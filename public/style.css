@@ -75,7 +75,7 @@ label{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 input,select{width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#FBFCFC;color:var(--ink)}
 input:focus,select:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:transparent}
 .typen{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.typen input{position:absolute;opacity:0;pointer-events:none}
+.typen input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
 .typen label{margin:0;text-align:center;font-weight:600;font-size:14px;padding:11px 6px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:#FBFCFC}
 .typen input:checked+label{border-color:var(--gruen);background:var(--gruen-l);color:var(--gruen-d)}
 .typen input:focus-visible+label{outline:2px solid var(--gruen)}
