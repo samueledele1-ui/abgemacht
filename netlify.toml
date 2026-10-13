@@ -1,0 +1,34 @@
+[build]
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Kurzlinks: merken sich, woher jemand kommt
+[[redirects]]
+  from = "/umfrage"
+  to = "/?quelle=umfrage"
+  status = 302
+[[redirects]]
+  from = "/ig"
+  to = "/?quelle=ig"
+  status = 302
+[[redirects]]
+  from = "/tt"
+  to = "/?quelle=tt"
+  status = 302
+[[redirects]]
+  from = "/li"
+  to = "/?quelle=li"
+  status = 302
+[[redirects]]
+  from = "/wa"
+  to = "/?quelle=wa"
+  status = 302
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
