@@ -1,0 +1,11 @@
+{
+  "name": "abgemacht-warteliste",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^4.0.0"
+  }
+}
