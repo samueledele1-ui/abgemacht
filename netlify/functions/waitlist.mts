@@ -6,6 +6,7 @@ import type { Config, Context } from "@netlify/functions";
 //   POST /api/waitlist     -> Anmeldung speichern, Bestätigungs-Mail schicken
 //   POST /api/bestaetigen  -> Klick aus der Bestätigungs-Mail (Double-Opt-in)
 //   POST /api/abmelden     -> Abmeldung aus jeder Mail
+//   POST /api/umfrage      -> Antworten der Umfrage auf /umfrage
 
 const TYPEN = ["firma", "selbststaendig", "mitarbeiter", "privat"];
 const QUELLEN = ["direkt", "umfrage", "ig", "tt", "li", "wa"];
@@ -132,6 +133,30 @@ export default async (req: Request, _context: Context) => {
     return Response.json({ ok: true });
   }
 
+  /* Umfrage */
+  if (pfad === "/api/umfrage") {
+    if (clip(body.website)) return Response.json({ ok: true });
+    const liste = (v: unknown, erlaubt: string[]) =>
+      Array.isArray(v) ? [...new Set(v.map(String).filter((x) => erlaubt.includes(x)))] : [];
+    const eins = (v: unknown, erlaubt: string[]) => (erlaubt.includes(String(v)) ? String(v) : null);
+    const z = Number(body.zufriedenheit);
+    const kontaktOk = body.kontakt_ok === true && !!clip(body.kontakt, 120);
+    await sql`
+      INSERT INTO umfrage (typ, branche, ort, kanaele, zufriedenheit, nervt, versucht, funktionen, zahlen, preis_fair, nutzung, kontakt_ok, kontakt, quelle)
+      VALUES (
+        ${eins(body.typ, TYPEN)}, ${clip(body.branche, 60)}, ${clip(body.ort, 80)},
+        ${liste(body.kanaele, ["empfehlung", "linkedin", "netzwerktreffen", "social", "google", "kaltakquise", "portale", "sonstiges"])},
+        ${Number.isInteger(z) && z >= 1 && z <= 5 ? z : null},
+        ${clip(body.nervt, 1000)}, ${clip(body.versucht, 1000)},
+        ${liste(body.funktionen, ["personen", "auftraege", "suche", "chats", "verifizierung", "team"])},
+        ${eins(body.zahlen, ["ja", "vielleicht", "nein"])}, ${clip(body.preis_fair, 60)},
+        ${eins(body.nutzung, ["taeglich", "woechentlich", "monatlich", "selten"])},
+        ${kontaktOk}, ${kontaktOk ? clip(body.kontakt, 120) : null},
+        ${QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "umfrage"}
+      )`;
+    return Response.json({ ok: true });
+  }
+
   /* Neue Anmeldung */
   if (pfad !== "/api/waitlist") return fehler("Nicht gefunden.", 404);
 
@@ -175,4 +200,4 @@ export default async (req: Request, _context: Context) => {
   return Response.json({ ok: true, neu: r.neu, mail });
 };
 
-export const config: Config = { path: ["/api/waitlist", "/api/bestaetigen", "/api/abmelden"] };
+export const config: Config = { path: ["/api/waitlist", "/api/bestaetigen", "/api/abmelden", "/api/umfrage"] };
