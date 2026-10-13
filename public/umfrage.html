@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Umfrage – Abgemacht</title>
+<meta name="description" content="3 Minuten, die eine App für Unternehmer aus der Region besser machen.">
+<link rel="stylesheet" href="/style.css">
+<style>
+.frage{margin-top:26px}
+.frage > b{display:block;font-size:16px;margin-bottom:4px}
+.frage .hint{color:var(--muted);font-size:13px;margin:0 0 10px}
+.wahl{display:flex;flex-wrap:wrap;gap:8px}
+.wahl input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.wahl label{margin:0;font-weight:600;font-size:14px;padding:10px 14px;border:1px solid var(--line);border-radius:999px;cursor:pointer;background:#FBFCFC}
+.wahl input:checked+label{border-color:var(--gruen);background:var(--gruen-l);color:var(--gruen-d)}
+.wahl input:focus-visible+label{outline:2px solid var(--gruen)}
+textarea{width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#FBFCFC;color:var(--ink);min-height:84px;resize:vertical}
+textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:transparent}
+.skala{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.skala label{text-align:center;padding:10px 0}
+.skala-legende{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px}
+.fortschritt{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0 4px}
+.fortschritt i{display:block;height:100%;width:0;background:var(--gruen);transition:width .2s}
+.box2{margin-top:28px;padding:18px;border-radius:16px;background:var(--gruen-l)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a></header>
+
+  <section style="padding-top:10px">
+    <div class="formbox" id="box">
+      <span class="pill">3 Minuten · anonym, wenn du willst</span>
+      <h2 style="margin-top:12px">Wie findest du heute Kunden und Partner?</h2>
+      <p class="sub" style="margin-bottom:6px">Ich baue Abgemacht, eine App für Unternehmer aus der Region. Deine Antworten entscheiden, was reinkommt. Danke dir! – Samuel</p>
+      <div class="fortschritt" aria-hidden="true"><i id="balken"></i></div>
+
+      <form id="form" novalidate>
+        <div class="frage">
+          <b>1. Was trifft auf dich zu?</b>
+          <div class="wahl" data-name="typ" data-typ="radio">
+            <input type="radio" name="typ" id="ty1" value="firma"><label for="ty1">Inhaber einer Firma</label>
+            <input type="radio" name="typ" id="ty2" value="selbststaendig"><label for="ty2">Selbstständig / Freiberufler</label>
+            <input type="radio" name="typ" id="ty3" value="mitarbeiter"><label for="ty3">Mitarbeiter</label>
+            <input type="radio" name="typ" id="ty4" value="privat"><label for="ty4">Privat</label>
+          </div>
+        </div>
+
+        <div class="frage">
+          <b>2. Branche und Ort</b>
+          <div class="row" style="margin-top:0">
+            <div><select id="branche" name="branche" aria-label="Branche">
+              <option value="">Branche wählen</option>
+              <option>Handwerk</option><option>Finanzen & Steuern</option><option>Gastronomie</option>
+              <option>Immobilien</option><option>Marketing & Social Media</option><option>KI</option>
+              <option>IT & Software</option><option>Sport & Gesundheit</option><option>Sicherheitsdienst</option>
+              <option>Vertrieb</option><option>Handel</option><option>Sonstiges</option>
+            </select></div>
+            <div><input id="ort" name="ort" maxlength="80" placeholder="Stadt oder PLZ" aria-label="Stadt oder PLZ"></div>
+          </div>
+        </div>
+
+        <div class="frage">
+          <b>3. Wie kommst du heute an neue Kunden, Partner oder Aufträge?</b>
+          <p class="hint">Mehrere Antworten möglich</p>
+          <div class="wahl">
+            <input type="checkbox" name="kanaele" id="k1" value="empfehlung"><label for="k1">Empfehlungen</label>
+            <input type="checkbox" name="kanaele" id="k2" value="linkedin"><label for="k2">LinkedIn</label>
+            <input type="checkbox" name="kanaele" id="k3" value="netzwerktreffen"><label for="k3">Netzwerktreffen, BNI, IHK</label>
+            <input type="checkbox" name="kanaele" id="k4" value="social"><label for="k4">Instagram, Facebook, TikTok</label>
+            <input type="checkbox" name="kanaele" id="k5" value="google"><label for="k5">Google, eigene Website</label>
+            <input type="checkbox" name="kanaele" id="k6" value="kaltakquise"><label for="k6">Kaltakquise</label>
+            <input type="checkbox" name="kanaele" id="k7" value="portale"><label for="k7">Portale wie MyHammer, Check24</label>
+            <input type="checkbox" name="kanaele" id="k8" value="sonstiges"><label for="k8">Sonstiges</label>
+          </div>
+        </div>
+
+        <div class="frage">
+          <b>4. Wie zufrieden bist du damit?</b>
+          <div class="wahl skala">
+            <input type="radio" name="zufriedenheit" id="z1" value="1"><label for="z1">1</label>
+            <input type="radio" name="zufriedenheit" id="z2" value="2"><label for="z2">2</label>
+            <input type="radio" name="zufriedenheit" id="z3" value="3"><label for="z3">3</label>
+            <input type="radio" name="zufriedenheit" id="z4" value="4"><label for="z4">4</label>
+            <input type="radio" name="zufriedenheit" id="z5" value="5"><label for="z5">5</label>
+          </div>
+          <div class="skala-legende"><span>gar nicht</span><span>sehr zufrieden</span></div>
+        </div>
+
+        <div class="frage">
+          <b>5. Was nervt dich beim Netzwerken oder bei der Kundensuche am meisten?</b>
+          <textarea name="nervt" maxlength="1000" placeholder="z. B. Netzwerktreffen kosten viel Zeit und bringen wenig"></textarea>
+        </div>
+
+        <div class="frage">
+          <b>6. Hast du schon Geld oder Zeit in eine Lösung gesteckt? Was war es?</b>
+          <textarea name="versucht" maxlength="1000" placeholder="z. B. BNI-Mitgliedschaft, LinkedIn Premium, Werbeanzeigen"></textarea>
+        </div>
+
+        <div class="frage">
+          <b>7. Welche Funktionen würdest du wirklich nutzen?</b>
+          <p class="hint">Mehrere Antworten möglich</p>
+          <div class="wahl">
+            <input type="checkbox" name="funktionen" id="f1" value="personen"><label for="f1">Unternehmer aus der Nähe per Swipe kennenlernen</label>
+            <input type="checkbox" name="funktionen" id="f2" value="auftraege"><label for="f2">Aufträge und Jobs finden</label>
+            <input type="checkbox" name="funktionen" id="f3" value="suche"><label for="f3">Firmen, Produkte, Kurse suchen</label>
+            <input type="checkbox" name="funktionen" id="f4" value="chats"><label for="f4">Branchen-Chats zum Austausch</label>
+            <input type="checkbox" name="funktionen" id="f5" value="verifizierung"><label for="f5">Geprüfte Profile</label>
+            <input type="checkbox" name="funktionen" id="f6" value="team"><label for="f6">Team-Funktionen für die Firma</label>
+          </div>
+        </div>
+
+        <div class="frage">
+          <b>8. Die Basis ist kostenlos. Würdest du für mehr Funktionen 11,99 € im Monat zahlen?</b>
+          <div class="wahl">
+            <input type="radio" name="zahlen" id="p1" value="ja"><label for="p1">Ja</label>
+            <input type="radio" name="zahlen" id="p2" value="vielleicht"><label for="p2">Vielleicht</label>
+            <input type="radio" name="zahlen" id="p3" value="nein"><label for="p3">Nein</label>
+          </div>
+          <input name="preis_fair" maxlength="60" placeholder="Was wäre für dich ein fairer Preis? (optional)" style="margin-top:10px">
+        </div>
+
+        <div class="frage">
+          <b>9. Wie oft würdest du so eine App nutzen?</b>
+          <div class="wahl">
+            <input type="radio" name="nutzung" id="n1" value="taeglich"><label for="n1">Täglich</label>
+            <input type="radio" name="nutzung" id="n2" value="woechentlich"><label for="n2">Wöchentlich</label>
+            <input type="radio" name="nutzung" id="n3" value="monatlich"><label for="n3">Monatlich</label>
+            <input type="radio" name="nutzung" id="n4" value="selten"><label for="n4">Selten</label>
+          </div>
+        </div>
+
+        <div class="frage">
+          <b>10. Darf ich dich für ein kurzes Gespräch (15 Minuten) kontaktieren?</b>
+          <p class="hint">Freiwillig. Ohne Angabe bleibt die Umfrage anonym.</p>
+          <input name="kontakt" maxlength="120" placeholder="Telefon oder E-Mail">
+          <label class="check"><input type="checkbox" id="kontakt_ok"> <span>Ja, Samuel darf mich für ein Gespräch über Abgemacht kontaktieren. Meine Angaben werden nur dafür genutzt (<a href="/datenschutz" target="_blank">Datenschutz</a>).</span></label>
+        </div>
+
+        <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+        <button class="btn" id="senden" type="submit" style="width:100%;margin-top:26px">Antworten absenden</button>
+        <div class="msg" id="msg" role="status"></div>
+      </form>
+    </div>
+  </section>
+
+  <footer><span>© 2026 Abgemacht</span><span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span></footer>
+</div>
+
+<script>
+(function(){
+  var p = new URLSearchParams(location.search);
+  var quelle = ['ig','tt','li','wa'].indexOf(p.get('quelle')) >= 0 ? p.get('quelle') : 'umfrage';
+  var form = document.getElementById('form'), msg = document.getElementById('msg'), btn = document.getElementById('senden');
+  var box = document.getElementById('box'), balken = document.getElementById('balken');
+
+  function wert(n){ var e = form.querySelector('input[name="'+n+'"]:checked'); return e ? e.value : null; }
+  function werte(n){ return [].map.call(form.querySelectorAll('input[name="'+n+'"]:checked'), function(e){ return e.value; }); }
+  function fortschritt(){
+    var f = [wert('typ'), form.branche.value, werte('kanaele').length, wert('zufriedenheit'), form.nervt.value.trim(), form.versucht.value.trim(), werte('funktionen').length, wert('zahlen'), wert('nutzung')];
+    balken.style.width = Math.round(f.filter(Boolean).length / f.length * 100) + '%';
+  }
+  form.addEventListener('input', fortschritt); form.addEventListener('change', fortschritt);
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!wert('typ') || !werte('kanaele').length || !wert('zahlen')) { msg.textContent = 'Bitte beantworte mindestens die Fragen 1, 3 und 8.'; msg.className = 'msg err'; return; }
+    var kontaktOk = document.getElementById('kontakt_ok').checked;
+    if (kontaktOk && !form.kontakt.value.trim()) { msg.textContent = 'Bitte trag bei Frage 10 noch Telefon oder E-Mail ein.'; msg.className = 'msg err'; return; }
+    btn.disabled = true; btn.textContent = 'Wird gesendet …';
+    fetch('/api/umfrage', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
+      typ: wert('typ'), branche: form.branche.value, ort: form.ort.value, kanaele: werte('kanaele'),
+      zufriedenheit: Number(wert('zufriedenheit')) || null, nervt: form.nervt.value, versucht: form.versucht.value,
+      funktionen: werte('funktionen'), zahlen: wert('zahlen'), preis_fair: form.preis_fair.value, nutzung: wert('nutzung'),
+      kontakt_ok: kontaktOk, kontakt: kontaktOk ? form.kontakt.value : '', website: form.website.value, quelle: quelle
+    }) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok) throw new Error(d.error || 'Fehler');
+      box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten helfen mir enorm.</p></div>' +
+        '<div class="box2"><b>Willst du als Erster Bescheid bekommen, wenn Abgemacht startet?</b>' +
+        '<form id="wl" novalidate style="margin-top:10px"><input id="wlmail" type="email" autocomplete="email" placeholder="du@firma.de">' +
+        '<label class="check"><input type="checkbox" id="wlok"> <span>Ich möchte per E-Mail informiert werden und habe die <a href="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen.</span></label>' +
+        '<button class="btn" type="submit" style="width:100%;margin-top:12px">Auf die Warteliste</button><div class="msg" id="wlmsg" role="status"></div></form></div>';
+      document.getElementById('wl').addEventListener('submit', function(ev){
+        ev.preventDefault();
+        var m = document.getElementById('wlmail').value.trim(), out = document.getElementById('wlmsg');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m)) { out.textContent = 'Bitte gib eine gültige E-Mail-Adresse ein.'; out.className = 'msg err'; return; }
+        if (!document.getElementById('wlok').checked) { out.textContent = 'Bitte bestätige kurz die Datenschutzerklärung.'; out.className = 'msg err'; return; }
+        fetch('/api/waitlist', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: m, typ: wert('typ'), branche: form.branche.value, ort: form.ort.value, consent: true, quelle: 'umfrage' }) })
+          .then(function(r){ return r.json(); })
+          .then(function(d){ if (!d.ok) throw new Error(d.error || 'Fehler'); out.textContent = d.status === 'bestaetigt' ? 'Du stehst schon auf der Liste. Danke!' : 'Fast geschafft! Bitte bestätige die E-Mail, die wir dir gerade geschickt haben.'; out.className = 'msg ok'; })
+          .catch(function(err){ out.textContent = err.message || 'Das hat nicht geklappt.'; out.className = 'msg err'; });
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    })
+    .catch(function(err){ msg.textContent = err.message && err.message !== 'Failed to fetch' ? err.message : 'Das hat nicht geklappt. Bitte versuch es gleich nochmal.'; msg.className = 'msg err'; btn.disabled = false; btn.textContent = 'Antworten absenden'; });
+  });
+})();
+</script>
+</body>
+</html>
