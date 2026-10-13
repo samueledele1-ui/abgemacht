@@ -6,10 +6,6 @@
 
 # Kurzlinks: merken sich, woher jemand kommt
 [[redirects]]
-  from = "/umfrage"
-  to = "/?quelle=umfrage"
-  status = 302
-[[redirects]]
   from = "/ig"
   to = "/?quelle=ig"
   status = 302
