@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abmelden – Abgemacht</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a></header>
+  <section>
+    <div class="formbox danke" id="box">
+      <h2>Von der Warteliste abmelden?</h2>
+      <p class="sub">Du bekommst dann keine E-Mails mehr von uns, und wir löschen deine Adresse aus dem Verteiler.</p>
+      <button class="btn" id="ok" type="button">Ja, abmelden</button>
+      <div class="msg" id="msg" role="status"></div>
+    </div>
+  </section>
+  <footer><span>© 2026 Abgemacht</span><span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span></footer>
+</div>
+<script>
+(function(){
+  var t = new URLSearchParams(location.search).get('t') || '';
+  var box = document.getElementById('box'), btn = document.getElementById('ok'), msg = document.getElementById('msg');
+  function fertig(titel, text){ box.innerHTML = '<h2>' + titel + '</h2><p class="sub">' + text + '</p><a class="btn ghost" href="/">Zur Startseite</a>'; }
+  if (!/^[a-f0-9]{64}$/.test(t)) { fertig('Link ungültig', 'Bitte nutze den Link aus deiner E-Mail oder schreib uns kurz an samuel.edele1@gmail.com.'); return; }
+  btn.addEventListener('click', function(){
+    btn.disabled = true; btn.textContent = 'Einen Moment …';
+    fetch('/api/abmelden', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ t: t }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (!d.ok) throw new Error(d.error || 'Fehler'); fertig('Du bist abgemeldet', 'Schade, dass du gehst. Du kannst dich jederzeit wieder eintragen.'); })
+      .catch(function(e){ msg.textContent = e.message || 'Das hat nicht geklappt. Bitte versuch es gleich nochmal.'; msg.className = 'msg err'; btn.disabled = false; btn.textContent = 'Ja, abmelden'; });
+  });
+})();
+</script>
+</body>
+</html>
