@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anmeldung bestätigen – Abgemacht</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a></header>
+  <section>
+    <div class="formbox danke" id="box">
+      <div class="big">🤝</div>
+      <h2>Fast geschafft</h2>
+      <p class="sub">Ein Klick noch, dann stehst du auf der Warteliste.</p>
+      <button class="btn" id="ok" type="button">Anmeldung bestätigen</button>
+      <div class="msg" id="msg" role="status"></div>
+    </div>
+  </section>
+  <footer><span>© 2026 Abgemacht</span><span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span></footer>
+</div>
+<script>
+(function(){
+  var t = new URLSearchParams(location.search).get('t') || '';
+  var box = document.getElementById('box'), btn = document.getElementById('ok'), msg = document.getElementById('msg');
+  function fertig(titel, text){ box.innerHTML = '<div class="big">🤝</div><h2>' + titel + '</h2><p class="sub">' + text + '</p><a class="btn ghost" href="/">Zur Startseite</a>'; }
+  if (!/^[a-f0-9]{64}$/.test(t)) { fertig('Link ungültig', 'Bitte nutze den Link aus deiner E-Mail oder trag dich neu ein.'); return; }
+  btn.addEventListener('click', function(){
+    btn.disabled = true; btn.textContent = 'Einen Moment …';
+    fetch('/api/bestaetigen', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ t: t }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d.ok) throw new Error(d.error || 'Fehler');
+        fertig('Abgemacht!', d.schon ? 'Du hattest schon bestätigt. Wir melden uns, sobald es losgeht.' : 'Du stehst jetzt auf der Warteliste. Wir melden uns, sobald Abgemacht in deiner Region startet.');
+      })
+      .catch(function(e){ msg.textContent = e.message || 'Das hat nicht geklappt. Bitte versuch es gleich nochmal.'; msg.className = 'msg err'; btn.disabled = false; btn.textContent = 'Anmeldung bestätigen'; });
+  });
+})();
+</script>
+</body>
+</html>
