@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Übersicht – Abgemacht</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 26px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .kpi .z{font-size:30px;font-weight:800;line-height:1.1}
+  .kpi .t{color:var(--muted);font-size:14px}
+  .kpi.gruen .z{color:var(--gruen)}
+  .box{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px;min-width:0}
+  .box h3{margin:0 0 12px;font-size:17px}
+  .zwei{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 34px;gap:10px;align-items:center;font-size:14px;margin:7px 0}
+  .bar .spur{height:10px;border-radius:99px;background:var(--gruen-l);overflow:hidden}
+  .bar .spur i{display:block;height:100%;background:var(--gruen);border-radius:99px}
+  .bar b{text-align:right;font-variant-numeric:tabular-nums}
+  .leer{color:var(--muted);font-size:14px}
+  .ziel{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+  .ziel:last-child{border:0}
+  .ziel span:last-child{white-space:nowrap}
+  .ok{color:var(--gruen-d);font-weight:700}.offen{color:var(--orange);font-weight:700}
+  .zitate p{margin:0 0 10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .zitate small{display:block;color:var(--muted);margin-top:4px}
+  .tabelle{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:700;font-size:13px}
+  .st{font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px}
+  .st.bestaetigt{background:var(--gruen-l);color:var(--gruen-d)}
+  .st.offen{background:#FCEDE3;color:var(--orange)}
+  .st.abgemeldet{background:#EEF0EF;color:var(--muted)}
+  .kopf{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .kopf h3{margin:0}
+  .klein{padding:8px 14px;font-size:14px}
+  #login{max-width:420px;margin:40px auto}
+  @media (max-width:760px){.kpis{grid-template-columns:1fr 1fr}.zwei{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a><button class="btn ghost" id="raus" hidden>Abmelden</button></header>
+
+  <form id="login" class="formbox">
+    <h2 style="font-size:24px">Übersicht</h2>
+    <p class="sub" style="margin-bottom:6px">Nur für dich: Warteliste und Umfrage-Ergebnisse.</p>
+    <label for="pw">Passwort</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <button class="btn" style="margin-top:16px;width:100%">Öffnen</button>
+    <div class="msg" id="loginMsg"></div>
+  </form>
+
+  <main id="inhalt" hidden>
+    <h1 style="font-size:34px;margin:6px 0 4px">Übersicht</h1>
+    <p class="sub" id="stand"></p>
+
+    <div class="kpis">
+      <div class="kpi gruen"><div class="z" id="kBest">0</div><div class="t">bestätigt auf der Warteliste</div></div>
+      <div class="kpi"><div class="z" id="kOffen">0</div><div class="t">noch nicht bestätigt</div></div>
+      <div class="kpi"><div class="z" id="kUmf">0</div><div class="t">Umfrage-Antworten</div></div>
+      <div class="kpi"><div class="z" id="kKontakt">0</div><div class="t">wollen ein Gespräch</div></div>
+    </div>
+
+    <div class="box">
+      <h3>Ziele bis zur Entscheidung</h3>
+      <div id="ziele"></div>
+    </div>
+
+    <h2 style="font-size:24px;margin-top:30px">Umfrage</h2>
+    <div class="zwei">
+      <div class="box"><h3>Wer hat geantwortet?</h3><div id="uTyp"></div></div>
+      <div class="box"><h3>Würden 11,99 € im Monat zahlen</h3><div id="uZahlen"></div></div>
+      <div class="box"><h3>So finden sie heute Kunden</h3><div id="uKanaele"></div></div>
+      <div class="box"><h3>Diese Funktionen würden sie nutzen</h3><div id="uFunk"></div></div>
+      <div class="box"><h3>Zufriedenheit mit der Kundensuche heute</h3><div id="uZufr"></div></div>
+      <div class="box"><h3>Wie oft sie die App nutzen würden</h3><div id="uNutz"></div></div>
+    </div>
+    <div class="zwei">
+      <div class="box zitate"><h3>Was am meisten nervt</h3><div id="uNervt"></div></div>
+      <div class="box zitate"><h3>Was sie schon ausprobiert haben</h3><div id="uVersucht"></div></div>
+    </div>
+    <div class="box zitate"><h3>Fairer Preis aus ihrer Sicht</h3><div id="uPreis"></div></div>
+
+    <div class="box">
+      <div class="kopf"><h3>Gesprächspartner aus der Umfrage</h3></div>
+      <div class="tabelle" id="uKontakte"></div>
+    </div>
+
+    <h2 style="font-size:24px;margin-top:30px">Warteliste</h2>
+    <div class="zwei">
+      <div class="box"><h3>Woher sie kommen</h3><div id="wQuelle"></div></div>
+      <div class="box"><h3>Wer sie sind</h3><div id="wTyp"></div></div>
+    </div>
+    <div class="box">
+      <div class="kopf"><h3>Alle Anmeldungen</h3><button class="btn ghost klein" id="csv">Als CSV herunterladen</button></div>
+      <div class="tabelle" id="wTabelle"></div>
+    </div>
+  </main>
+
+  <footer><span>© 2026 Abgemacht</span><span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span></footer>
+</div>
+
+<script>
+const L = {
+  typ: { firma: "Firma", selbststaendig: "Selbstständig", mitarbeiter: "Mitarbeiter", privat: "Privat" },
+  kanaele: { empfehlung: "Empfehlungen", linkedin: "LinkedIn", netzwerktreffen: "Netzwerktreffen, BNI", social: "Instagram, Facebook", google: "Google, Website", kaltakquise: "Kaltakquise", portale: "Portale (MyHammer usw.)", sonstiges: "Sonstiges" },
+  funktionen: { personen: "Personen entdecken", auftraege: "Aufträge, Stellen", suche: "Suche nach Firmen", chats: "Branchen-Chats", verifizierung: "Verifizierte Profile", team: "Team-Zugang" },
+  zahlen: { ja: "Ja", vielleicht: "Vielleicht", nein: "Nein" },
+  nutzung: { taeglich: "Täglich", woechentlich: "Wöchentlich", monatlich: "Monatlich", selten: "Selten" },
+  quelle: { direkt: "Direkt", umfrage: "Umfrage", ig: "Instagram", tt: "TikTok", li: "LinkedIn", wa: "WhatsApp" },
+  status: { bestaetigt: "bestätigt", offen: "offen", abgemeldet: "abgemeldet" }
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const datum = (d) => d ? new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "";
+let daten = null;
+
+function zaehle(werte) {
+  const m = {};
+  werte.forEach((w) => { if (w != null && w !== "") m[w] = (m[w] || 0) + 1; });
+  return m;
+}
+function balken(ziel, zahlen, labels, gesamt, reihenfolge) {
+  const keys = reihenfolge || Object.keys(zahlen).sort((a, b) => zahlen[b] - zahlen[a]);
+  const max = Math.max(1, ...keys.map((k) => zahlen[k] || 0));
+  const html = keys.filter((k) => reihenfolge || zahlen[k]).map((k) => {
+    const n = zahlen[k] || 0;
+    const titel = gesamt ? `${n} von ${gesamt}` : `${n}`;
+    return `<div class="bar" title="${titel}"><span>${esc(labels ? labels[k] || k : k)}</span><span class="spur"><i style="width:${(n / max) * 100}%"></i></span><b>${n}</b></div>`;
+  }).join("");
+  $(ziel).innerHTML = html || '<p class="leer">Noch keine Daten.</p>';
+}
+function zitate(ziel, rows, feld) {
+  const r = rows.filter((x) => x[feld] && String(x[feld]).trim());
+  $(ziel).innerHTML = r.length
+    ? r.map((x) => `<p>${esc(x[feld])}<small>${esc(L.typ[x.typ] || "–")}${x.branche ? " · " + esc(x.branche) : ""}${x.ort ? " · " + esc(x.ort) : ""} · ${datum(x.created_at)}</small></p>`).join("")
+    : '<p class="leer">Noch keine Antworten.</p>';
+}
+function tabelle(ziel, kopf, zeilen) {
+  $(ziel).innerHTML = zeilen.length
+    ? `<table><thead><tr>${kopf.map((k) => `<th>${k}</th>`).join("")}</tr></thead><tbody>${zeilen.map((z) => `<tr>${z.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    : '<p class="leer">Noch keine Einträge.</p>';
+}
+function zielZeile(text, ist, soll) {
+  const erreicht = ist >= soll;
+  return `<div class="ziel"><span>${text}</span><span class="${erreicht ? "ok" : "offen"}">${ist} / ${soll}${erreicht ? " ✓" : ""}</span></div>`;
+}
+
+function zeige(d) {
+  daten = d;
+  const w = d.warteliste, u = d.umfrage;
+  const st = zaehle(w.map((x) => x.status));
+  const best = st.bestaetigt || 0;
+  const kontakte = u.filter((x) => x.kontakt_ok && x.kontakt);
+  $("kBest").textContent = best;
+  $("kOffen").textContent = st.offen || 0;
+  $("kUmf").textContent = u.length;
+  $("kKontakt").textContent = kontakte.length;
+  $("stand").textContent = "Stand: " + new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) + " Uhr";
+
+  const zahlenJa = u.filter((x) => x.zahlen === "ja").length;
+  const problem = u.filter((x) => x.zufriedenheit != null && x.zufriedenheit <= 3).length;
+  $("ziele").innerHTML =
+    zielZeile("Bestätigte Anmeldungen auf der Warteliste", best, 100) +
+    zielZeile("Umfrage-Antworten", u.length, 20) +
+    zielZeile("Unzufrieden mit der Kundensuche (1–3 von 5)", problem, 12) +
+    zielZeile("Würden 11,99 € zahlen", zahlenJa, 6);
+
+  balken("uTyp", zaehle(u.map((x) => x.typ)), L.typ, u.length);
+  balken("uZahlen", zaehle(u.map((x) => x.zahlen)), L.zahlen, u.length, ["ja", "vielleicht", "nein"]);
+  balken("uKanaele", zaehle(u.flatMap((x) => x.kanaele || [])), L.kanaele, u.length);
+  balken("uFunk", zaehle(u.flatMap((x) => x.funktionen || [])), L.funktionen, u.length);
+  const zf = zaehle(u.map((x) => x.zufriedenheit));
+  const zfL = { 1: "1 – gar nicht", 2: "2", 3: "3", 4: "4", 5: "5 – sehr" };
+  balken("uZufr", zf, zfL, u.length, ["1", "2", "3", "4", "5"]);
+  balken("uNutz", zaehle(u.map((x) => x.nutzung)), L.nutzung, u.length, ["taeglich", "woechentlich", "monatlich", "selten"]);
+  zitate("uNervt", u, "nervt");
+  zitate("uVersucht", u, "versucht");
+  zitate("uPreis", u, "preis_fair");
+
+  tabelle("uKontakte", ["Datum", "Kontakt", "Typ", "Branche", "Ort", "Zahlt?"],
+    kontakte.map((x) => [datum(x.created_at), esc(x.kontakt), esc(L.typ[x.typ] || ""), esc(x.branche), esc(x.ort), esc(L.zahlen[x.zahlen] || "")]));
+
+  balken("wQuelle", zaehle(w.filter((x) => x.status === "bestaetigt").map((x) => x.quelle)), L.quelle);
+  balken("wTyp", zaehle(w.filter((x) => x.status === "bestaetigt").map((x) => x.typ)), L.typ);
+  tabelle("wTabelle", ["Datum", "E-Mail", "Name", "Typ", "Branche", "Ort", "Quelle", "Status"],
+    w.map((x) => [datum(x.created_at), esc(x.email), esc(x.name), esc(L.typ[x.typ] || ""), esc(x.branche), esc(x.ort), esc(L.quelle[x.quelle] || x.quelle), `<span class="st ${esc(x.status)}">${esc(L.status[x.status] || x.status)}</span>`]));
+
+  $("login").hidden = true;
+  $("inhalt").hidden = false;
+  $("raus").hidden = false;
+}
+
+async function laden(pw) {
+  const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pw }) });
+  const d = await r.json().catch(() => ({ ok: false, error: "Server antwortet nicht." }));
+  if (!d.ok) throw new Error(d.error || "Fehler");
+  return d;
+}
+
+$("login").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $("login").querySelector("button");
+  const msg = $("loginMsg");
+  msg.className = "msg";
+  btn.disabled = true;
+  try {
+    const pw = $("pw").value;
+    const d = await laden(pw);
+    try { sessionStorage.setItem("hs_admin", pw); } catch {}
+    zeige(d);
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = "msg err";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$("raus").addEventListener("click", () => {
+  try { sessionStorage.removeItem("hs_admin"); } catch {}
+  location.reload();
+});
+
+$("csv").addEventListener("click", () => {
+  if (!daten) return;
+  const feld = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const kopf = ["Datum", "E-Mail", "Name", "Typ", "Branche", "Ort", "Quelle", "Status", "Bestätigt am"];
+  const zeilen = daten.warteliste.map((x) => [datum(x.created_at), x.email, x.name, L.typ[x.typ] || "", x.branche, x.ort, L.quelle[x.quelle] || x.quelle, L.status[x.status] || x.status, datum(x.confirmed_at)]);
+  const text = "\ufeff" + [kopf, ...zeilen].map((z) => z.map(feld).join(";")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  a.download = `abgemacht-warteliste-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+(async () => {
+  let pw = null;
+  try { pw = sessionStorage.getItem("hs_admin"); } catch {}
+  if (!pw) return;
+  try { zeige(await laden(pw)); } catch { try { sessionStorage.removeItem("hs_admin"); } catch {} }
+})();
+</script>
+</body>
+</html>
