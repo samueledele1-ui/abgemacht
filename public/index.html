@@ -116,7 +116,7 @@
       </div>
       <div class="danke" id="danke" hidden>
         <div class="big">🤝</div>
-        <h2>Du bist dabei!</h2>
+        <h2 id="dankeTitel">Du bist dabei!</h2>
         <p class="sub" id="dankeText">Wir melden uns, sobald es losgeht.</p>
         <button class="btn ghost" id="teilen" type="button">Mit Kollegen teilen</button>
       </div>
@@ -158,7 +158,9 @@
       if (!res.ok || !res.d.ok) throw new Error(res.d && res.d.error || 'Fehler');
       document.getElementById('formteil').hidden = true;
       document.getElementById('danke').hidden = false;
-      if (!res.d.neu) document.getElementById('dankeText').textContent = 'Diese E-Mail steht schon auf der Liste. Wir melden uns!';
+      var titel = document.getElementById('dankeTitel'), text = document.getElementById('dankeText');
+      if (res.d.status === 'bestaetigt') { text.textContent = 'Diese E-Mail steht schon auf der Liste. Wir melden uns!'; }
+      else if (res.d.mail) { titel.textContent = 'Fast geschafft!'; text.textContent = 'Wir haben dir eine E-Mail geschickt. Bitte bestätige darin mit einem Klick deine Anmeldung. Schau notfalls im Spam-Ordner nach.'; }
     })
     .catch(function(err){ zeige(err.message && err.message !== 'Failed to fetch' ? err.message : 'Das hat nicht geklappt. Bitte versuch es gleich nochmal.'); })
     .finally(function(){ btn.disabled = false; btn.textContent = 'Auf die Warteliste'; });
