@@ -54,6 +54,7 @@ const knopf = (href: string, text: string) =>
 async function sendeMail(an: string, name: string | null, betreff: string, html: string, abmeldeLink?: string) {
   const res = await brevo("/smtp/email", "POST", {
     sender: { name: "Abgemacht", email: Netlify.env.get("MAIL_FROM") || "hallo@abgemacht.de" },
+    replyTo: { email: Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com", name: "Samuel von Abgemacht" },
     to: [name ? { email: an, name } : { email: an }],
     subject: betreff,
     htmlContent: html,
