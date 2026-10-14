@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@neondatabase/serverless": "^1.0.0"
+    "@neondatabase/serverless": "^1.0.0",
+    "node-ical": "^0.27.3"
   },
   "devDependencies": {
     "@netlify/functions": "^4.0.0"
