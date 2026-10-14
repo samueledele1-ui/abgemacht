@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Termin wählen – Abgemacht</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .slots{display:grid;gap:10px;margin:16px 0 4px}
+  .slot input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+  .slot label{display:flex;align-items:center;gap:10px;margin:0;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#FBFCFC;font-weight:600;cursor:pointer}
+  .slot input:checked+label{border-color:var(--gruen);background:var(--gruen-l);color:var(--gruen-d)}
+  .slot input:focus-visible+label{outline:2px solid var(--gruen)}
+  .slot input:disabled+label{opacity:.5;cursor:not-allowed;text-decoration:line-through}
+  .klein{font-size:14px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a></header>
+  <div class="formbox" id="box">
+    <p class="klein">Einen Moment …</p>
+  </div>
+  <footer><span>© 2026 Abgemacht</span><span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span></footer>
+</div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search), t = q.get('t') || '', s = q.get('s') || '';
+  var box = document.getElementById('box');
+  function esc(x) { return String(x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function api(daten) {
+    return fetch('/api/termin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten) })
+      .then(function (r) { return r.json(); });
+  }
+  function fertig(text) {
+    box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Abgemacht!</h2><p class="sub">Wir sprechen am <b>' + esc(text) +
+      '</b>.</p><p class="klein">Die Bestätigung mit Kalendereintrag ist in deinem Postfach. Falls etwas dazwischenkommt, antworte einfach auf diese E-Mail.</p></div>';
+  }
+  function fehlerAnzeigen(msg) {
+    box.innerHTML = '<h2 style="font-size:24px">Das hat nicht geklappt</h2><p class="sub">' + esc(msg) +
+      '</p><p class="klein">Antworte einfach auf die E-Mail mit den Terminvorschlägen, dann finden wir einen Termin.</p>';
+  }
+  function zeige(d) {
+    if (d.gebucht) return fertig(d.text);
+    var frei = d.vorschlaege.filter(function (v) { return v.frei; });
+    if (!frei.length) return fehlerAnzeigen('Die vorgeschlagenen Termine sind leider schon vorbei oder vergeben.');
+    var html = '<h2 style="font-size:26px">Wann passt es dir?</h2><p class="sub" style="margin-bottom:0">Etwa 15 Minuten, am Telefon oder per Video. Wähle einen Termin:</p>' +
+      '<form id="f" novalidate><div class="slots">';
+    d.vorschlaege.forEach(function (v, i) {
+      var an = v.frei && (String(v.zeit) === s || (!frei.some(function (x) { return String(x.zeit) === s; }) && v === frei[0]));
+      html += '<div class="slot"><input type="radio" name="slot" id="s' + i + '" value="' + v.zeit + '"' + (v.frei ? '' : ' disabled') + (an ? ' checked' : '') +
+        '><label for="s' + i + '">📅 ' + esc(v.text) + (v.frei ? '' : ' (vergeben)') + '</label></div>';
+    });
+    html += '</div><label for="tel">Telefonnummer (optional)</label><input id="tel" type="tel" autocomplete="tel" placeholder="Dann rufe ich dich an">' +
+      '<p class="klein" style="margin:6px 0 0">Ohne Nummer schicke ich dir vorher einen Link für einen Videocall.</p>' +
+      '<button class="btn" type="submit" style="width:100%;margin-top:18px">Termin festmachen</button><div class="msg" id="msg" role="status"></div></form>';
+    box.innerHTML = html;
+    document.getElementById('f').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var wahl = document.querySelector('input[name=slot]:checked'), msg = document.getElementById('msg'), btn = e.submitter || this.querySelector('button');
+      if (!wahl) { msg.textContent = 'Bitte wähle einen Termin.'; msg.className = 'msg err'; return; }
+      btn.disabled = true; btn.textContent = 'Wird eingetragen …';
+      api({ t: t, aktion: 'buchen', s: Number(wahl.value), telefon: document.getElementById('tel').value })
+        .then(function (r) {
+          if (r.ok) return fertig(r.text);
+          msg.textContent = r.error || 'Das hat nicht geklappt.'; msg.className = 'msg err';
+          btn.disabled = false; btn.textContent = 'Termin festmachen';
+          if (r.error && r.error.indexOf('vergeben') > -1) api({ t: t }).then(function (d) { if (d.ok) zeige(d); });
+        })
+        .catch(function () { msg.textContent = 'Keine Verbindung. Bitte versuch es gleich nochmal.'; msg.className = 'msg err'; btn.disabled = false; btn.textContent = 'Termin festmachen'; });
+    });
+  }
+  if (!/^[a-f0-9]{64}$/.test(t)) return fehlerAnzeigen('Der Link ist unvollständig.');
+  api({ t: t }).then(function (d) { d.ok ? zeige(d) : fehlerAnzeigen(d.error || 'Der Link ist ungültig.'); })
+    .catch(function () { fehlerAnzeigen('Keine Verbindung zum Server.'); });
+})();
+</script>
+</body>
+</html>
