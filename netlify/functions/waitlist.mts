@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
+import ical from "node-ical";
 
 // Eine Funktion für alles rund um die Warteliste:
 //   GET  /api/waitlist     -> Anzahl bestätigter Anmeldungen
@@ -94,7 +95,7 @@ ${knopf(`${seite()}/wa`, "Abgemacht weiterempfehlen")}
 
 const TZ = "Europe/Berlin";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const adminMail = () => Netlify.env.get("MAIL_ADMIN") || Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com";
+const adminMail = () => Netlify.env.get("MAIL_ADMIN") || "hallo@ab-gemacht.info";
 
 function berlinTeile(d: Date) {
   const p = Object.fromEntries(
@@ -113,24 +114,65 @@ function berlinZeit(y: number, m: number, d: number, h: number, min: number) {
 const terminText = (d: Date) =>
   new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(d) + " Uhr";
 
-// 4 Vorschläge an den nächsten Werktagen, frühestens 18 Stunden ab jetzt, abwechselnd zu den Zeiten aus TERMIN_ZEITEN
-function terminVorschlaege(belegt: number[], jetzt = new Date()) {
-  const zeiten = (Netlify.env.get("TERMIN_ZEITEN") || "12:30,17:30").split(",").map((z) => z.trim()).filter((z) => /^\d{1,2}:\d{2}$/.test(z));
+/* Belegte Zeiten aus dem Google Kalender (geheime iCal-Adresse in KALENDER_ICS, mehrere durch Komma getrennt).
+   Gibt null zurück, wenn kein Kalender eingerichtet oder einer nicht erreichbar ist. */
+type Zeitraum = [number, number];
+async function belegteZeiten(von: Date, bis: Date): Promise<Zeitraum[] | null> {
+  const urls = (Netlify.env.get("KALENDER_ICS") || "").split(/[\s,]+/).filter((u) => /^https:\/\//.test(u));
+  if (!urls.length) return null;
+  const out: Zeitraum[] = [];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const daten = await ical.async.parseICS(await res.text());
+      for (const e of Object.values(daten) as any[]) {
+        if (!e || e.type !== "VEVENT" || e.transparency === "TRANSPARENT" || e.status === "CANCELLED") continue;
+        for (const i of ical.expandRecurringEvent(e, { from: von, to: bis, expandOngoing: true }) as any[]) {
+          const s = new Date(i.start).getTime();
+          out.push([s, i.end ? new Date(i.end).getTime() : s + 3600e3]);
+        }
+      }
+    } catch (err) {
+      console.error("Kalender nicht lesbar", String(err));
+      return null;
+    }
+  }
+  return out;
+}
+
+const DAUER = 15 * 60e3; // Länge des Gesprächs
+const PUFFER = 15 * 60e3; // Abstand zu anderen Terminen
+
+function istFrei(start: number, belegt: Zeitraum[] | null, gebucht: number[]) {
+  if (gebucht.some((g) => Math.abs(g - start) < DAUER + PUFFER)) return false;
+  if (!belegt) return true;
+  return !belegt.some(([s, e]) => s < start + DAUER + PUFFER && e > start - PUFFER);
+}
+
+// 4 Vorschläge an verschiedenen Tagen, frühestens 18 Stunden ab jetzt, nur in freien Lücken des Kalenders.
+// Arbeitszeit (ARBEITSZEIT, Standard 09:00-18:30 als letzter Beginn) und Tage (TERMIN_TAGE, Standard 1-5 = Mo-Fr) einstellbar.
+function terminVorschlaege(belegt: Zeitraum[] | null, gebucht: number[], jetzt = new Date()) {
+  const [ab, bis] = (Netlify.env.get("ARBEITSZEIT") || "09:00-18:30").split("-").map((z) => {
+    const [h, m] = z.trim().split(":").map(Number);
+    return h * 60 + (m || 0);
+  });
+  const tage = (Netlify.env.get("TERMIN_TAGE") || "1,2,3,4,5").split(",").map(Number);
+  const ziele = [10 * 60, 14 * 60, 11 * 60 + 30, 16 * 60 + 30, 9 * 60 + 30, 17 * 60 + 30];
   const heute = berlinTeile(jetzt);
   const out: Date[] = [];
-  let i = 0;
-  for (let tag = 1; tag <= 21 && out.length < 4; tag++) {
+  let n = 0;
+  for (let tag = 1; tag <= 28 && out.length < 4; tag++) {
     const basis = new Date(Date.UTC(heute.y, heute.m - 1, heute.d + tag, 12));
-    const wt = basis.getUTCDay();
-    if (wt === 0 || wt === 6) continue;
-    for (let k = 0; k < zeiten.length; k++) {
-      const [h, mi] = zeiten[(i + k) % zeiten.length].split(":").map(Number);
-      const slot = berlinZeit(basis.getUTCFullYear(), basis.getUTCMonth() + 1, basis.getUTCDate(), h, mi);
-      if (slot.getTime() - jetzt.getTime() < 18 * 3600e3 || belegt.includes(slot.getTime())) continue;
-      out.push(slot);
-      break;
+    if (!tage.includes(basis.getUTCDay() === 0 ? 7 : basis.getUTCDay())) continue;
+    const ziel = ziele[n % ziele.length];
+    let beste: Date | null = null, abstand = Infinity;
+    for (let min = ab; min <= bis; min += 30) {
+      const slot = berlinZeit(basis.getUTCFullYear(), basis.getUTCMonth() + 1, basis.getUTCDate(), Math.floor(min / 60), min % 60);
+      if (slot.getTime() - jetzt.getTime() < 18 * 3600e3 || !istFrei(slot.getTime(), belegt, gebucht)) continue;
+      if (Math.abs(min - ziel) < abstand) { beste = slot; abstand = Math.abs(min - ziel); }
     }
-    i++;
+    if (beste) { out.push(beste); n++; }
   }
   return out;
 }
@@ -167,11 +209,11 @@ const LABEL: Record<string, Record<string, string>> = {
   nutzung: { taeglich: "Täglich", woechentlich: "Wöchentlich", monatlich: "Monatlich", selten: "Selten" },
 };
 
-function adminUmfrageMail(a: Record<string, unknown>, mailGeschickt: boolean) {
+function adminUmfrageMail(a: Record<string, unknown>, mailGeschickt: boolean, ohneKalender = false) {
   const v = (x: unknown) => (x === null || x === undefined || x === "" ? "–" : esc(Array.isArray(x) ? x.join(", ") : String(x)));
   const reihe = (k: string, w: unknown) => `<tr><td style="padding:6px 12px 6px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:6px 0">${v(w)}</td></tr>`;
   const kontakt = a.kontakt
-    ? `<p style="margin:16px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>Will ein Gespräch:</b> ${esc(String(a.kontakt))}${mailGeschickt ? "<br>Terminvorschläge wurden automatisch per Mail geschickt." : "<br>Bitte selbst melden (Telefon oder keine Mail möglich)."}</p>`
+    ? `<p style="margin:16px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>Will ein Gespräch:</b> ${esc(String(a.kontakt))}${mailGeschickt ? "<br>Terminvorschläge wurden automatisch per Mail geschickt." + (ohneKalender ? "<br><b>Achtung:</b> Dein Kalender war nicht erreichbar, die Vorschläge sind ungeprüft." : "") : "<br>Bitte selbst melden (Telefon oder keine Mail möglich)."}</p>`
     : "";
   return mailLayout(
     `<p style="margin:0 0 12px"><b>Neue Antwort in der Umfrage</b></p>
@@ -243,9 +285,12 @@ export default async (req: Request, _context: Context) => {
     const istMail = !!kontakt && EMAIL_RE.test(kontakt);
     const token = istMail ? neuerToken() : null;
     let vorschlaege: Date[] = [];
+    let kalenderOk = true;
     if (istMail) {
-      const belegt = await sql`SELECT termin FROM umfrage WHERE termin > now()`;
-      vorschlaege = terminVorschlaege(belegt.map((r) => new Date(r.termin).getTime()));
+      const gebucht = (await sql`SELECT termin FROM umfrage WHERE termin > now()`).map((r) => new Date(r.termin).getTime());
+      const belegt = await belegteZeiten(new Date(), new Date(Date.now() + 30 * 864e5));
+      kalenderOk = belegt !== null;
+      vorschlaege = terminVorschlaege(belegt, gebucht);
     }
     const a = {
       typ: eins(body.typ, TYPEN), branche: clip(body.branche, 60), ort: clip(body.ort, 80),
@@ -271,7 +316,7 @@ export default async (req: Request, _context: Context) => {
       if (mailGeschickt) await sql`UPDATE umfrage SET termin_mail_at = now() WHERE id = ${rows[0].id}`;
     }
     const kurz = [LABEL.typ[String(a.typ)], a.branche, a.ort].filter(Boolean).join(", ");
-    await sendeMail(adminMail(), "Samuel", `Neue Umfrage${kontaktOk ? " + Gesprächswunsch" : ""}${kurz ? ": " + kurz : ""}`, adminUmfrageMail(a, mailGeschickt));
+    await sendeMail(adminMail(), "Samuel", `Neue Umfrage${kontaktOk ? " + Gesprächswunsch" : ""}${kurz ? ": " + kurz : ""}`, adminUmfrageMail(a, mailGeschickt, istMail && !kalenderOk));
     return Response.json({ ok: true });
   }
 
@@ -282,11 +327,12 @@ export default async (req: Request, _context: Context) => {
     const r = (await sql`SELECT id, kontakt, termin, termin_vorschlaege, branche, ort, typ FROM umfrage WHERE token = ${t}`)[0];
     if (!r) return fehler("Der Link ist ungültig oder abgelaufen.", 404);
     if (r.termin) return Response.json({ ok: true, gebucht: true, termin: new Date(r.termin).getTime(), text: terminText(new Date(r.termin)) });
-    const belegt = (await sql`SELECT termin FROM umfrage WHERE termin > now()`).map((x) => new Date(x.termin).getTime());
+    const gebucht = (await sql`SELECT termin FROM umfrage WHERE termin > now()`).map((x) => new Date(x.termin).getTime());
+    const belegt = await belegteZeiten(new Date(), new Date(Date.now() + 30 * 864e5));
     const vorschlaege = ((r.termin_vorschlaege || []) as (string | Date)[])
       .map((d) => new Date(d))
       .filter((d) => d.getTime() > Date.now() + 2 * 3600e3)
-      .map((d) => ({ zeit: d.getTime(), text: terminText(d), frei: !belegt.includes(d.getTime()) }));
+      .map((d) => ({ zeit: d.getTime(), text: terminText(d), frei: istFrei(d.getTime(), belegt, gebucht) }));
     if (body.aktion !== "buchen") return Response.json({ ok: true, gebucht: false, vorschlaege });
 
     const s = Number(body.s);
