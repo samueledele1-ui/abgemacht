@@ -6,7 +6,8 @@ import type { Config, Context } from "@netlify/functions";
 //   POST /api/waitlist     -> Anmeldung speichern, Bestätigungs-Mail schicken
 //   POST /api/bestaetigen  -> Klick aus der Bestätigungs-Mail (Double-Opt-in)
 //   POST /api/abmelden     -> Abmeldung aus jeder Mail
-//   POST /api/umfrage      -> Antworten der Umfrage auf /umfrage
+//   POST /api/umfrage      -> Antworten der Umfrage auf /umfrage (+ Benachrichtigung an Samuel, Terminvorschläge an Teilnehmer)
+//   POST /api/termin       -> Terminvorschläge abrufen bzw. Termin festmachen (Seite /termin)
 
 const TYPEN = ["firma", "selbststaendig", "mitarbeiter", "privat"];
 const QUELLEN = ["direkt", "umfrage", "ig", "tt", "li", "wa"];
@@ -52,8 +53,9 @@ function mailLayout(inhalt: string, abmeldeLink?: string) {
 const knopf = (href: string, text: string) =>
   `<p style="margin:24px 0"><a href="${href}" style="display:inline-block;background:#138A6B;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 24px;border-radius:999px">${text}</a></p>`;
 
-async function sendeMail(an: string, name: string | null, betreff: string, html: string, abmeldeLink?: string) {
+async function sendeMail(an: string, name: string | null, betreff: string, html: string, abmeldeLink?: string, anhang?: { name: string; text: string }) {
   const res = await brevo("/smtp/email", "POST", {
+    ...(anhang ? { attachment: [{ name: anhang.name, content: Buffer.from(anhang.text, "utf-8").toString("base64") }] } : {}),
     sender: { name: "Abgemacht", email: Netlify.env.get("MAIL_FROM") || "hallo@abgemacht.de" },
     replyTo: { email: Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com", name: "Samuel von Abgemacht" },
     to: [name ? { email: an, name } : { email: an }],
@@ -84,6 +86,102 @@ function willkommensMail(name: string | null, token: string) {
 ${knopf(`${seite()}/wa`, "Abgemacht weiterempfehlen")}
 <p style="margin:0">Bis bald<br>Samuel von Abgemacht</p>`,
     abmelden
+  );
+}
+
+
+/* ---------- Termine (Zeitzone Berlin) ---------- */
+
+const TZ = "Europe/Berlin";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const adminMail = () => Netlify.env.get("MAIL_ADMIN") || Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com";
+
+function berlinTeile(d: Date) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+      .formatToParts(d).map((x) => [x.type, x.value])
+  );
+  return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour, min: +p.minute };
+}
+// Uhrzeit in Berlin -> echter Zeitpunkt (beachtet Sommer- und Winterzeit)
+function berlinZeit(y: number, m: number, d: number, h: number, min: number) {
+  const roh = Date.UTC(y, m - 1, d, h, min);
+  const t = berlinTeile(new Date(roh));
+  const versatz = Date.UTC(t.y, t.m - 1, t.d, t.h, t.min) - roh;
+  return new Date(roh - versatz);
+}
+const terminText = (d: Date) =>
+  new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(d) + " Uhr";
+
+// 4 Vorschläge an den nächsten Werktagen, frühestens 18 Stunden ab jetzt, abwechselnd zu den Zeiten aus TERMIN_ZEITEN
+function terminVorschlaege(belegt: number[], jetzt = new Date()) {
+  const zeiten = (Netlify.env.get("TERMIN_ZEITEN") || "12:30,17:30").split(",").map((z) => z.trim()).filter((z) => /^\d{1,2}:\d{2}$/.test(z));
+  const heute = berlinTeile(jetzt);
+  const out: Date[] = [];
+  let i = 0;
+  for (let tag = 1; tag <= 21 && out.length < 4; tag++) {
+    const basis = new Date(Date.UTC(heute.y, heute.m - 1, heute.d + tag, 12));
+    const wt = basis.getUTCDay();
+    if (wt === 0 || wt === 6) continue;
+    for (let k = 0; k < zeiten.length; k++) {
+      const [h, mi] = zeiten[(i + k) % zeiten.length].split(":").map(Number);
+      const slot = berlinZeit(basis.getUTCFullYear(), basis.getUTCMonth() + 1, basis.getUTCDate(), h, mi);
+      if (slot.getTime() - jetzt.getTime() < 18 * 3600e3 || belegt.includes(slot.getTime())) continue;
+      out.push(slot);
+      break;
+    }
+    i++;
+  }
+  return out;
+}
+
+function kalenderDatei(start: Date, uid: string, beschreibung: string) {
+  const f = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const ende = new Date(start.getTime() + 15 * 60000);
+  const zeile = (s: string) => s.replace(/[\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Abgemacht//Termin//DE", "METHOD:PUBLISH", "BEGIN:VEVENT",
+    `UID:${uid}@ab-gemacht.info`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(start)}`, `DTEND:${f(ende)}`,
+    `SUMMARY:${zeile("Abgemacht – kurzes Gespräch mit Samuel")}`, `DESCRIPTION:${zeile(beschreibung)}`,
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+function terminMail(token: string, vorschlaege: Date[]) {
+  const links = vorschlaege
+    .map((d) => `<p style="margin:0 0 10px"><a href="${seite()}/termin?t=${token}&s=${d.getTime()}" style="display:block;border:1px solid #138A6B;color:#0E6E55;text-decoration:none;font-weight:bold;padding:12px 16px;border-radius:12px">📅 ${terminText(d)}</a></p>`)
+    .join("");
+  return mailLayout(
+    `<p style="margin:0 0 12px">Hallo,</p>
+<p style="margin:0 0 12px">vielen Dank, dass du dir die Zeit für die Umfrage genommen hast! Du hast angegeben, dass du für ein kurzes Gespräch offen bist. Das freut mich sehr.</p>
+<p style="margin:0 0 16px">Es dauert etwa 15 Minuten, am Telefon oder per Video. Such dir einfach einen Termin aus:</p>
+${links}
+<p style="margin:16px 0 12px;font-size:14px;color:#5B6B65">Keiner passt? Antworte einfach auf diese E-Mail mit zwei, drei Zeiten, die dir besser passen.</p>
+<p style="margin:0">Viele Grüße<br>Samuel von Abgemacht</p>`
+  );
+}
+
+const LABEL: Record<string, Record<string, string>> = {
+  typ: { firma: "Firma", selbststaendig: "Selbstständig", mitarbeiter: "Mitarbeiter", privat: "Privat" },
+  zahlen: { ja: "Ja", vielleicht: "Vielleicht", nein: "Nein" },
+  nutzung: { taeglich: "Täglich", woechentlich: "Wöchentlich", monatlich: "Monatlich", selten: "Selten" },
+};
+
+function adminUmfrageMail(a: Record<string, unknown>, mailGeschickt: boolean) {
+  const v = (x: unknown) => (x === null || x === undefined || x === "" ? "–" : esc(Array.isArray(x) ? x.join(", ") : String(x)));
+  const reihe = (k: string, w: unknown) => `<tr><td style="padding:6px 12px 6px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:6px 0">${v(w)}</td></tr>`;
+  const kontakt = a.kontakt
+    ? `<p style="margin:16px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>Will ein Gespräch:</b> ${esc(String(a.kontakt))}${mailGeschickt ? "<br>Terminvorschläge wurden automatisch per Mail geschickt." : "<br>Bitte selbst melden (Telefon oder keine Mail möglich)."}</p>`
+    : "";
+  return mailLayout(
+    `<p style="margin:0 0 12px"><b>Neue Antwort in der Umfrage</b></p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.45">
+${reihe("Typ", LABEL.typ[String(a.typ)] || a.typ)}${reihe("Branche", a.branche)}${reihe("Ort", a.ort)}
+${reihe("Kanäle heute", a.kanaele)}${reihe("Zufriedenheit", a.zufriedenheit ? a.zufriedenheit + " von 5" : null)}
+${reihe("Was nervt", a.nervt)}${reihe("Schon versucht", a.versucht)}${reihe("Funktionen", a.funktionen)}
+${reihe("11,99 € zahlen", LABEL.zahlen[String(a.zahlen)] || a.zahlen)}${reihe("Fairer Preis", a.preis_fair)}${reihe("Nutzung", LABEL.nutzung[String(a.nutzung)] || a.nutzung)}
+</table>${kontakt}
+${knopf(`${seite()}/admin`, "Zur Übersicht")}`
   );
 }
 
@@ -140,21 +238,88 @@ export default async (req: Request, _context: Context) => {
       Array.isArray(v) ? [...new Set(v.map(String).filter((x) => erlaubt.includes(x)))] : [];
     const eins = (v: unknown, erlaubt: string[]) => (erlaubt.includes(String(v)) ? String(v) : null);
     const z = Number(body.zufriedenheit);
-    const kontaktOk = body.kontakt_ok === true && !!clip(body.kontakt, 120);
-    await sql`
-      INSERT INTO umfrage (typ, branche, ort, kanaele, zufriedenheit, nervt, versucht, funktionen, zahlen, preis_fair, nutzung, kontakt_ok, kontakt, quelle)
+    const kontakt = body.kontakt_ok === true ? clip(body.kontakt, 120) : null;
+    const kontaktOk = !!kontakt;
+    const istMail = !!kontakt && EMAIL_RE.test(kontakt);
+    const token = istMail ? neuerToken() : null;
+    let vorschlaege: Date[] = [];
+    if (istMail) {
+      const belegt = await sql`SELECT termin FROM umfrage WHERE termin > now()`;
+      vorschlaege = terminVorschlaege(belegt.map((r) => new Date(r.termin).getTime()));
+    }
+    const a = {
+      typ: eins(body.typ, TYPEN), branche: clip(body.branche, 60), ort: clip(body.ort, 80),
+      kanaele: liste(body.kanaele, ["empfehlung", "linkedin", "netzwerktreffen", "social", "google", "kaltakquise", "portale", "sonstiges"]),
+      zufriedenheit: Number.isInteger(z) && z >= 1 && z <= 5 ? z : null,
+      nervt: clip(body.nervt, 1000), versucht: clip(body.versucht, 1000),
+      funktionen: liste(body.funktionen, ["personen", "auftraege", "suche", "chats", "verifizierung", "team"]),
+      zahlen: eins(body.zahlen, ["ja", "vielleicht", "nein"]), preis_fair: clip(body.preis_fair, 60),
+      nutzung: eins(body.nutzung, ["taeglich", "woechentlich", "monatlich", "selten"]),
+      kontakt: kontaktOk ? kontakt : null,
+    };
+    const rows = await sql`
+      INSERT INTO umfrage (typ, branche, ort, kanaele, zufriedenheit, nervt, versucht, funktionen, zahlen, preis_fair, nutzung, kontakt_ok, kontakt, quelle, token, termin_vorschlaege)
       VALUES (
-        ${eins(body.typ, TYPEN)}, ${clip(body.branche, 60)}, ${clip(body.ort, 80)},
-        ${liste(body.kanaele, ["empfehlung", "linkedin", "netzwerktreffen", "social", "google", "kaltakquise", "portale", "sonstiges"])},
-        ${Number.isInteger(z) && z >= 1 && z <= 5 ? z : null},
-        ${clip(body.nervt, 1000)}, ${clip(body.versucht, 1000)},
-        ${liste(body.funktionen, ["personen", "auftraege", "suche", "chats", "verifizierung", "team"])},
-        ${eins(body.zahlen, ["ja", "vielleicht", "nein"])}, ${clip(body.preis_fair, 60)},
-        ${eins(body.nutzung, ["taeglich", "woechentlich", "monatlich", "selten"])},
-        ${kontaktOk}, ${kontaktOk ? clip(body.kontakt, 120) : null},
-        ${QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "umfrage"}
-      )`;
+        ${a.typ}, ${a.branche}, ${a.ort}, ${a.kanaele}, ${a.zufriedenheit}, ${a.nervt}, ${a.versucht}, ${a.funktionen},
+        ${a.zahlen}, ${a.preis_fair}, ${a.nutzung}, ${kontaktOk}, ${a.kontakt},
+        ${QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "umfrage"},
+        ${token}, ${vorschlaege.length ? vorschlaege.map((d) => d.toISOString()) : null}
+      ) RETURNING id`;
+    let mailGeschickt = false;
+    if (istMail && vorschlaege.length) {
+      mailGeschickt = await sendeMail(kontakt!, null, "Danke für deine Antworten – wann passt ein kurzes Gespräch?", terminMail(token!, vorschlaege));
+      if (mailGeschickt) await sql`UPDATE umfrage SET termin_mail_at = now() WHERE id = ${rows[0].id}`;
+    }
+    const kurz = [LABEL.typ[String(a.typ)], a.branche, a.ort].filter(Boolean).join(", ");
+    await sendeMail(adminMail(), "Samuel", `Neue Umfrage${kontaktOk ? " + Gesprächswunsch" : ""}${kurz ? ": " + kurz : ""}`, adminUmfrageMail(a, mailGeschickt));
     return Response.json({ ok: true });
+  }
+
+  /* Termin auswählen und festmachen */
+  if (pfad === "/api/termin") {
+    const t = String(body.t || "");
+    if (!TOKEN_RE.test(t)) return fehler("Der Link ist ungültig.");
+    const r = (await sql`SELECT id, kontakt, termin, termin_vorschlaege, branche, ort, typ FROM umfrage WHERE token = ${t}`)[0];
+    if (!r) return fehler("Der Link ist ungültig oder abgelaufen.", 404);
+    if (r.termin) return Response.json({ ok: true, gebucht: true, termin: new Date(r.termin).getTime(), text: terminText(new Date(r.termin)) });
+    const belegt = (await sql`SELECT termin FROM umfrage WHERE termin > now()`).map((x) => new Date(x.termin).getTime());
+    const vorschlaege = ((r.termin_vorschlaege || []) as (string | Date)[])
+      .map((d) => new Date(d))
+      .filter((d) => d.getTime() > Date.now() + 2 * 3600e3)
+      .map((d) => ({ zeit: d.getTime(), text: terminText(d), frei: !belegt.includes(d.getTime()) }));
+    if (body.aktion !== "buchen") return Response.json({ ok: true, gebucht: false, vorschlaege });
+
+    const s = Number(body.s);
+    const wahl = vorschlaege.find((v) => v.zeit === s);
+    if (!wahl) return fehler("Dieser Termin ist nicht mehr verfügbar. Bitte wähle einen anderen.");
+    if (!wahl.frei) return fehler("Dieser Termin ist leider gerade vergeben. Bitte wähle einen anderen.", 409);
+    const telefon = clip(body.telefon, 40);
+    try {
+      const upd = await sql`UPDATE umfrage SET termin = ${new Date(s).toISOString()}, termin_gebucht_at = now(), termin_telefon = ${telefon}
+        WHERE token = ${t} AND termin IS NULL RETURNING id`;
+      if (!upd.length) return fehler("Für diesen Link ist schon ein Termin eingetragen.", 409);
+    } catch {
+      return fehler("Dieser Termin ist leider gerade vergeben. Bitte wähle einen anderen.", 409);
+    }
+    const start = new Date(s);
+    const wie = telefon ? `Samuel ruft dich unter ${telefon} an.` : "Samuel meldet sich vorher kurz mit einem Link für den Videocall oder ruft dich an.";
+    await sendeMail(String(r.kontakt), null, `Abgemacht! Unser Gespräch am ${terminText(start)}`, mailLayout(
+      `<p style="margin:0 0 12px">Hallo,</p>
+<p style="margin:0 0 12px"><b>Abgemacht!</b> Wir sprechen am <b>${terminText(start)}</b>, etwa 15 Minuten.</p>
+<p style="margin:0 0 12px">${esc(wie)}</p>
+<p style="margin:0 0 12px">Den Termin findest du im Anhang für deinen Kalender. Falls etwas dazwischenkommt, antworte einfach auf diese E-Mail.</p>
+<p style="margin:0">Bis dann<br>Samuel von Abgemacht</p>`),
+      undefined, { name: "abgemacht-termin.ics", text: kalenderDatei(start, `u${r.id}`, `Kurzes Gespräch zu Abgemacht. ${wie}`) });
+    const wer = [LABEL.typ[String(r.typ)], r.branche, r.ort].filter(Boolean).join(", ");
+    await sendeMail(adminMail(), "Samuel", `Neuer Termin: ${terminText(start)}${wer ? " – " + wer : ""}`, mailLayout(
+      `<p style="margin:0 0 12px"><b>Neuer Gesprächstermin</b></p>
+<p style="margin:0 0 6px"><b>Wann:</b> ${terminText(start)} (15 Minuten)</p>
+<p style="margin:0 0 6px"><b>E-Mail:</b> ${esc(String(r.kontakt))}</p>
+<p style="margin:0 0 6px"><b>Telefon:</b> ${telefon ? esc(telefon) : "nicht angegeben – bitte Videolink schicken"}</p>
+<p style="margin:0 0 6px"><b>Wer:</b> ${esc(wer || "–")}</p>
+${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`),
+      undefined, { name: "abgemacht-termin.ics", text: kalenderDatei(start, `s${r.id}`, `Gespräch mit ${r.kontakt}${telefon ? ", Tel. " + telefon : ""}`) });
+    return Response.json({ ok: true, gebucht: true, termin: s, text: terminText(start) });
   }
 
   /* Neue Anmeldung */
@@ -200,4 +365,4 @@ export default async (req: Request, _context: Context) => {
   return Response.json({ ok: true, neu: r.neu, mail });
 };
 
-export const config: Config = { path: ["/api/waitlist", "/api/bestaetigen", "/api/abmelden", "/api/umfrage"] };
+export const config: Config = { path: ["/api/waitlist", "/api/bestaetigen", "/api/abmelden", "/api/umfrage", "/api/termin"] };
