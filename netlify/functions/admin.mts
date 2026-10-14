@@ -42,7 +42,7 @@ export default async (req: Request, _context: Context) => {
     sql`SELECT id, email, name, typ, branche, ort, quelle, status, created_at, confirmed_at
         FROM waitlist ORDER BY created_at DESC`,
     sql`SELECT id, created_at, typ, branche, ort, kanaele, zufriedenheit, nervt, versucht, funktionen,
-               zahlen, preis_fair, nutzung, kontakt_ok, kontakt, quelle
+               zahlen, preis_fair, nutzung, kontakt_ok, kontakt, quelle, termin, termin_telefon, termin_mail_at
         FROM umfrage ORDER BY created_at DESC`,
   ]);
   return Response.json({ ok: true, warteliste, umfrage }, { headers: { "Cache-Control": "no-store" } });
