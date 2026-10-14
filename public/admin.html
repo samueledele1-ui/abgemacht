@@ -182,8 +182,10 @@ function zeige(d) {
   zitate("uVersucht", u, "versucht");
   zitate("uPreis", u, "preis_fair");
 
-  tabelle("uKontakte", ["Datum", "Kontakt", "Typ", "Branche", "Ort", "Zahlt?"],
-    kontakte.map((x) => [datum(x.created_at), esc(x.kontakt), esc(L.typ[x.typ] || ""), esc(x.branche), esc(x.ort), esc(L.zahlen[x.zahlen] || "")]));
+  const zeit = (d) => d ? new Date(d).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + " Uhr" : "";
+  const sortiert = [...kontakte].sort((a, b) => (a.termin ? new Date(a.termin) : Infinity) - (b.termin ? new Date(b.termin) : Infinity));
+  tabelle("uKontakte", ["Termin", "Kontakt", "Telefon", "Typ", "Branche", "Ort", "Zahlt?"],
+    sortiert.map((x) => [x.termin ? `<b>${zeit(x.termin)}</b>` : (x.termin_mail_at ? "Vorschläge geschickt" : "selbst melden"), esc(x.kontakt), esc(x.termin_telefon), esc(L.typ[x.typ] || ""), esc(x.branche), esc(x.ort), esc(L.zahlen[x.zahlen] || "")]));
 
   balken("wQuelle", zaehle(w.filter((x) => x.status === "bestaetigt").map((x) => x.quelle)), L.quelle);
   balken("wTyp", zaehle(w.filter((x) => x.status === "bestaetigt").map((x) => x.typ)), L.typ);
