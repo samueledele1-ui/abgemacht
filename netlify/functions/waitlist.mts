@@ -11,7 +11,7 @@ import ical from "node-ical";
 //   POST /api/termin       -> Terminvorschläge abrufen bzw. Termin festmachen (Seite /termin)
 
 const TYPEN = ["firma", "selbststaendig", "mitarbeiter", "privat"];
-const QUELLEN = ["direkt", "umfrage", "ig", "tt", "li", "wa", "telefon"];
+const QUELLEN = ["direkt", "umfrage", "ig", "tt", "li", "wa", "telefon", "seo"];
 const TOKEN_RE = /^[a-f0-9]{64}$/;
 
 const clip = (v: unknown, n = 120): string | null => {
