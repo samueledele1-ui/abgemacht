@@ -140,7 +140,7 @@
   </div>
 
   <footer>
-    <span>© 2026 Abgemacht</span>
+    <span>© 2026 Abgemacht · <a href="/finden">Branchen und Orte</a></span>
     <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span>
   </footer>
 </div>
@@ -157,6 +157,12 @@
   }).catch(function(){});
 
   var form = document.getElementById('form'), msg = document.getElementById('msg'), btn = document.getElementById('senden');
+  // Von den Google-Seiten (/finden/...): Branche und Ort vorausfüllen
+  (function(){
+    var b = p.get('branche'), o = p.get('ort'), sel = document.getElementById('branche');
+    if (b) for (var i = 0; i < sel.options.length; i++) if (sel.options[i].text === b) sel.selectedIndex = i;
+    if (o) document.getElementById('ort').value = o.slice(0, 80);
+  })();
   function zeige(text, ok){ msg.textContent = text; msg.className = 'msg ' + (ok ? 'ok' : 'err'); }
 
   form.addEventListener('submit', function(e){
