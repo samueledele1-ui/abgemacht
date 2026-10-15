@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CRM – Abgemacht</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#138A6B">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .wrap{max-width:1180px}
+  #login{max-width:420px;margin:40px auto}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 14px}
+  .top h1{font-size:30px;margin:0}
+  .knoepfe{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .klein{padding:9px 15px;font-size:14px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;cursor:pointer}
+  .kpi .z{font-size:26px;font-weight:800;line-height:1.1}
+  .kpi .t{color:var(--muted);font-size:13px}
+  .kpi.rot .z{color:#C0392B}.kpi.gruen .z{color:var(--gruen)}
+  .tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:12px;overflow-x:auto}
+  .tabs button{flex:1;border:0;background:none;font:inherit;font-weight:700;font-size:14px;padding:9px 14px;border-radius:999px;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .tabs button[aria-pressed=true]{background:var(--gruen);color:#fff}
+  .filter{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:12px}
+  .filter input,.filter select{padding:10px 12px}
+  .karte{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center;cursor:pointer;margin-bottom:8px}
+  .karte:hover{border-color:var(--gruen)}
+  .karte .m{flex:1;min-width:0}
+  .karte b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karte small{color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karte .rechts{text-align:right;flex:none;font-size:13px}
+  .anruf{flex:none;width:44px;height:44px;border-radius:50%;background:var(--gruen);color:#fff;display:grid;place-items:center;text-decoration:none;font-size:20px}
+  .faellig{color:#C0392B;font-weight:700}
+  .st{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .s-neu{background:#EEF0EF;color:#4A5751}.s-wiedervorlage{background:#FBF1DF;color:var(--gold)}.s-mailbox{background:#F0E9FA;color:var(--lila)}
+  .s-mail_gewuenscht{background:#DFF1F5;color:var(--tuerkis)}.s-warteliste{background:var(--gruen-l);color:var(--gruen-d)}.s-bestaetigt{background:var(--gruen);color:#fff}
+  .s-kein_interesse,.s-nicht_erreichbar{background:#F3F3F3;color:#888}.s-keine_anrufe{background:#FADADD;color:#A12B36}
+  h3.ab{font-size:15px;color:var(--muted);margin:18px 0 8px;text-transform:uppercase;letter-spacing:.04em}
+  .pipe{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:10px;overflow-x:auto;padding-bottom:10px}
+  .spalte{background:rgba(255,255,255,.6);border:1px solid var(--line);border-radius:16px;padding:10px;min-height:120px}
+  .spalte h4{margin:2px 4px 10px;font-size:14px;display:flex;justify-content:space-between}
+  .spalte .karte{padding:10px}
+  .tabelle{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:16px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-size:13px;cursor:pointer;position:sticky;top:0;background:#fff}
+  tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg)}
+  .box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  .leer{color:var(--muted);text-align:center;padding:30px 10px}
+  /* Detail */
+  .scrim{position:fixed;inset:0;background:rgba(20,35,30,.35);z-index:40}
+  .panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--bg);z-index:41;overflow-y:auto;box-shadow:-20px 0 60px -20px rgba(0,0,0,.35);padding:18px 18px 40px}
+  .panel .kopf{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .panel h2{font-size:22px;margin:0 0 2px}
+  .zu{border:0;background:#fff;border-radius:50%;width:38px;height:38px;font-size:20px;cursor:pointer;flex:none;border:1px solid var(--line)}
+  .grossanruf{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:14px 0 6px;font-size:18px;padding:16px}
+  .info{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin-top:10px}
+  .info span:nth-child(odd){color:var(--muted)}
+  .info a{overflow-wrap:anywhere}
+  .erg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .erg button{border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px 10px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left}
+  .erg button:hover{border-color:var(--gruen)}
+  .erg button small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+  .erg .gut{background:var(--gruen-l);border-color:#BFE5D7}
+  .unter{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:8px}
+  .unter label{margin-top:0}
+  .unter .reihe{display:flex;gap:8px;margin-top:8px}
+  textarea{width:100%;font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#FBFCFC;min-height:70px;resize:vertical}
+  .verlauf{list-style:none;padding:0;margin:0;font-size:14px}
+  .verlauf li{padding:8px 0;border-bottom:1px solid var(--line)}
+  .verlauf small{color:var(--muted);display:block}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .formgrid label{margin:10px 0 4px;font-size:13px}
+  .formgrid .ganz{grid-column:1/-1}
+  .msg{font-size:14px;margin-top:8px}.msg.err{color:#C0392B}.msg.ok{color:var(--gruen-d)}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#14231E;color:#fff;padding:12px 18px;border-radius:14px;font-size:14px;z-index:60;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .bars .bar{display:grid;grid-template-columns:110px 1fr 40px;gap:10px;align-items:center;font-size:14px;margin:6px 0}
+  .bars .spur{height:12px;border-radius:99px;background:var(--gruen-l);overflow:hidden;display:flex}
+  .bars .spur i{display:block;height:100%}
+  .legende{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);margin-top:8px}
+  .legende span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:5px;vertical-align:-1px}
+  @media (max-width:760px){
+    .kpis{grid-template-columns:repeat(3,1fr)}.kpi:nth-child(n+4){display:none}
+    .filter{grid-template-columns:1fr 1fr}.filter input{grid-column:1/-1}
+    .top h1{font-size:24px}
+    .formgrid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a><span class="knoepfe"><a class="btn ghost klein" href="/admin">Übersicht</a> <button class="btn ghost klein" id="raus" hidden>Abmelden</button></span></header>
+
+  <form id="login" class="formbox">
+    <h2 style="font-size:24px">CRM</h2>
+    <p class="sub" style="margin-bottom:6px">Telefon-Akquise: Kontakte, Rückrufe, Warteliste.</p>
+    <label for="pw">Passwort</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <button class="btn" style="margin-top:16px;width:100%">Öffnen</button>
+    <div class="msg" id="loginMsg"></div>
+  </form>
+
+  <main id="app" hidden>
+    <div class="top">
+      <h1>Akquise</h1>
+      <div class="knoepfe"><button class="btn klein" id="neu">+ Kontakt</button><button class="btn ghost klein" id="csv">CSV</button></div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="tabs" role="tablist">
+      <button data-v="heute" aria-pressed="true">Heute</button>
+      <button data-v="pipeline" aria-pressed="false">Pipeline</button>
+      <button data-v="liste" aria-pressed="false">Liste</button>
+      <button data-v="statistik" aria-pressed="false">Statistik</button>
+    </div>
+    <div class="filter">
+      <input id="such" type="search" placeholder="Suchen: Firma, Name, Ort, Telefon …">
+      <select id="fRegion"><option value="">Alle Regionen</option></select>
+      <select id="fStatus"><option value="">Alle Status</option></select>
+    </div>
+    <div id="ansicht"></div>
+  </main>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const ST = {
+    neu: "Neu", wiedervorlage: "Wiedervorlage", mailbox: "Mailbox", mail_gewuenscht: "Mail gewünscht",
+    warteliste: "Warteliste Ja", bestaetigt: "Bestätigt ✓", kein_interesse: "Kein Interesse", keine_anrufe: "Keine Anrufe", nicht_erreichbar: "Nicht erreichbar",
+  };
+  const FARBE = { neu: "#B8C2BE", wiedervorlage: "#E0A43A", mailbox: "#9B7BD6", mail_gewuenscht: "#3BA6C1", warteliste: "#5FD3AC", bestaetigt: "#138A6B", kein_interesse: "#D9D9D9", keine_anrufe: "#E57B86", nicht_erreichbar: "#C9C9C9" };
+  const PIPE = ["neu", "wiedervorlage", "mailbox", "mail_gewuenscht", "warteliste", "bestaetigt", "kein_interesse", "nicht_erreichbar", "keine_anrufe"];
+  const TZ = "Europe/Berlin";
+  let pw = null, alle = [], ansicht = "heute", sortierung = { k: "naechster_kontakt", r: 1 }, offenId = null;
+
+  const status = (k) => (k.status === "warteliste" && k.wl_status === "bestaetigt") ? "bestaetigt" : k.status;
+  const tel = (t) => String(t || "").replace(/\(0\)/g, "").replace(/[^\d+]/g, "");
+  const dt = (d) => d ? new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(d)) : "";
+  const tagKey = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
+  const heuteKey = () => tagKey(new Date());
+  const aktiv = (k) => !["kein_interesse", "keine_anrufe", "nicht_erreichbar"].includes(k.status) && status(k) !== "bestaetigt";
+  const istFaellig = (k) => aktiv(k) && k.naechster_kontakt && tagKey(new Date(k.naechster_kontakt)) <= heuteKey();
+  const ueberfaellig = (k) => k.naechster_kontakt && tagKey(new Date(k.naechster_kontakt)) < heuteKey();
+  function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 3200); }
+
+  async function api(daten) {
+    const r = await fetch("/api/crm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pw, ...daten }) });
+    const j = await r.json().catch(() => ({ ok: false, error: "Server antwortet nicht." }));
+    if (r.status === 401) { abmelden(); throw new Error("Falsches Passwort."); }
+    if (!j.ok) throw new Error(j.error || "Fehler");
+    return j;
+  }
+  async function laden() { const d = await api({ aktion: "liste" }); alle = d.kontakte; fuelleFilter(); zeichne(); if (offenId) oeffne(offenId, true); }
+
+  function fuelleFilter() {
+    const r = $("fRegion"), wert = r.value;
+    const regionen = [...new Set(alle.map((k) => k.region).filter(Boolean))].sort();
+    r.innerHTML = '<option value="">Alle Regionen</option>' + regionen.map((x) => `<option>${esc(x)}</option>`).join("");
+    r.value = wert;
+    const s = $("fStatus"), sw = s.value;
+    s.innerHTML = '<option value="">Alle Status</option>' + PIPE.map((x) => `<option value="${x}">${ST[x]}</option>`).join("");
+    s.value = sw;
+  }
+  function gefiltert() {
+    const q = $("such").value.trim().toLowerCase(), reg = $("fRegion").value, st = $("fStatus").value;
+    return alle.filter((k) => (!reg || k.region === reg) && (!st || status(k) === st) &&
+      (!q || [k.firma, k.ansprechpartner, k.ort, k.telefon, k.kategorie, k.email, k.notizen].join(" ").toLowerCase().includes(q)));
+  }
+
+  function kpis() {
+    const f = alle.filter(istFaellig).length, neu = alle.filter((k) => k.status === "neu").length;
+    const wl = alle.filter((k) => k.status === "warteliste").length, best = alle.filter((k) => status(k) === "bestaetigt").length;
+    const erreicht = alle.filter((k) => ["warteliste", "mail_gewuenscht", "kein_interesse", "keine_anrufe"].includes(k.status)).length;
+    $("kpis").innerHTML = [
+      ["rot", f, "Heute fällig", "heute"], ["", neu, "Noch nie angerufen", "neu"], ["gruen", wl, "Ja zur Warteliste", "warteliste"],
+      ["gruen", best, "Davon bestätigt", "bestaetigt"], ["", erreicht ? Math.round((wl / erreicht) * 100) + " %" : "–", "Quote (Ja / erreicht)", ""],
+    ].map(([c, z, t, ziel]) => `<div class="kpi ${c}" data-ziel="${ziel}"><div class="z">${z}</div><div class="t">${t}</div></div>`).join("");
+    document.querySelectorAll(".kpi").forEach((el) => el.onclick = () => {
+      const z = el.dataset.ziel; if (!z) return;
+      if (z === "heute") { $("fStatus").value = ""; setze("heute"); } else { $("fStatus").value = z; setze("liste"); }
+    });
+  }
+
+  function karte(k, mitDatum = true) {
+    const s = status(k), t = tel(k.telefon);
+    return `<div class="karte" data-id="${k.id}">
+      ${t && aktiv(k) ? `<a class="anruf" href="tel:${esc(t)}" data-tel="${k.id}" title="Anrufen">📞</a>` : ""}
+      <div class="m"><b>${esc(k.firma)}</b><small>${esc(k.ansprechpartner || k.kategorie || "")}${k.region ? " · " + esc(k.region) : ""}</small></div>
+      <div class="rechts"><span class="st s-${s}">${ST[s] || esc(s)}</span>${mitDatum && k.naechster_kontakt ? `<br><span class="${ueberfaellig(k) ? "faellig" : ""}">${dt(k.naechster_kontakt)}</span>` : ""}${k.versuche ? `<br><small>${k.versuche}× versucht</small>` : ""}</div>
+    </div>`;
+  }
+
+  function zeichne() {
+    kpis();
+    const liste = gefiltert(), el = $("ansicht");
+    if (ansicht === "heute") {
+      const f = liste.filter(istFaellig).sort((a, b) => new Date(a.naechster_kontakt) - new Date(b.naechster_kontakt));
+      const neu = liste.filter((k) => k.status === "neu" && !k.naechster_kontakt).slice(0, 25);
+      el.innerHTML = `<h3 class="ab">Fällig (${f.length})</h3>${f.length ? f.map((k) => karte(k)).join("") : '<div class="leer">Keine Rückrufe fällig. 👌</div>'}
+        <h3 class="ab">Als Nächstes anrufen (${liste.filter((k) => k.status === "neu" && !k.naechster_kontakt).length} neue)</h3>${neu.map((k) => karte(k, false)).join("") || '<div class="leer">Keine neuen Kontakte.</div>'}`;
+    } else if (ansicht === "pipeline") {
+      el.innerHTML = `<div class="pipe">${PIPE.map((s) => { const ks = liste.filter((k) => status(k) === s);
+        return `<div class="spalte"><h4><span>${ST[s]}</span><span>${ks.length}</span></h4>${ks.slice(0, 60).map((k) => karte(k)).join("")}${ks.length > 60 ? `<small class="leer">+ ${ks.length - 60} weitere (Liste nutzen)</small>` : ""}</div>`; }).join("")}</div>`;
+    } else if (ansicht === "liste") {
+      const S = sortierung, sorted = [...liste].sort((a, b) => { const x = a[S.k] ?? "", y = b[S.k] ?? ""; return (x > y ? 1 : x < y ? -1 : 0) * S.r * (x === "" ? -1 : 1) * (y === "" ? -1 : 1) || 0; });
+      const sp = [["firma", "Firma"], ["ansprechpartner", "Ansprechpartner"], ["telefon", "Telefon"], ["kategorie", "Kategorie"], ["region", "Region"], ["status", "Status"], ["versuche", "Versuche"], ["naechster_kontakt", "Nächster Kontakt"]];
+      el.innerHTML = `<div class="tabelle"><table><thead><tr>${sp.map(([k, t]) => `<th data-k="${k}">${t}${S.k === k ? (S.r > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>${sorted.map((k) => `<tr data-id="${k.id}"><td><b>${esc(k.firma)}</b></td><td>${esc(k.ansprechpartner)}</td><td><a href="tel:${esc(tel(k.telefon))}" data-tel="${k.id}">${esc(k.telefon)}</a></td><td>${esc(k.kategorie)}</td><td>${esc(k.region)}</td><td><span class="st s-${status(k)}">${ST[status(k)]}</span></td><td>${k.versuche || ""}</td><td class="${istFaellig(k) && ueberfaellig(k) ? "faellig" : ""}">${dt(k.naechster_kontakt)}</td></tr>`).join("")}</tbody></table></div>
+        <p class="sub" style="margin:8px 4px;font-size:13px">${sorted.length} Kontakte</p>`;
+      el.querySelectorAll("th").forEach((th) => th.onclick = () => { sortierung = { k: th.dataset.k, r: sortierung.k === th.dataset.k ? -sortierung.r : 1 }; zeichne(); });
+    } else {
+      const regionen = [...new Set(liste.map((k) => k.region || "Ohne Region"))].sort();
+      const zeile = (name, ks) => `<div class="bar"><span>${esc(name)}</span><div class="spur">${PIPE.map((s) => { const n = ks.filter((k) => status(k) === s).length; return n ? `<i style="width:${(n / ks.length) * 100}%;background:${FARBE[s]}" title="${ST[s]}: ${n}"></i>` : ""; }).join("")}</div><b>${ks.length}</b></div>`;
+      const angerufen = liste.filter((k) => k.status !== "neu").length;
+      el.innerHTML = `<div class="box"><h3 style="margin:0 0 10px">Fortschritt nach Region</h3><div class="bars">${regionen.map((r) => zeile(r, liste.filter((k) => (k.region || "Ohne Region") === r))).join("")}</div>
+        <div class="legende">${PIPE.map((s) => `<span style="--c:${FARBE[s]}">${ST[s]}</span>`).join("")}</div></div>
+        <div class="box"><h3 style="margin:0 0 10px">Zahlen</h3><div class="info">
+          <span>Kontakte</span><b>${liste.length}</b><span>Schon angerufen</span><b>${angerufen}</b>
+          <span>Anrufversuche gesamt</span><b>${liste.reduce((a, k) => a + (Number(k.versuche) || 0), 0)}</b>
+          <span>Ja zur Warteliste</span><b>${liste.filter((k) => k.status === "warteliste").length}</b>
+          <span>Davon bestätigt</span><b>${liste.filter((k) => status(k) === "bestaetigt").length}</b>
+          <span>Kein Interesse</span><b>${liste.filter((k) => k.status === "kein_interesse").length}</b></div></div>`;
+    }
+    el.querySelectorAll("[data-id]").forEach((n) => n.onclick = (e) => { if (e.target.closest("[data-tel]")) return; oeffne(+n.dataset.id); });
+    el.querySelectorAll("[data-tel]").forEach((a) => a.onclick = (e) => { e.stopPropagation(); setTimeout(() => oeffne(+a.dataset.tel), 400); });
+  }
+  function setze(v) { ansicht = v; document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === v)); zeichne(); }
+
+  /* ---------- Detail ---------- */
+  function schliessen() { document.querySelectorAll(".scrim,.panel").forEach((n) => n.remove()); offenId = null; }
+  const ERG = [
+    ["nicht_erreicht", "Nicht erreicht", "Rückruf automatisch planen"], ["mailbox", "Mailbox besprochen", "in 3 Werktagen nochmal"],
+    ["rueckruf", "Rückruf vereinbart", "Datum und Uhrzeit wählen", "zeit"], ["mail_gewuenscht", "Will Infos per Mail", "Mail öffnen + nachfassen"],
+    ["warteliste", "Ja zur Warteliste ✓", "E-Mail eintragen", "mail", "gut"], ["kein_interesse", "Kein Interesse", "nicht mehr anrufen"],
+    ["keine_anrufe", "Will keine Anrufe", "sofort sperren"], ["gespraech", "Gespräch geführt", "nur notieren"],
+  ];
+  function oeffne(id, still) {
+    const k = alle.find((x) => x.id === id); if (!k) return schliessen();
+    offenId = id;
+    document.querySelectorAll(".scrim,.panel").forEach((n) => n.remove());
+    const scrim = document.createElement("div"); scrim.className = "scrim"; scrim.onclick = schliessen;
+    const p = document.createElement("div"); p.className = "panel"; p.setAttribute("role", "dialog");
+    const s = status(k), t = tel(k.telefon);
+    p.innerHTML = `<div class="kopf"><div><h2>${esc(k.firma)}</h2><span class="st s-${s}">${ST[s]}</span> ${k.versuche ? `<small style="color:var(--muted)">${k.versuche}× versucht</small>` : ""}</div><button class="zu" aria-label="Schließen">×</button></div>
+      ${t ? `<a class="btn grossanruf" href="tel:${esc(t)}">📞 ${esc(k.telefon)}</a>` : ""}
+      <div class="info">
+        ${k.ansprechpartner ? `<span>Ansprechpartner</span><span>${esc(k.ansprechpartner)}</span>` : ""}
+        ${k.kategorie ? `<span>Kategorie</span><span>${esc(k.kategorie)}</span>` : ""}
+        ${k.ort || k.region ? `<span>Ort</span><span>${esc(k.ort || "")}${k.region ? " · " + esc(k.region) : ""}</span>` : ""}
+        ${k.website ? `<span>Website</span><a href="${esc(k.website)}" target="_blank" rel="noopener">${esc(k.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>` : ""}
+        ${k.email ? `<span>E-Mail</span><a href="mailto:${esc(k.email)}">${esc(k.email)}</a>` : ""}
+        ${k.warteliste_email ? `<span>Warteliste</span><span>${esc(k.warteliste_email)} · ${k.wl_status === "bestaetigt" ? "<b style='color:var(--gruen)'>bestätigt</b>" : k.wl_status === "offen" ? "Bestätigung offen" : esc(k.wl_status || "nicht gefunden")}</span>` : ""}
+        <span>Nächster Kontakt</span><span class="${istFaellig(k) ? "faellig" : ""}">${k.naechster_kontakt ? dt(k.naechster_kontakt) : "–"}</span>
+      </div>
+      <h3 class="ab">Ergebnis des Anrufs</h3>
+      <div class="erg">${ERG.map(([v, a, b, , c]) => `<button data-e="${v}" class="${c || ""}">${a}<small>${b}</small></button>`).join("")}</div>
+      <div id="unter"></div>
+      <label for="notiz" style="margin-top:14px">Notiz zum Gespräch (optional)</label>
+      <textarea id="notiz" placeholder="z. B. Chef erst ab 16 Uhr da, sucht Subunternehmer …"></textarea>
+      <div class="reihe" style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost klein" id="nurNotiz">Notiz speichern</button></div>
+      <div class="msg" id="pmsg"></div>
+      <h3 class="ab">Verlauf</h3><ul class="verlauf" id="verlauf"><li><small>Lädt …</small></li></ul>
+      <h3 class="ab">Daten bearbeiten</h3><div id="bearb"></div>`;
+    document.body.append(scrim, p);
+    p.querySelector(".zu").onclick = schliessen;
+    if (!still) p.scrollTop = 0;
+    const msg = (t, ok) => { const m = p.querySelector("#pmsg"); m.textContent = t; m.className = "msg " + (ok ? "ok" : "err"); };
+
+    async function sende(erg, extra = {}) {
+      try {
+        const r = await api({ aktion: "ergebnis", id, ergebnis: erg, notiz: p.querySelector("#notiz").value, ...extra });
+        toast(`${ERG.find((x) => x[0] === erg)[1]} gespeichert${r.naechster_kontakt ? " · nächster Kontakt " + dt(r.naechster_kontakt) : ""}`);
+        await laden();
+      } catch (e) { msg(e.message); }
+    }
+    p.querySelectorAll("[data-e]").forEach((b) => b.onclick = () => {
+      const e = b.dataset.e, u = p.querySelector("#unter");
+      if (e === "rueckruf" || e === "gespraech") {
+        const vor = new Date(Date.now() + 86400000); vor.setHours(10, 0, 0, 0);
+        const lokal = new Date(vor - vor.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        u.innerHTML = `<div class="unter"><label for="wann">${e === "rueckruf" ? "Wann zurückrufen?" : "Nächster Kontakt (optional)"}</label><input id="wann" type="datetime-local" value="${e === "rueckruf" ? lokal : ""}"><div class="reihe"><button class="btn klein" id="ok">Speichern</button></div></div>`;
+        u.querySelector("#ok").onclick = () => { const w = u.querySelector("#wann").value; sende(e, { wann: w ? new Date(w).toISOString() : null }); };
+      } else if (e === "warteliste") {
+        u.innerHTML = `<div class="unter"><label for="wlmail">E-Mail für die Warteliste</label><input id="wlmail" type="email" value="${esc(k.email || "")}" placeholder="name@firma.de">
+          <label for="wltyp" style="margin-top:8px">Typ</label><select id="wltyp"><option value="firma">Firma</option><option value="selbststaendig">Selbstständig</option><option value="mitarbeiter">Mitarbeiter</option><option value="privat">Privat</option></select>
+          <p style="font-size:13px;color:var(--muted);margin:8px 0 0">Die Person bekommt die Bestätigungs-Mail und muss selbst klicken (Double-Opt-in).</p>
+          <div class="reihe"><button class="btn klein" id="ok">Eintragen + Mail senden</button></div></div>`;
+        u.querySelector("#ok").onclick = async (ev) => {
+          const mail = u.querySelector("#wlmail").value.trim(); ev.target.disabled = true;
+          try {
+            const r = await fetch("/api/waitlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: mail, name: (k.ansprechpartner || "").split(/[,/(]/)[0].trim() || null, typ: u.querySelector("#wltyp").value, branche: k.kategorie, ort: k.region || k.ort, quelle: "telefon", consent: true }) });
+            const j = await r.json(); if (!j.ok) throw new Error(j.error || "Eintragen fehlgeschlagen");
+            await sende("warteliste", { email: mail });
+            if (j.status === "bestaetigt") toast("Diese Adresse ist schon bestätigt auf der Warteliste.");
+          } catch (err) { msg(err.message); ev.target.disabled = false; }
+        };
+      } else if (e === "mail_gewuenscht") {
+        const betreff = "Abgemacht – wie eben besprochen";
+        const anrede = k.ansprechpartner ? `Hallo ${k.ansprechpartner.split(/[,/(]/)[0].trim()},` : "Hallo,";
+        const text = `${anrede}\n\ndanke für das kurze Gespräch eben. Wie besprochen: Abgemacht ist das Netzwerk für Firmen, Selbstständige und Privatleute aus unserer Region. Aufträge finden und vergeben, geprüfte Profile, keine Provision.\n\nHier tragen Sie sich in 20 Sekunden ein: https://ab-gemacht.info/?quelle=telefon\n\nBei Fragen einfach auf diese Mail antworten.\n\nViele Grüße\nSamuel Edele`;
+        u.innerHTML = `<div class="unter"><label for="mmail">E-Mail-Adresse</label><input id="mmail" type="email" value="${esc(k.email || "")}"><div class="reihe"><a class="btn ghost klein" id="mopen">Mail öffnen</a><button class="btn klein" id="ok">Gespeichert, nachfassen planen</button></div></div>`;
+        const upd = () => u.querySelector("#mopen").href = `mailto:${encodeURIComponent(u.querySelector("#mmail").value)}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
+        u.querySelector("#mmail").oninput = upd; upd();
+        u.querySelector("#ok").onclick = () => sende("mail_gewuenscht");
+      } else { u.innerHTML = ""; sende(e); }
+    });
+    p.querySelector("#nurNotiz").onclick = async () => {
+      const t = p.querySelector("#notiz").value.trim(); if (!t) return msg("Bitte erst eine Notiz schreiben.");
+      try { await api({ aktion: "notiz", id, text: t }); toast("Notiz gespeichert"); await laden(); } catch (e) { msg(e.message); }
+    };
+    api({ aktion: "verlauf", id }).then((d) => {
+      p.querySelector("#verlauf").innerHTML = d.log.length ? d.log.map((l) => `<li>${esc(l.text || ({ angelegt: "Kontakt angelegt" })[l.art] || l.art)}<small>${dt(l.created_at)}</small></li>`).join("") : "<li><small>Noch keine Einträge.</small></li>";
+    }).catch(() => {});
+    formular(p.querySelector("#bearb"), k);
+  }
+
+  function formular(ziel, k) {
+    const f = (n, l, typ = "text", ganz) => `<div class="${ganz ? "ganz" : ""}"><label for="f_${n}">${l}</label><input id="f_${n}" type="${typ}" value="${esc(k ? k[n] : "")}"></div>`;
+    const nk = k && k.naechster_kontakt ? new Date(new Date(k.naechster_kontakt) - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "";
+    ziel.innerHTML = `<div class="formgrid">
+      ${f("firma", "Firma / Name *", "text", true)}${f("ansprechpartner", "Ansprechpartner")}${f("telefon", "Telefon", "tel")}
+      ${f("kategorie", "Kategorie / Branche")}${f("region", "Region")}${f("ort", "Ort")}${f("email", "E-Mail", "email")}${f("website", "Website", "url", true)}
+      <div><label for="f_status">Status</label><select id="f_status">${PIPE.filter((x) => x !== "bestaetigt").map((x) => `<option value="${x}" ${k && k.status === x ? "selected" : ""}>${ST[x]}</option>`).join("")}</select></div>
+      <div><label for="f_nk">Nächster Kontakt</label><input id="f_nk" type="datetime-local" value="${nk}"></div>
+      <div class="ganz"><label for="f_notizen">Notizen</label><textarea id="f_notizen">${esc(k ? k.notizen : "")}</textarea></div></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn klein" id="fsave">${k ? "Änderungen speichern" : "Kontakt anlegen"}</button>${k ? '<button class="btn ghost klein" id="fdel">Löschen</button>' : ""}</div>
+      <div class="msg" id="fmsg"></div>`;
+    const m = (t, ok) => { const x = ziel.querySelector("#fmsg"); x.textContent = t; x.className = "msg " + (ok ? "ok" : "err"); };
+    ziel.querySelector("#fsave").onclick = async () => {
+      const daten = {}; ["firma", "ansprechpartner", "telefon", "kategorie", "region", "ort", "email", "website", "notizen"].forEach((n) => daten[n] = ziel.querySelector("#f_" + n).value);
+      daten.status = ziel.querySelector("#f_status").value;
+      const w = ziel.querySelector("#f_nk").value; daten.naechster_kontakt = w ? new Date(w).toISOString() : null;
+      try { const r = await api({ aktion: "speichern", id: k ? k.id : 0, daten }); toast(k ? "Gespeichert" : "Kontakt angelegt"); offenId = r.id; await laden(); oeffne(r.id); } catch (e) { m(e.message); }
+    };
+    const del = ziel.querySelector("#fdel");
+    if (del) del.onclick = async () => {
+      if (del.dataset.sicher !== "1") { del.dataset.sicher = "1"; del.textContent = "Wirklich löschen?"; del.style.color = "#C0392B"; return; }
+      try { await api({ aktion: "loeschen", id: k.id }); toast("Kontakt gelöscht"); schliessen(); await laden(); } catch (e) { m(e.message); }
+    };
+  }
+  function neuerKontakt() {
+    schliessen();
+    const scrim = document.createElement("div"); scrim.className = "scrim"; scrim.onclick = schliessen;
+    const p = document.createElement("div"); p.className = "panel";
+    p.innerHTML = `<div class="kopf"><h2>Neuer Kontakt</h2><button class="zu" aria-label="Schließen">×</button></div><div id="nf"></div>`;
+    document.body.append(scrim, p); p.querySelector(".zu").onclick = schliessen;
+    formular(p.querySelector("#nf"), null);
+    p.querySelector("#f_firma").focus();
+  }
+
+  function csv() {
+    const sp = ["firma", "ansprechpartner", "telefon", "email", "website", "kategorie", "ort", "region", "status", "versuche", "naechster_kontakt", "letzter_kontakt", "warteliste_email", "notizen"];
+    const z = [sp.join(";")].concat(gefiltert().map((k) => sp.map((s) => { let v = s === "status" ? ST[status(k)] : k[s] ?? ""; if (s.endsWith("kontakt") && v) v = dt(v); return '"' + String(v).replace(/"/g, '""') + '"'; }).join(";")));
+    const blob = new Blob(["\ufeff" + z.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `abgemacht-crm-${heuteKey()}.csv`; a.click();
+  }
+
+  function abmelden() { pw = null; try { sessionStorage.removeItem("hs_admin"); } catch {} $("app").hidden = true; $("raus").hidden = true; $("login").hidden = false; schliessen(); }
+  async function start(p) { pw = p; await laden(); $("login").hidden = true; $("app").hidden = false; $("raus").hidden = false; }
+
+  $("login").onsubmit = async (e) => {
+    e.preventDefault(); const m = $("loginMsg"); m.textContent = "";
+    try { await start($("pw").value); try { sessionStorage.setItem("hs_admin", pw); } catch {} }
+    catch (err) { m.textContent = err.message; m.className = "msg err"; pw = null; }
+  };
+  $("raus").onclick = abmelden;
+  $("neu").onclick = neuerKontakt;
+  $("csv").onclick = csv;
+  document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => setze(b.dataset.v));
+  ["such", "fRegion", "fStatus"].forEach((id) => $(id).addEventListener("input", zeichne));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") schliessen(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && pw) laden().catch(() => {}); });
+  let gespeichert = null; try { gespeichert = sessionStorage.getItem("hs_admin"); } catch {}
+  if (gespeichert) start(gespeichert).catch(() => abmelden());
+})();
+</script>
+</body>
+</html>
