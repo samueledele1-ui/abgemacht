@@ -6,6 +6,10 @@
 
 # Kurzlinks: merken sich, woher jemand kommt
 [[redirects]]
+  from = "/warteliste"
+  to = "/#warteliste"
+  status = 302
+[[redirects]]
   from = "/ig"
   to = "/?quelle=ig"
   status = 302
