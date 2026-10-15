@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin
+Disallow: /crm
+Disallow: /api/
+Disallow: /termin
+Disallow: /bestaetigen
+Disallow: /abmelden
+
+Sitemap: https://ab-gemacht.info/sitemap.xml
