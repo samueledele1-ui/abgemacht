@@ -118,10 +118,26 @@
         <div class="big">🤝</div>
         <h2 id="dankeTitel">Du bist dabei!</h2>
         <p class="sub" id="dankeText">Wir melden uns, sobald es losgeht.</p>
+        <div class="mitreden">
+          <b>Rede mit, was Abgemacht zuerst kann</b>
+          <p>9 kurze Fragen, etwa 2 Minuten. Du entscheidest, wo die App am Start steht und was danach kommt.</p>
+          <a class="btn" id="umfrageLink" href="/umfrage">Zur Umfrage</a>
+        </div>
         <button class="btn ghost" id="teilen" type="button">Mit Kollegen teilen</button>
       </div>
     </div>
   </section>
+
+  <div class="popup" id="popup" hidden role="dialog" aria-modal="true" aria-labelledby="popupTitel">
+    <div class="popup-box">
+      <button class="popup-zu" id="popupZu" type="button" aria-label="Schließen">×</button>
+      <div class="big">🗳️</div>
+      <h2 id="popupTitel">Danke! Willst du mitreden?</h2>
+      <p class="sub">Abgemacht wird gerade gebaut, und du kannst mitentscheiden, was die App zum Start kann und was später kommt. 9 kurze Fragen, etwa 2 Minuten.</p>
+      <a class="btn" id="popupLink" href="/umfrage" style="width:100%">Ja, ich rede mit</a>
+      <button class="btn ghost" id="popupSpaeter" type="button" style="width:100%;margin-top:10px">Später</button>
+    </div>
+  </div>
 
   <footer>
     <span>© 2026 Abgemacht</span>
@@ -159,12 +175,26 @@
       document.getElementById('formteil').hidden = true;
       document.getElementById('danke').hidden = false;
       var titel = document.getElementById('dankeTitel'), text = document.getElementById('dankeText');
+      try { sessionStorage.setItem('hs_wl', '1'); } catch(e) {}
+      setTimeout(oeffnePopup, 700);
       if (res.d.status === 'bestaetigt') { text.textContent = 'Diese E-Mail steht schon auf der Liste. Wir melden uns!'; }
       else if (res.d.mail) { titel.textContent = 'Fast geschafft!'; text.textContent = 'Wir haben dir eine E-Mail geschickt. Bitte bestätige darin mit einem Klick deine Anmeldung. Schau notfalls im Spam-Ordner nach.'; }
     })
     .catch(function(err){ zeige(err.message && err.message !== 'Failed to fetch' ? err.message : 'Das hat nicht geklappt. Bitte versuch es gleich nochmal.'); })
     .finally(function(){ btn.disabled = false; btn.textContent = 'Auf die Warteliste'; });
   });
+
+  // Nach der Anmeldung: Einladung zur Umfrage (Quelle wird mitgegeben)
+  var umfrageUrl = '/umfrage' + (['ig','tt','li','wa'].indexOf(quelle) >= 0 ? '?quelle=' + quelle : '');
+  document.getElementById('umfrageLink').href = umfrageUrl;
+  document.getElementById('popupLink').href = umfrageUrl;
+  var popup = document.getElementById('popup');
+  function oeffnePopup(){ popup.hidden = false; document.getElementById('popupLink').focus(); }
+  function schliessePopup(){ popup.hidden = true; }
+  document.getElementById('popupZu').addEventListener('click', schliessePopup);
+  document.getElementById('popupSpaeter').addEventListener('click', schliessePopup);
+  popup.addEventListener('click', function(e){ if (e.target === popup) schliessePopup(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !popup.hidden) schliessePopup(); });
 
   document.getElementById('teilen').addEventListener('click', function(){
     var data = { title: 'Abgemacht', text: 'Geschäftskontakte per Swipe – hier geht\'s zur Warteliste:', url: location.origin };
