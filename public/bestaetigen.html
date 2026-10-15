@@ -25,7 +25,9 @@
 (function(){
   var t = new URLSearchParams(location.search).get('t') || '';
   var box = document.getElementById('box'), btn = document.getElementById('ok'), msg = document.getElementById('msg');
-  function fertig(titel, text){ box.innerHTML = '<div class="big">🤝</div><h2>' + titel + '</h2><p class="sub">' + text + '</p><a class="btn ghost" href="/">Zur Startseite</a>'; }
+  function fertig(titel, text, umfrage){ box.innerHTML = '<div class="big">🤝</div><h2>' + titel + '</h2><p class="sub">' + text + '</p>' +
+    (umfrage ? '<div class="mitreden"><b>Rede mit, was Abgemacht zuerst kann</b><p>9 kurze Fragen, etwa 2 Minuten.</p><a class="btn" href="/umfrage">Zur Umfrage</a></div>' : '') +
+    '<a class="btn ghost" href="/">Zur Startseite</a>'; }
   if (!/^[a-f0-9]{64}$/.test(t)) { fertig('Link ungültig', 'Bitte nutze den Link aus deiner E-Mail oder trag dich neu ein.'); return; }
   btn.addEventListener('click', function(){
     btn.disabled = true; btn.textContent = 'Einen Moment …';
@@ -33,7 +35,8 @@
       .then(function(r){ return r.json(); })
       .then(function(d){
         if (!d.ok) throw new Error(d.error || 'Fehler');
-        fertig('Abgemacht!', d.schon ? 'Du hattest schon bestätigt. Wir melden uns, sobald es losgeht.' : 'Du stehst jetzt auf der Warteliste. Wir melden uns, sobald Abgemacht in deiner Region startet.');
+        fertig('Abgemacht!', d.schon ? 'Du hattest schon bestätigt. Wir melden uns, sobald es losgeht.' : 'Du stehst jetzt auf der Warteliste. Wir melden uns, sobald Abgemacht in deiner Region startet.', true);
+        try { sessionStorage.setItem('hs_wl', '1'); } catch(e) {}
       })
       .catch(function(e){ msg.textContent = e.message || 'Das hat nicht geklappt. Bitte versuch es gleich nochmal.'; msg.className = 'msg err'; btn.disabled = false; btn.textContent = 'Anmeldung bestätigen'; });
   });
