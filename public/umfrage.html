@@ -179,6 +179,8 @@ textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:tr
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!d.ok) throw new Error(d.error || 'Fehler');
+      var schonDrauf = false; try { schonDrauf = sessionStorage.getItem('hs_wl') === '1'; } catch(e) {}
+      if (schonDrauf) { box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten fließen direkt in die App ein. Du stehst schon auf der Warteliste, wir melden uns zum Start.</p><a class="btn ghost" href="/">Zur Startseite</a></div>'; window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
       box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten helfen mir enorm.</p></div>' +
         '<div class="box2"><b>Willst du als Erster Bescheid bekommen, wenn Abgemacht startet?</b>' +
         '<form id="wl" novalidate style="margin-top:10px"><input id="wlmail" type="email" autocomplete="email" placeholder="du@firma.de">' +
