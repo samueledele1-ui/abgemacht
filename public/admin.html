@@ -43,7 +43,7 @@
 </head>
 <body>
 <div class="wrap">
-  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a><button class="btn ghost" id="raus" hidden>Abmelden</button></header>
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a><span><a class="btn ghost" href="/crm" style="padding:9px 15px;font-size:14px">CRM</a> <button class="btn ghost" id="raus" hidden>Abmelden</button></span></header>
 
   <form id="login" class="formbox">
     <h2 style="font-size:24px">Übersicht</h2>
@@ -111,7 +111,7 @@ const L = {
   funktionen: { personen: "Personen entdecken", auftraege: "Aufträge, Stellen", suche: "Suche nach Firmen", chats: "Branchen-Chats", verifizierung: "Verifizierte Profile", team: "Team-Zugang" },
   zahlen: { ja: "Ja", vielleicht: "Vielleicht", nein: "Nein" },
   nutzung: { taeglich: "Täglich", woechentlich: "Wöchentlich", monatlich: "Monatlich", selten: "Selten" },
-  quelle: { direkt: "Direkt", umfrage: "Umfrage", ig: "Instagram", tt: "TikTok", li: "LinkedIn", wa: "WhatsApp" },
+  quelle: { direkt: "Direkt", umfrage: "Umfrage", ig: "Instagram", tt: "TikTok", li: "LinkedIn", wa: "WhatsApp", telefon: "Telefon" },
   status: { bestaetigt: "bestätigt", offen: "offen", abgemeldet: "abgemeldet" }
 };
 const $ = (id) => document.getElementById(id);
