@@ -94,7 +94,10 @@ export default async (req: Request, _context: Context) => {
       FROM crm_kontakte k
       LEFT JOIN waitlist w ON k.warteliste_email IS NOT NULL AND lower(w.email) = lower(k.warteliste_email)
       ORDER BY k.naechster_kontakt NULLS LAST, k.id`;
-    return Response.json({ ok: true, kontakte, jetzt: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
+    const eintraege = await sql`
+      SELECT e.id, e.kontakt_id, e.art, e.titel, e.text, e.ort, e.kontakt, e.status, e.freigabe_am, e.created_at, k.firma, k.region
+      FROM crm_eintraege e JOIN crm_kontakte k ON k.id = e.kontakt_id ORDER BY e.created_at DESC`;
+    return Response.json({ ok: true, kontakte, eintraege, jetzt: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
   }
 
   if (aktion === "verlauf") {
@@ -126,6 +129,29 @@ export default async (req: Request, _context: Context) => {
       RETURNING id`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r[0].id}, 'angelegt', null)`;
     return Response.json({ ok: true, id: r[0].id });
+  }
+
+  if (aktion === "eintrag_aendern") {
+    const eid = Number(body.eid) || 0;
+    const rows = await sql`SELECT kontakt_id, status FROM crm_eintraege WHERE id = ${eid}`;
+    if (!rows.length) return fehler("Start-Eintrag nicht gefunden.", 404);
+    const st = String(body.status || rows[0].status);
+    if (!["angeboten", "freigegeben", "zurueckgezogen"].includes(st)) return fehler("Unbekannter Status.");
+    const titel = clip(body.titel, 160);
+    if (body.titel !== undefined && !titel) return fehler("Bitte einen Titel eintragen.");
+    await sql`UPDATE crm_eintraege SET
+        art = COALESCE(${clip(body.art, 30)}, art), titel = COALESCE(${titel}, titel),
+        text = CASE WHEN ${body.text !== undefined} THEN ${clip(body.text, 1000)} ELSE text END,
+        kontakt = CASE WHEN ${body.kontakt !== undefined} THEN ${clip(body.kontakt, 200)} ELSE kontakt END,
+        status = ${st}, freigabe_am = CASE WHEN ${st} = 'freigegeben' THEN COALESCE(freigabe_am, now()) ELSE freigabe_am END
+      WHERE id = ${eid}`;
+    const kid = rows[0].kontakt_id;
+    const ES: Record<string, string> = { angeboten: "Freigabe offen", freigegeben: "freigegeben", zurueckgezogen: "zurückgezogen" };
+    await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'eintrag_geaendert', ${"Start-Eintrag " + (titel || "") + " geändert: " + ES[st]})`;
+    await sql`UPDATE crm_kontakte SET eintrag = (
+        SELECT CASE WHEN bool_or(status = 'freigegeben') THEN 'freigegeben' WHEN bool_or(status = 'angeboten') THEN 'angeboten' END
+        FROM crm_eintraege WHERE kontakt_id = ${kid}), updated_at = now() WHERE id = ${kid}`;
+    return Response.json({ ok: true });
   }
 
   if (aktion === "loeschen") {
