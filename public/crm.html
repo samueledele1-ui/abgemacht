@@ -104,7 +104,7 @@
   <main id="app" hidden>
     <div class="top">
       <h1>Akquise</h1>
-      <div class="knoepfe"><button class="btn klein" id="neu">+ Kontakt</button><button class="btn ghost klein" id="csv">CSV</button></div>
+      <div class="knoepfe"><button class="btn klein" id="neu">+ Kontakt</button><button class="btn ghost klein" id="csv">CSV</button><button class="btn ghost klein" id="tagesplan" title="Abendmail mit dem Plan für morgen jetzt senden">Tagesplan senden</button></div>
     </div>
     <div class="kpis" id="kpis"></div>
     <div class="tabs" role="tablist">
@@ -453,6 +453,7 @@
   $("neu").onclick = neuerKontakt;
   $("csv").onclick = csv;
   document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => setze(b.dataset.v));
+  $("tagesplan").onclick = async (e) => { e.target.disabled = true; try { const r = await api({ aktion: "tagesplan" }); toast("Gesendet: " + r.betreff); } catch (err) { toast(err.message); } e.target.disabled = false; };
   ["such", "fRegion", "fStatus"].forEach((id) => $(id).addEventListener("input", zeichne));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") schliessen(); });
   document.addEventListener("visibilitychange", () => { if (!document.hidden && pw) laden().catch(() => {}); });
