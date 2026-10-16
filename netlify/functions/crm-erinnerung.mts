@@ -18,7 +18,7 @@ export default async () => {
   // Ende des heutigen Tages in Berlin
   const heute = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
   const rows = await sql`
-    SELECT k.id, k.firma, k.ansprechpartner, k.telefon, k.region, k.status, k.naechster_kontakt, k.versuche, w.status AS wl_status
+    SELECT k.id, k.firma, k.ansprechpartner, k.telefon, k.region, k.status, k.eintrag, k.naechster_kontakt, k.versuche, w.status AS wl_status
     FROM crm_kontakte k
     LEFT JOIN waitlist w ON k.warteliste_email IS NOT NULL AND lower(w.email) = lower(k.warteliste_email)
     WHERE k.naechster_kontakt IS NOT NULL
@@ -32,7 +32,7 @@ export default async () => {
   const zeit = (d: string) => new Intl.DateTimeFormat("de-DE", { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(d));
   const zeilen = rows.map((r) =>
     `<tr><td style="padding:8px 6px;border-bottom:1px solid #E2E8E5"><b>${esc(r.firma)}</b><br><span style="color:#5B6B65;font-size:13px">${esc(r.ansprechpartner || "")}${r.region ? " · " + esc(r.region) : ""}</span></td>` +
-    `<td style="padding:8px 6px;border-bottom:1px solid #E2E8E5;white-space:nowrap"><a href="tel:${esc(String(r.telefon || "").replace(/[^\d+]/g, ""))}" style="color:#138A6B">${esc(r.telefon || "")}</a><br><span style="color:#5B6B65;font-size:13px">${STATUS[r.status as string] || esc(r.status)} · ${zeit(r.naechster_kontakt as string)}</span></td></tr>`
+    `<td style="padding:8px 6px;border-bottom:1px solid #E2E8E5;white-space:nowrap"><a href="tel:${esc(String(r.telefon || "").replace(/[^\d+]/g, ""))}" style="color:#138A6B">${esc(r.telefon || "")}</a><br><span style="color:#5B6B65;font-size:13px">${r.eintrag === "angeboten" ? "Start-Eintrag: Freigabe nachfassen" : STATUS[r.status as string] || esc(r.status)} · ${zeit(r.naechster_kontakt as string)}</span></td></tr>`
   ).join("");
 
   const html = `<!doctype html><html lang="de"><body style="margin:0;background:#F6F8F7;font-family:Arial,Helvetica,sans-serif;color:#14231E">
