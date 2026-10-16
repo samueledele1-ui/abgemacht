@@ -98,7 +98,8 @@ export default async (req: Request, _context: Context) => {
     const eintraege = await sql`
       SELECT e.id, e.kontakt_id, e.art, e.titel, e.text, e.ort, e.kontakt, e.status, e.freigabe_am, e.created_at, k.firma, k.region
       FROM crm_eintraege e JOIN crm_kontakte k ON k.id = e.kontakt_id ORDER BY e.created_at DESC`;
-    return Response.json({ ok: true, kontakte, eintraege, jetzt: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
+    const fahrplan = await sql`SELECT id, to_char(von, 'YYYY-MM-DD') AS von, to_char(bis, 'YYYY-MM-DD') AS bis, phase, text, typ, erledigt FROM fahrplan_aufgaben ORDER BY von, id`;
+    return Response.json({ ok: true, kontakte, eintraege, fahrplan, jetzt: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
   }
 
   if (aktion === "verlauf") {
@@ -130,6 +131,19 @@ export default async (req: Request, _context: Context) => {
       RETURNING id`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r[0].id}, 'angelegt', null)`;
     return Response.json({ ok: true, id: r[0].id });
+  }
+
+  if (aktion === "fahrplan_erledigt") {
+    const fid = Number(body.fid) || 0, e = !!body.erledigt;
+    await sql`UPDATE fahrplan_aufgaben SET erledigt = ${e}, erledigt_am = CASE WHEN ${e} THEN now() END WHERE id = ${fid}`;
+    return Response.json({ ok: true });
+  }
+
+  if (aktion === "fahrplan_neu") {
+    const text = clip(body.text, 300), von = clip(body.von, 10), bis = clip(body.bis, 10) || von;
+    if (!text || !von || !/^\d{4}-\d{2}-\d{2}$/.test(von) || !/^\d{4}-\d{2}-\d{2}$/.test(bis!)) return fehler("Bitte Text und Datum angeben.");
+    await sql`INSERT INTO fahrplan_aufgaben (von, bis, phase, text) VALUES (${von}::date, ${bis}::date, ${clip(body.phase, 80) || "Eigene Aufgabe"}, ${text})`;
+    return Response.json({ ok: true });
   }
 
   if (aktion === "tagesplan") {
