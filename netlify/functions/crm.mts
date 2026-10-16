@@ -180,9 +180,35 @@ export default async (req: Request, _context: Context) => {
       case "kein_interesse": status = "kein_interesse"; naechster = null; break;
       case "keine_anrufe": status = "keine_anrufe"; naechster = null; break;
       case "gespraech": naechster = body.wann ? new Date(String(body.wann)) : null; break;
-      case "eintrag":
-        eintragNeu = "angeboten"; naechster = werktag(2, 10, 0); hinweis = "Text zur Freigabe mailen, in 2 Werktagen nachfassen.";
+      case "eintrag": {
+        // Freigabe-Mail direkt über Brevo senden: Absender und Antwort immer hallo@ab-gemacht.info
+        const m = body.mail as Record<string, unknown> | undefined;
+        if (m) {
+          const an = clip(m.an, 254)?.toLowerCase() || "";
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(an)) return fehler("Bitte eine gültige E-Mail für die Freigabe eingeben.");
+          const key = Netlify.env.get("BREVO_API_KEY");
+          if (!key) return fehler("BREVO_API_KEY fehlt in Netlify, Mail nicht gesendet.", 503);
+          const absender = Netlify.env.get("MAIL_FROM") || "hallo@ab-gemacht.info";
+          const antwort = Netlify.env.get("CRM_REPLY_TO") || "hallo@ab-gemacht.info";
+          const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+            method: "POST",
+            headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
+            body: JSON.stringify({
+              sender: { name: "Samuel Edele | Abgemacht", email: absender },
+              to: [{ email: an }],
+              bcc: [{ email: antwort }],
+              replyTo: { email: antwort, name: "Samuel Edele | Abgemacht" },
+              subject: clip(m.betreff, 200) || "Ihr Start-Eintrag bei Abgemacht",
+              textContent: clip(m.text, 5000) || "",
+            }),
+          });
+          if (!res.ok) { console.error("Brevo", res.status, await res.text()); return fehler("Mail konnte nicht gesendet werden (Brevo " + res.status + "). Nichts gespeichert.", 502); }
+          hinweis = `Freigabe-Mail an ${an} gesendet. `;
+          await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${id}, 'mail', ${"Freigabe-Mail gesendet an " + an})`;
+        }
+        eintragNeu = "angeboten"; naechster = werktag(2, 10, 0); hinweis += "In 2 Werktagen nachfassen.";
         break;
+      }
       case "eintrag_frei":
         eintragNeu = "freigegeben"; naechster = null; hinweis = "Freigegeben: Eintrag zum Start einstellen.";
         break;
