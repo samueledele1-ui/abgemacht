@@ -276,7 +276,7 @@
     async function sende(erg, extra = {}) {
       try {
         const r = await api({ aktion: "ergebnis", id, ergebnis: erg, notiz: p.querySelector("#notiz").value, ...extra });
-        toast(`${ERG.find((x) => x[0] === erg)[1]} gespeichert${r.naechster_kontakt ? " · nächster Kontakt " + dt(r.naechster_kontakt) : ""}`);
+        toast(`${r.hinweis && r.hinweis.includes("gesendet") ? "✉️ Mail gesendet · " : ""}${ERG.find((x) => x[0] === erg)[1]} gespeichert${r.naechster_kontakt ? " · nächster Kontakt " + dt(r.naechster_kontakt) : ""}`);
         await laden();
       } catch (e) { msg(e.message); }
     }
@@ -317,18 +317,28 @@
           <label for="e_text" style="margin-top:8px">Kurzbeschreibung</label><textarea id="e_text" placeholder="1–2 Sätze, Ort, bis wann"></textarea>
           <label for="e_kontakt" style="margin-top:8px">Kontakt bei Anfragen</label><input id="e_kontakt" value="${esc([vorname, k.telefon || k.email || ""].filter(Boolean).join(", "))}">
           <label for="e_mail" style="margin-top:8px">E-Mail für die Freigabe</label><input id="e_mail" type="email" value="${esc(k.email || k.warteliste_email || "")}">
-          <div class="reihe"><a class="btn ghost klein" id="e_open">Freigabe-Mail öffnen</a><button class="btn klein" id="ok">Speichern, nachfassen planen</button></div></div>`;
+          <p style="font-size:13px;color:var(--muted);margin:8px 0 0">Geht von hallo@ab-gemacht.info raus, Antworten landen dort, Kopie an dich.</p>
+          <div class="reihe"><button class="btn klein" id="ok">Freigabe-Mail senden + speichern</button><button class="btn ghost klein" id="ok2">Nur speichern</button></div>
+          <a id="e_open" style="font-size:13px;display:inline-block;margin-top:6px">oder im eigenen Mailprogramm öffnen</a></div>`;
         const g = (id) => u.querySelector(id).value.trim();
+        const BETREFF = "Ihr Start-Eintrag bei Abgemacht – bitte kurz freigeben";
+        let mailText = "";
         const upd = () => {
-          const text = `${vorname ? "Hallo " + vorname + "," : "Hallo,"}\n\nwie besprochen hier der Text für Ihren kostenlosen Start-Eintrag bei Abgemacht:\n\n${g("#e_art")}: ${g("#e_titel")}\n${g("#e_text")}\nKontakt bei Anfragen: ${g("#e_kontakt")}\n\nWenn alles passt, antworten Sie einfach mit „Passt“. Damit beauftragen Sie mich, Ihr Firmenprofil mit diesem Eintrag in Ihrem Namen bei Abgemacht anzulegen und zum Start zu veröffentlichen. Bis Sie Ihren eigenen Zugang übernehmen, ist das Profil als „Eingerichtet vom Abgemacht-Team“ gekennzeichnet und Anfragen gehen an Ihre Kontaktadresse. Sie können das jederzeit per Mail widerrufen, dann lösche ich alles. Datenschutz: https://ab-gemacht.info/datenschutz Gern auch ein Foto (Team, Werkstatt, Baustelle) mitschicken.\n\nViele Grüße\nSamuel Edele\nhttps://ab-gemacht.info`;
-          u.querySelector("#e_open").href = `mailto:${encodeURIComponent(g("#e_mail"))}?subject=${encodeURIComponent("Ihr Start-Eintrag bei Abgemacht – bitte kurz freigeben")}&body=${encodeURIComponent(text)}`;
+          const text = mailText = `${vorname ? "Hallo " + vorname + "," : "Hallo,"}\n\nwie besprochen hier der Text für Ihren kostenlosen Start-Eintrag bei Abgemacht:\n\n${g("#e_art")}: ${g("#e_titel")}\n${g("#e_text")}\nKontakt bei Anfragen: ${g("#e_kontakt")}\n\nWenn alles passt, antworten Sie einfach mit „Passt“. Damit beauftragen Sie mich, Ihr Firmenprofil mit diesem Eintrag in Ihrem Namen bei Abgemacht anzulegen und zum Start zu veröffentlichen. Bis Sie Ihren eigenen Zugang übernehmen, ist das Profil als „Eingerichtet vom Abgemacht-Team“ gekennzeichnet und Anfragen gehen an Ihre Kontaktadresse. Sie können das jederzeit per Mail widerrufen, dann lösche ich alles. Datenschutz: https://ab-gemacht.info/datenschutz Gern auch ein Foto (Team, Werkstatt, Baustelle) mitschicken.\n\nViele Grüße\nSamuel Edele\nhttps://ab-gemacht.info`;
+          u.querySelector("#e_open").href = `mailto:${encodeURIComponent(g("#e_mail"))}?subject=${encodeURIComponent(BETREFF)}&body=${encodeURIComponent(text)}`;
         };
         u.querySelectorAll("input,textarea,select").forEach((x) => x.oninput = x.onchange = upd); upd();
-        u.querySelector("#ok").onclick = () => {
+        const speichern = async (mitMail, btn) => {
           if (!g("#e_titel")) return msg("Bitte einen Titel eintragen.");
+          if (mitMail && !g("#e_mail")) return msg("Bitte die E-Mail für die Freigabe eintragen.");
           const n = p.querySelector("#notiz"); n.value = [`${g("#e_art")}: ${g("#e_titel")}`, g("#e_text"), n.value.trim()].filter(Boolean).join(" · ");
-          sende("eintrag", { eintrag: { art: g("#e_art"), titel: g("#e_titel"), text: g("#e_text"), kontakt: g("#e_kontakt"), ort: k.ort || k.region || "" } });
+          btn.disabled = true;
+          await sende("eintrag", { eintrag: { art: g("#e_art"), titel: g("#e_titel"), text: g("#e_text"), kontakt: g("#e_kontakt"), ort: k.ort || k.region || "" },
+            ...(mitMail ? { mail: { an: g("#e_mail"), betreff: BETREFF, text: mailText } } : {}) });
+          btn.disabled = false;
         };
+        u.querySelector("#ok").onclick = (ev) => speichern(true, ev.target);
+        u.querySelector("#ok2").onclick = (ev) => speichern(false, ev.target);
       } else { u.innerHTML = ""; sende(e); }
     });
     p.querySelector("#nurNotiz").onclick = async () => {
