@@ -112,6 +112,7 @@
       <button data-v="pipeline" aria-pressed="false">Pipeline</button>
       <button data-v="liste" aria-pressed="false">Liste</button>
       <button data-v="eintraege" aria-pressed="false">Start-Einträge</button>
+      <button data-v="fahrplan" aria-pressed="false">Fahrplan</button>
       <button data-v="statistik" aria-pressed="false">Statistik</button>
     </div>
     <div class="filter">
@@ -134,7 +135,7 @@
   const FARBE = { neu: "#B8C2BE", wiedervorlage: "#E0A43A", mailbox: "#9B7BD6", mail_gewuenscht: "#3BA6C1", warteliste: "#5FD3AC", bestaetigt: "#138A6B", kein_interesse: "#D9D9D9", keine_anrufe: "#E57B86", nicht_erreichbar: "#C9C9C9" };
   const PIPE = ["neu", "wiedervorlage", "mailbox", "mail_gewuenscht", "warteliste", "bestaetigt", "kein_interesse", "nicht_erreichbar", "keine_anrufe"];
   const TZ = "Europe/Berlin";
-  let pw = null, alle = [], alleE = [], ansicht = "heute", sortierung = { k: "naechster_kontakt", r: 1 }, offenId = null;
+  let pw = null, alle = [], alleE = [], alleF = [], fpAlle = false, ansicht = "heute", sortierung = { k: "naechster_kontakt", r: 1 }, offenId = null;
 
   const status = (k) => (k.status === "warteliste" && k.wl_status === "bestaetigt") ? "bestaetigt" : k.status;
   const tel = (t) => String(t || "").replace(/\(0\)/g, "").replace(/[^\d+]/g, "");
@@ -153,7 +154,7 @@
     if (!j.ok) throw new Error(j.error || "Fehler");
     return j;
   }
-  async function laden() { const d = await api({ aktion: "liste" }); alle = d.kontakte; alleE = d.eintraege || []; fuelleFilter(); zeichne(); if (offenId) oeffne(offenId, true); }
+  async function laden() { const d = await api({ aktion: "liste" }); alle = d.kontakte; alleE = d.eintraege || []; alleF = d.fahrplan || []; fuelleFilter(); zeichne(); if (offenId) oeffne(offenId, true); }
 
   function fuelleFilter() {
     const r = $("fRegion"), wert = r.value;
@@ -243,6 +244,21 @@
       el.innerHTML = `<div class="tabelle"><table><thead><tr>${sp.map(([k, t]) => `<th data-k="${k}">${t}${S.k === k ? (S.r > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>${sorted.map((k) => `<tr data-id="${k.id}"><td><b>${esc(k.firma)}</b></td><td>${esc(k.ansprechpartner)}</td><td><a href="tel:${esc(tel(k.telefon))}" data-tel="${k.id}">${esc(k.telefon)}</a></td><td>${esc(k.kategorie)}</td><td>${esc(k.region)}</td><td><span class="st s-${status(k)}">${ST[status(k)]}</span></td><td>${k.versuche || ""}</td><td class="${istFaellig(k) && ueberfaellig(k) ? "faellig" : ""}">${dt(k.naechster_kontakt)}</td></tr>`).join("")}</tbody></table></div>
         <p class="sub" style="margin:8px 4px;font-size:13px">${sorted.length} Kontakte</p>`;
       el.querySelectorAll("th").forEach((th) => th.onclick = () => { sortierung = { k: th.dataset.k, r: sortierung.k === th.dataset.k ? -sortierung.r : 1 }; zeichne(); });
+    } else if (ansicht === "fahrplan") {
+      const heute = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
+      const kd = (x) => x.slice(8, 10) + "." + x.slice(5, 7) + ".";
+      const sicht = alleF.filter((a) => fpAlle || (!a.erledigt && a.bis >= heute) || (a.erledigt && a.bis >= heute));
+      const offen = alleF.filter((a) => !a.erledigt && a.bis < heute);
+      const phasen = [...new Set(sicht.map((a) => a.phase))];
+      const zeile = (a) => `<label class="karte" style="cursor:pointer;align-items:flex-start;${a.erledigt ? "opacity:.55" : ""}"><input type="checkbox" data-fid="${a.id}" ${a.erledigt ? "checked" : ""} style="width:20px;height:20px;margin-top:2px;flex:none">
+        <div class="m"><b style="white-space:normal;${a.erledigt ? "text-decoration:line-through" : ""}">${a.typ === "gate" ? "🚦 " : ""}${esc(a.text)}</b><small>${a.von === a.bis ? kd(a.von) : kd(a.von) + "–" + kd(a.bis)}${a.von <= heute && a.bis >= heute ? " · läuft" : ""}</small></div></label>`;
+      el.innerHTML = `${offen.length && !fpAlle ? `<div class="box" style="border-color:#E0A43A"><b>${offen.length} überfällige Aufgabe${offen.length === 1 ? "" : "n"}</b> aus vergangenen Wochen<div style="margin-top:8px">${offen.map(zeile).join("")}</div></div>` : ""}
+        ${phasen.map((ph) => `<h3 class="ab">${esc(ph)}</h3>${sicht.filter((a) => a.phase === ph).map(zeile).join("")}`).join("")}
+        <div class="box"><h3 style="margin:0 0 8px">Eigene Aufgabe</h3><input id="fpText" placeholder="Was ist zu tun?"><div style="display:flex;gap:8px;margin-top:8px"><input id="fpVon" type="date" value="${heute}"><input id="fpBis" type="date" value="${heute}"></div>
+          <div style="display:flex;gap:8px;margin-top:10px"><button class="btn klein" id="fpAdd">Hinzufügen</button><button class="btn ghost klein" id="fpAlle">${fpAlle ? "Nur aktuelle zeigen" : "Auch Vergangenes zeigen"}</button></div></div>`;
+      el.querySelectorAll("[data-fid]").forEach((c) => c.onchange = async () => { try { await api({ aktion: "fahrplan_erledigt", fid: +c.dataset.fid, erledigt: c.checked }); const a = alleF.find((x) => x.id === +c.dataset.fid); if (a) a.erledigt = c.checked; zeichne(); } catch (e) { toast(e.message); c.checked = !c.checked; } });
+      el.querySelector("#fpAlle").onclick = () => { fpAlle = !fpAlle; zeichne(); };
+      el.querySelector("#fpAdd").onclick = async () => { const t = el.querySelector("#fpText").value.trim(); if (!t) return toast("Bitte eine Aufgabe eingeben."); try { await api({ aktion: "fahrplan_neu", text: t, von: el.querySelector("#fpVon").value, bis: el.querySelector("#fpBis").value }); toast("Aufgabe hinzugefügt"); await laden(); } catch (e) { toast(e.message); } };
     } else if (ansicht === "eintraege") {
       const q = $("such").value.trim().toLowerCase(), reg = $("fRegion").value;
       const es = alleE.filter((x) => (!reg || x.region === reg) && (!q || [x.firma, x.titel, x.text, x.art].join(" ").toLowerCase().includes(q)));
