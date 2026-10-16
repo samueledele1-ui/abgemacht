@@ -188,7 +188,7 @@
     return `<div class="karte" data-id="${k.id}">
       ${t && aktiv(k) ? `<a class="anruf" href="tel:${esc(t)}" data-tel="${k.id}" title="Anrufen">📞</a>` : ""}
       <div class="m"><b>${esc(k.firma)}</b><small>${esc(k.ansprechpartner || k.kategorie || "")}${k.region ? " · " + esc(k.region) : ""}</small></div>
-      <div class="rechts"><span class="st s-${s}">${ST[s] || esc(s)}</span>${mitDatum && k.naechster_kontakt ? `<br><span class="${ueberfaellig(k) ? "faellig" : ""}">${dt(k.naechster_kontakt)}</span>` : ""}${k.versuche ? `<br><small>${k.versuche}× versucht</small>` : ""}</div>
+      <div class="rechts"><span class="st s-${s}">${ST[s] || esc(s)}</span>${mitDatum && k.naechster_kontakt ? `<br><span class="${ueberfaellig(k) ? "faellig" : ""}">${dt(k.naechster_kontakt)}</span>` : ""}${k.versuche ? `<br><small>${k.versuche}× versucht</small>` : ""}${k.eintrag ? `<br><small>${k.eintrag === "angeboten" ? "📝 Eintrag offen" : "✓ Eintrag frei"}</small>` : ""}</div>
     </div>`;
   }
 
@@ -220,7 +220,9 @@
           <span>Anrufversuche gesamt</span><b>${liste.reduce((a, k) => a + (Number(k.versuche) || 0), 0)}</b>
           <span>Ja zur Warteliste</span><b>${liste.filter((k) => k.status === "warteliste").length}</b>
           <span>Davon bestätigt</span><b>${liste.filter((k) => status(k) === "bestaetigt").length}</b>
-          <span>Kein Interesse</span><b>${liste.filter((k) => k.status === "kein_interesse").length}</b></div></div>`;
+          <span>Kein Interesse</span><b>${liste.filter((k) => k.status === "kein_interesse").length}</b>
+          <span>Start-Einträge angeboten</span><b>${liste.filter((k) => k.eintrag).length}</b>
+          <span>Davon freigegeben</span><b>${liste.filter((k) => k.eintrag === "freigegeben").length}</b></div></div>`;
     }
     el.querySelectorAll("[data-id]").forEach((n) => n.onclick = (e) => { if (e.target.closest("[data-tel]")) return; oeffne(+n.dataset.id); });
     el.querySelectorAll("[data-tel]").forEach((a) => a.onclick = (e) => { e.stopPropagation(); setTimeout(() => oeffne(+a.dataset.tel), 400); });
@@ -234,7 +236,9 @@
     ["rueckruf", "Rückruf vereinbart", "Datum und Uhrzeit wählen", "zeit"], ["mail_gewuenscht", "Will Infos per Mail", "Mail öffnen + nachfassen"],
     ["warteliste", "Ja zur Warteliste ✓", "E-Mail eintragen", "mail", "gut"], ["kein_interesse", "Kein Interesse", "nicht mehr anrufen"],
     ["keine_anrufe", "Will keine Anrufe", "sofort sperren"], ["gespraech", "Gespräch geführt", "nur notieren"],
+    ["eintrag", "Start-Eintrag angeboten 📝", "Text mailen, in 2 Tagen nachfassen"], ["eintrag_frei", "Start-Eintrag freigegeben ✓", "„Passt“ bekommen", "", "gut"],
   ];
+  const EINTRAG = { angeboten: "📝 Start-Eintrag: Freigabe offen", freigegeben: "✓ Start-Eintrag freigegeben" };
   function oeffne(id, still) {
     const k = alle.find((x) => x.id === id); if (!k) return schliessen();
     offenId = id;
@@ -251,6 +255,7 @@
         ${k.website ? `<span>Website</span><a href="${esc(k.website)}" target="_blank" rel="noopener">${esc(k.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>` : ""}
         ${k.email ? `<span>E-Mail</span><a href="mailto:${esc(k.email)}">${esc(k.email)}</a>` : ""}
         ${k.warteliste_email ? `<span>Warteliste</span><span>${esc(k.warteliste_email)} · ${k.wl_status === "bestaetigt" ? "<b style='color:var(--gruen)'>bestätigt</b>" : k.wl_status === "offen" ? "Bestätigung offen" : esc(k.wl_status || "nicht gefunden")}</span>` : ""}
+        ${k.eintrag ? `<span>Start-Eintrag</span><span>${EINTRAG[k.eintrag] || esc(k.eintrag)}</span>` : ""}
         <span>Nächster Kontakt</span><span class="${istFaellig(k) ? "faellig" : ""}">${k.naechster_kontakt ? dt(k.naechster_kontakt) : "–"}</span>
       </div>
       <h3 class="ab">Ergebnis des Anrufs</h3>
@@ -303,6 +308,26 @@
         const upd = () => u.querySelector("#mopen").href = `mailto:${encodeURIComponent(u.querySelector("#mmail").value)}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
         u.querySelector("#mmail").oninput = upd; upd();
         u.querySelector("#ok").onclick = () => sende("mail_gewuenscht");
+      } else if (e === "eintrag") {
+        const vorname = k.ansprechpartner ? k.ansprechpartner.split(/[,/(]/)[0].trim() : "";
+        u.innerHTML = `<div class="unter"><p style="font-size:13px;color:var(--muted);margin:0 0 8px">Was soll zum Start eingestellt werden? Nur echte Einträge, erst nach „Passt“ einstellen.</p>
+          <label for="e_art">Art</label><select id="e_art"><option>Stelle</option><option>Auftrag</option><option>Angebot</option></select>
+          <label for="e_titel" style="margin-top:8px">Titel</label><input id="e_titel" placeholder="z. B. Elektroniker (m/w/d) oder Dachrinne erneuern">
+          <label for="e_text" style="margin-top:8px">Kurzbeschreibung</label><textarea id="e_text" placeholder="1–2 Sätze, Ort, bis wann"></textarea>
+          <label for="e_kontakt" style="margin-top:8px">Kontakt bei Anfragen</label><input id="e_kontakt" value="${esc([vorname, k.telefon || k.email || ""].filter(Boolean).join(", "))}">
+          <label for="e_mail" style="margin-top:8px">E-Mail für die Freigabe</label><input id="e_mail" type="email" value="${esc(k.email || k.warteliste_email || "")}">
+          <div class="reihe"><a class="btn ghost klein" id="e_open">Freigabe-Mail öffnen</a><button class="btn klein" id="ok">Speichern, nachfassen planen</button></div></div>`;
+        const g = (id) => u.querySelector(id).value.trim();
+        const upd = () => {
+          const text = `${vorname ? "Hallo " + vorname + "," : "Hallo,"}\n\nwie besprochen hier der Text für Ihren kostenlosen Start-Eintrag bei Abgemacht:\n\n${g("#e_art")}: ${g("#e_titel")}\n${g("#e_text")}\nKontakt bei Anfragen: ${g("#e_kontakt")}\n\nWenn alles passt, antworten Sie einfach mit „Passt“. Ich stelle den Eintrag dann zum Start ein. Später bekommen Sie einen eigenen Zugang und können alles selbst ändern. Gern auch ein Foto (Team, Werkstatt, Baustelle) mitschicken.\n\nViele Grüße\nSamuel Edele\nhttps://ab-gemacht.info`;
+          u.querySelector("#e_open").href = `mailto:${encodeURIComponent(g("#e_mail"))}?subject=${encodeURIComponent("Ihr Start-Eintrag bei Abgemacht – bitte kurz freigeben")}&body=${encodeURIComponent(text)}`;
+        };
+        u.querySelectorAll("input,textarea,select").forEach((x) => x.oninput = x.onchange = upd); upd();
+        u.querySelector("#ok").onclick = () => {
+          if (!g("#e_titel")) return msg("Bitte einen Titel eintragen.");
+          const n = p.querySelector("#notiz"); n.value = [`${g("#e_art")}: ${g("#e_titel")}`, g("#e_text"), n.value.trim()].filter(Boolean).join(" · ");
+          sende("eintrag");
+        };
       } else { u.innerHTML = ""; sende(e); }
     });
     p.querySelector("#nurNotiz").onclick = async () => {
