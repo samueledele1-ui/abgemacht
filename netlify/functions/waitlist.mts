@@ -221,7 +221,7 @@ function adminUmfrageMail(a: Record<string, unknown>, mailGeschickt: boolean, oh
 ${reihe("Typ", LABEL.typ[String(a.typ)] || a.typ)}${reihe("Branche", a.branche)}${reihe("Ort", a.ort)}
 ${reihe("Kanäle heute", a.kanaele)}${reihe("Zufriedenheit", a.zufriedenheit ? a.zufriedenheit + " von 5" : null)}
 ${reihe("Was nervt", a.nervt)}${reihe("Schon versucht", a.versucht)}${reihe("Funktionen", a.funktionen)}
-${reihe("11,99 € zahlen", LABEL.zahlen[String(a.zahlen)] || a.zahlen)}${reihe("Fairer Preis", a.preis_fair)}${reihe("Nutzung", LABEL.nutzung[String(a.nutzung)] || a.nutzung)}
+${reihe("4,99 € zahlen", LABEL.zahlen[String(a.zahlen)] || a.zahlen)}${reihe("Fairer Preis", a.preis_fair)}${reihe("Nutzung", LABEL.nutzung[String(a.nutzung)] || a.nutzung)}
 </table>${kontakt}
 ${knopf(`${seite()}/admin`, "Zur Übersicht")}`
   );
