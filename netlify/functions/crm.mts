@@ -65,6 +65,8 @@ const ERGEBNISSE: Record<string, string> = {
   kein_interesse: "Kein Interesse",
   keine_anrufe: "Will keine Anrufe",
   gespraech: "Gespräch geführt",
+  eintrag: "Start-Eintrag angeboten",
+  eintrag_frei: "Start-Eintrag freigegeben",
 };
 
 export default async (req: Request, _context: Context) => {
@@ -149,6 +151,7 @@ export default async (req: Request, _context: Context) => {
     let naechster: Date | null = null;
     let wlEmail: string | null = null;
     let hinweis = "";
+    let eintragNeu: string | null = null;
 
     switch (erg) {
       case "nicht_erreicht":
@@ -176,11 +179,17 @@ export default async (req: Request, _context: Context) => {
       case "kein_interesse": status = "kein_interesse"; naechster = null; break;
       case "keine_anrufe": status = "keine_anrufe"; naechster = null; break;
       case "gespraech": naechster = body.wann ? new Date(String(body.wann)) : null; break;
+      case "eintrag":
+        eintragNeu = "angeboten"; naechster = werktag(2, 10, 0); hinweis = "Text zur Freigabe mailen, in 2 Werktagen nachfassen.";
+        break;
+      case "eintrag_frei":
+        eintragNeu = "freigegeben"; naechster = null; hinweis = "Freigegeben: Eintrag zum Start einstellen.";
+        break;
     }
 
     await sql`
       UPDATE crm_kontakte SET status=${status}, versuche=${versuche}, naechster_kontakt=${naechster ? naechster.toISOString() : null},
-        letzter_kontakt=now(), warteliste_email=COALESCE(${wlEmail}, warteliste_email), updated_at=now()
+        letzter_kontakt=now(), warteliste_email=COALESCE(${wlEmail}, warteliste_email), eintrag=COALESCE(${eintragNeu}, eintrag), updated_at=now()
       WHERE id=${id}`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${id}, ${erg}, ${[ERGEBNISSE[erg], wlEmail, notiz].filter(Boolean).join(" · ")})`;
     return Response.json({ ok: true, status, versuche, naechster_kontakt: naechster, hinweis });
