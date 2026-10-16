@@ -73,7 +73,7 @@
     <h2 style="font-size:24px;margin-top:30px">Umfrage</h2>
     <div class="zwei">
       <div class="box"><h3>Wer hat geantwortet?</h3><div id="uTyp"></div></div>
-      <div class="box"><h3>Würden 11,99 € im Monat zahlen</h3><div id="uZahlen"></div></div>
+      <div class="box"><h3>Würden 4,99 € im Monat zahlen</h3><div id="uZahlen"></div></div>
       <div class="box"><h3>So finden sie heute Kunden</h3><div id="uKanaele"></div></div>
       <div class="box"><h3>Diese Funktionen würden sie nutzen</h3><div id="uFunk"></div></div>
       <div class="box"><h3>Zufriedenheit mit der Kundensuche heute</h3><div id="uZufr"></div></div>
@@ -168,7 +168,7 @@ function zeige(d) {
     zielZeile("Bestätigte Anmeldungen auf der Warteliste", best, 100) +
     zielZeile("Umfrage-Antworten", u.length, 20) +
     zielZeile("Unzufrieden mit der Kundensuche (1–3 von 5)", problem, 12) +
-    zielZeile("Würden 11,99 € zahlen", zahlenJa, 6);
+    zielZeile("Würden 4,99 € zahlen", zahlenJa, 6);
 
   balken("uTyp", zaehle(u.map((x) => x.typ)), L.typ, u.length);
   balken("uZahlen", zaehle(u.map((x) => x.zahlen)), L.zahlen, u.length, ["ja", "vielleicht", "nein"]);
