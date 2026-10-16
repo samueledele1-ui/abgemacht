@@ -99,7 +99,8 @@ export default async (req: Request, _context: Context) => {
 
   if (aktion === "verlauf") {
     const log = await sql`SELECT art, text, created_at FROM crm_log WHERE kontakt_id = ${id} ORDER BY created_at DESC LIMIT 100`;
-    return Response.json({ ok: true, log });
+    const eintraege = await sql`SELECT id, art, titel, text, ort, kontakt, status, freigabe_am, created_at FROM crm_eintraege WHERE kontakt_id = ${id} ORDER BY created_at DESC`;
+    return Response.json({ ok: true, log, eintraege });
   }
 
   if (aktion === "speichern") {
@@ -192,6 +193,15 @@ export default async (req: Request, _context: Context) => {
         letzter_kontakt=now(), warteliste_email=COALESCE(${wlEmail}, warteliste_email), eintrag=COALESCE(${eintragNeu}, eintrag), updated_at=now()
       WHERE id=${id}`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${id}, ${erg}, ${[ERGEBNISSE[erg], wlEmail, notiz].filter(Boolean).join(" · ")})`;
+    // Start-Einträge strukturiert speichern, damit sie zum Start automatisch in die App übernommen werden
+    if (erg === "eintrag") {
+      const e = (body.eintrag || {}) as Record<string, unknown>;
+      const titel = clip(e.titel, 160);
+      if (titel) await sql`INSERT INTO crm_eintraege (kontakt_id, art, titel, text, ort, kontakt) VALUES (${id}, ${clip(e.art, 30) || "Stelle"}, ${titel}, ${clip(e.text, 1000)}, ${clip(e.ort, 120)}, ${clip(e.kontakt, 200)})`;
+    }
+    if (erg === "eintrag_frei") {
+      await sql`UPDATE crm_eintraege SET status = 'freigegeben', freigabe_am = now() WHERE kontakt_id = ${id} AND status = 'angeboten'`;
+    }
     return Response.json({ ok: true, status, versuche, naechster_kontakt: naechster, hinweis });
   }
 
