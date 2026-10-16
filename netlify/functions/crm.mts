@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
+import { tagesplanSenden } from "../lib/tagesplan.ts";
 
 // CRM für Telefon-Akquise: Kontakte, Anruf-Ergebnisse, Wiedervorlagen.
 // Geschützt mit demselben ADMIN_PASSWORT wie /admin. Alles läuft über POST /api/crm mit {pw, aktion, ...}.
@@ -129,6 +130,11 @@ export default async (req: Request, _context: Context) => {
       RETURNING id`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r[0].id}, 'angelegt', null)`;
     return Response.json({ ok: true, id: r[0].id });
+  }
+
+  if (aktion === "tagesplan") {
+    try { return Response.json({ ok: true, betreff: await tagesplanSenden() }); }
+    catch (e) { return fehler("Tagesplan nicht gesendet: " + String(e).slice(0, 200), 500); }
   }
 
   if (aktion === "eintrag_aendern") {
