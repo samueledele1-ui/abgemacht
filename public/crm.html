@@ -265,6 +265,7 @@
       <textarea id="notiz" placeholder="z. B. Chef erst ab 16 Uhr da, sucht Subunternehmer …"></textarea>
       <div class="reihe" style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost klein" id="nurNotiz">Notiz speichern</button></div>
       <div class="msg" id="pmsg"></div>
+      <div id="eintraege"></div>
       <h3 class="ab">Verlauf</h3><ul class="verlauf" id="verlauf"><li><small>Lädt …</small></li></ul>
       <h3 class="ab">Daten bearbeiten</h3><div id="bearb"></div>`;
     document.body.append(scrim, p);
@@ -326,7 +327,7 @@
         u.querySelector("#ok").onclick = () => {
           if (!g("#e_titel")) return msg("Bitte einen Titel eintragen.");
           const n = p.querySelector("#notiz"); n.value = [`${g("#e_art")}: ${g("#e_titel")}`, g("#e_text"), n.value.trim()].filter(Boolean).join(" · ");
-          sende("eintrag");
+          sende("eintrag", { eintrag: { art: g("#e_art"), titel: g("#e_titel"), text: g("#e_text"), kontakt: g("#e_kontakt"), ort: k.ort || k.region || "" } });
         };
       } else { u.innerHTML = ""; sende(e); }
     });
@@ -335,6 +336,8 @@
       try { await api({ aktion: "notiz", id, text: t }); toast("Notiz gespeichert"); await laden(); } catch (e) { msg(e.message); }
     };
     api({ aktion: "verlauf", id }).then((d) => {
+      const ES = { angeboten: "Freigabe offen", freigegeben: "Freigegeben ✓ · geht zum Start automatisch online", veroeffentlicht: "Online", zurueckgezogen: "Zurückgezogen" };
+      if (d.eintraege && d.eintraege.length) p.querySelector("#eintraege").innerHTML = `<h3 class="ab">Start-Einträge</h3><ul class="verlauf">${d.eintraege.map((x) => `<li><b>${esc(x.art)}: ${esc(x.titel)}</b>${x.text ? `<br>${esc(x.text)}` : ""}<small>${esc(ES[x.status] || x.status)}${x.freigabe_am ? " · " + dt(x.freigabe_am) : ""}</small></li>`).join("")}</ul>`;
       p.querySelector("#verlauf").innerHTML = d.log.length ? d.log.map((l) => `<li>${esc(l.text || ({ angelegt: "Kontakt angelegt" })[l.art] || l.art)}<small>${dt(l.created_at)}</small></li>`).join("") : "<li><small>Noch keine Einträge.</small></li>";
     }).catch(() => {});
     formular(p.querySelector("#bearb"), k);
