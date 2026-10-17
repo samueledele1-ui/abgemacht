@@ -92,6 +92,35 @@ ${knopf(`${seite()}/wa`, "Abgemacht weiterempfehlen")}
 }
 
 
+/* ---------- Interessierte Betriebe automatisch ins CRM (Vermittlung → Partner-Betriebe → Interessenten) ---------- */
+async function crmInteressent(sql: any, d: { email?: string | null; telefon?: string | null; name?: string | null; branche?: string | null; ort?: string | null; typ?: string | null; quelle: string; notiz: string }) {
+  if (!["anbieter", "beides"].includes(String(d.typ))) return;
+  try {
+    const email = d.email ? d.email.toLowerCase() : null;
+    const ziffern = d.telefon ? d.telefon.replace(/\D/g, "") : null;
+    if (!email && !ziffern) return;
+    const vorh = await sql`SELECT id FROM crm_kontakte
+      WHERE (${email}::text IS NOT NULL AND (lower(email) = ${email}::text OR lower(warteliste_email) = ${email}::text))
+         OR (${ziffern}::text IS NOT NULL AND length(${ziffern}::text) >= 6 AND regexp_replace(coalesce(telefon, ''), '\D', '', 'g') = ${ziffern}::text)
+      ORDER BY id LIMIT 1`;
+    const notiz = `${new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit" }).format(new Date())}: ${d.notiz}`;
+    if (vorh.length) {
+      const id = vorh[0].id;
+      await sql`UPDATE crm_kontakte SET partner = COALESCE(partner, 'interessiert'), kategorie = COALESCE(kategorie, ${d.branche ?? null}),
+        ort = COALESCE(ort, ${d.ort ?? null}), warteliste_email = COALESCE(warteliste_email, ${email}),
+        notizen = CASE WHEN notizen IS NULL OR notizen = '' THEN ${notiz} ELSE notizen || E'\n' || ${notiz} END, updated_at = now() WHERE id = ${id}`;
+      await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${id}, 'partner', ${d.notiz})`;
+    } else {
+      const r = await sql`INSERT INTO crm_kontakte (firma, kategorie, ansprechpartner, telefon, email, ort, notizen, warteliste_email, quelle, status, partner, naechster_kontakt)
+        VALUES (${d.name || email || d.telefon}, ${d.branche ?? null}, ${d.name ?? null}, ${d.telefon ?? null}, ${email}, ${d.ort ?? null}, ${notiz}, ${email},
+                ${d.quelle}, 'neu', 'interessiert', now()) RETURNING id`;
+      await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r[0].id}, 'partner', ${d.notiz})`;
+    }
+  } catch (e) {
+    console.error("crmInteressent", e);
+  }
+}
+
 /* ---------- Termine (Zeitzone Berlin) ---------- */
 
 const TZ = "Europe/Berlin";
@@ -176,6 +205,32 @@ function terminVorschlaege(belegt: Zeitraum[] | null, gebucht: number[], jetzt =
     if (beste) { out.push(beste); n++; }
   }
   return out;
+}
+
+function googleKalenderLink(start: Date, titel: string, beschreibung: string) {
+  const f = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const ende = new Date(start.getTime() + 15 * 60000);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titel)}&dates=${f(start)}/${f(ende)}&details=${encodeURIComponent(beschreibung)}&ctz=Europe/Berlin`;
+}
+
+const kalenderMail = () => Netlify.env.get("KALENDER_MAIL") || Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com";
+
+// Einladung (METHOD:REQUEST) an Samuels Google-Konto: Gmail trägt sie automatisch in den Google Kalender ein
+function kalenderEinladung(start: Date, uid: string, titel: string, beschreibung: string) {
+  const f = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const ende = new Date(start.getTime() + 15 * 60000);
+  const zeile = (s: string) => s.replace(/[\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+  const von = Netlify.env.get("MAIL_FROM") || "hallo@abgemacht.de";
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Abgemacht//Termin//DE", "CALSCALE:GREGORIAN", "METHOD:REQUEST", "BEGIN:VEVENT",
+    `UID:${uid}@ab-gemacht.info`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(start)}`, `DTEND:${f(ende)}`,
+    `SUMMARY:${zeile(titel)}`, `DESCRIPTION:${zeile(beschreibung)}`,
+    `ORGANIZER;CN=Abgemacht:mailto:${von}`,
+    `ATTENDEE;CN=Samuel;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${kalenderMail()}`,
+    "SEQUENCE:0", "STATUS:CONFIRMED", "TRANSP:OPAQUE",
+    "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Gespräch Abgemacht", "TRIGGER:-PT15M", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
 }
 
 function kalenderDatei(start: Date, uid: string, beschreibung: string) {
@@ -325,6 +380,12 @@ export default async (req: Request, _context: Context) => {
       mailGeschickt = await sendeMail(kontakt!, null, "Danke für deine Antworten – wann passt ein kurzes Gespräch?", terminMail(token!, vorschlaege));
       if (mailGeschickt) await sql`UPDATE umfrage SET termin_mail_at = now() WHERE id = ${rows[0].id}`;
     }
+    if (kontaktOk) {
+      const infos = [a.auslastung && "Auslastung: " + (LABEL.auslastung[a.auslastung] || a.auslastung), a.zahlen && "9 € okay: " + a.zahlen,
+        a.langzeit && "Langzeit: " + a.langzeit].filter(Boolean).join(", ");
+      await crmInteressent(sql, { email: istMail ? kontakt : null, telefon: istMail ? null : kontakt, branche: a.branche, ort: a.ort, typ: a.typ,
+        quelle: "umfrage", notiz: "Umfrage ausgefüllt" + (infos ? " (" + infos + ")" : "") + (vorschlaege.length ? ", Terminvorschläge geschickt" : "") });
+    }
     const kurz = [LABEL.typ[String(a.typ)], a.branche, a.ort].filter(Boolean).join(", ");
     await sendeMail(adminMail(), "Samuel", `Neue Umfrage${kontaktOk ? " + Gesprächswunsch" : ""}${kurz ? ": " + kurz : ""}`, adminUmfrageMail(a, mailGeschickt, istMail && !kalenderOk));
     return Response.json({ ok: true });
@@ -366,6 +427,8 @@ export default async (req: Request, _context: Context) => {
 <p style="margin:0 0 12px">Den Termin findest du im Anhang für deinen Kalender. Falls etwas dazwischenkommt, antworte einfach auf diese E-Mail.</p>
 <p style="margin:0">Bis dann<br>Samuel von Abgemacht</p>`),
       undefined, { name: "abgemacht-termin.ics", text: kalenderDatei(start, `u${r.id}`, `Kurzes Gespräch zu Abgemacht. ${wie}`) });
+    await crmInteressent(sql, { email: String(r.kontakt), telefon: telefon || null, branche: r.branche, ort: r.ort, typ: r.typ, quelle: "umfrage",
+      notiz: `Gesprächstermin gebucht: ${terminText(start)}` });
     const wer = [LABEL.typ[String(r.typ)], r.branche, r.ort].filter(Boolean).join(", ");
     await sendeMail(adminMail(), "Samuel", `Neuer Termin: ${terminText(start)}${wer ? " – " + wer : ""}`, mailLayout(
       `<p style="margin:0 0 12px"><b>Neuer Gesprächstermin</b></p>
@@ -373,8 +436,13 @@ export default async (req: Request, _context: Context) => {
 <p style="margin:0 0 6px"><b>E-Mail:</b> ${esc(String(r.kontakt))}</p>
 <p style="margin:0 0 6px"><b>Telefon:</b> ${telefon ? esc(telefon) : "nicht angegeben – bitte Videolink schicken"}</p>
 <p style="margin:0 0 6px"><b>Wer:</b> ${esc(wer || "–")}</p>
-${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`),
-      undefined, { name: "abgemacht-termin.ics", text: kalenderDatei(start, `s${r.id}`, `Gespräch mit ${r.kontakt}${telefon ? ", Tel. " + telefon : ""}`) });
+${knopf(googleKalenderLink(start, `Abgemacht: Gespräch mit ${r.kontakt}`, `${wer ? wer + "\n" : ""}E-Mail: ${r.kontakt}${telefon ? "\nTelefon: " + telefon : ""}`), "In Google Kalender eintragen")}
+<p style="margin:0 0 6px;font-size:14px;color:#5B6B65">Gmail bekommt zusätzlich eine Kalendereinladung und trägt sie normalerweise automatisch ein. Falls nicht, reicht der Knopf oben.</p>
+${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
+    // Eigene Einladungs-Mail an das Google-Konto, damit der Termin direkt im Kalender landet
+    await sendeMail(kalenderMail(), "Samuel", `Einladung: Abgemacht-Gespräch ${terminText(start)}`, mailLayout(
+      `<p style="margin:0 0 12px"><b>Kalendereinladung</b> für das Gespräch am ${terminText(start)} mit ${esc(String(r.kontakt))}.</p>`),
+      undefined, { name: "invite.ics", text: kalenderEinladung(start, `s${r.id}`, `Abgemacht: Gespräch mit ${r.kontakt}`, `${wer ? wer + "\n" : ""}E-Mail: ${r.kontakt}${telefon ? "\nTelefon: " + telefon : ""}`) });
     return Response.json({ ok: true, gebucht: true, termin: s, text: terminText(start) });
   }
 
@@ -401,6 +469,8 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`),
     ON CONFLICT (email) DO UPDATE SET token = COALESCE(waitlist.token, EXCLUDED.token)
     RETURNING id, token, status, name, mail_sent_at, (xmax = 0) AS neu`;
   const r = rows[0];
+  if (r.neu) await crmInteressent(sql, { email, name, branche: clip(body.branche, 60), ort: clip(body.ort, 80), typ, quelle: "warteliste",
+    notiz: `Auf der Website angemeldet als „${LABEL.typ[String(typ)] || typ}“` });
 
   if (r.status === "bestaetigt") return Response.json({ ok: true, neu: false, status: "bestaetigt" });
 
