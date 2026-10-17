@@ -203,7 +203,7 @@
       <div class="rechts"><span class="st v-${v.status}">${VS[v.status]}</span><br><small style="color:var(--muted)">${bs.length} angefragt · ${ang} Angebote</small></div></div>`;
   }
   function zeichne() {
-    kpis();
+    kpis(); tabZahl();
     const el = $("ansicht");
     if (ansicht === "anfragen") {
       const gruppe = (sts, t) => { const l = V.filter((v) => sts.includes(v.status)); return l.length ? `<h3 class="ab">${t} (${l.length})</h3>${l.map(vKarte).join("")}` : ""; };
@@ -213,10 +213,17 @@
     } else if (ansicht === "partner") {
       const zeile = (p) => `<tr data-p="${p.id}"><td><b>${esc(p.firma)}</b>${p.partner === "pausiert" ? '<span class="tag2 t-proj">pausiert</span>' : ""}</td><td>${esc(p.leistungen || p.kategorie || "")}</td><td>${esc(p.ort || p.region || "")}</td>
         <td>${p.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : "–"}</td><td>${p.angefragt}</td><td>${p.angebote}</td><td>${p.zusagen}</td><td>${p.antwort_h != null ? esc(String(p.antwort_h).replace(".", ",")) + " Std." : "–"}</td></tr>`;
-      el.innerHTML = `<div class="box"><b>${P.filter((p) => p.partner === "aktiv").length} aktive Partner</b> <span style="color:var(--muted)">· Ziel bis 15.11.: 30 Partner in 8 Branchen</span>
+      const INT = P.filter((p) => p.partner === "interessiert");
+      const PP = P.filter((p) => p.partner !== "interessiert");
+      const intKarte = (p) => `<div class="karte" data-p="${p.id}"><div class="m"><b>${esc(p.firma)}${p.quelle ? `<span class="tag2 t-p">${esc(p.quelle === "warteliste" ? "Warteliste" : p.quelle === "umfrage" ? "Umfrage" : p.quelle)}</span>` : ""}</b>
+        <small>${esc([p.kategorie, p.ort || p.region, p.email, p.telefon].filter(Boolean).join(" · "))}</small>${p.notizen ? `<small>${esc(String(p.notizen).split("\n").slice(-2).join(" · "))}</small>` : ""}</div>
+        ${p.telefon ? `<a class="anruf" href="tel:${esc(String(p.telefon).replace(/[^\d+]/g, ""))}" title="Anrufen" onclick="event.stopPropagation()">📞</a>` : ""}
+        <button class="btn klein" data-auf="${p.id}" type="button">Als Partner</button></div>`;
+      el.innerHTML = (INT.length ? `<div class="box" style="border-color:var(--gruen)"><b>${INT.length} ${INT.length === 1 ? "Betrieb hat" : "Betriebe haben"} sich selbst gemeldet</b> <span style="color:var(--muted)">· über Warteliste oder Umfrage. Anrufen, Leistungen klären, dann als Partner aufnehmen.</span><div style="margin-top:10px">${INT.map(intKarte).join("")}</div></div>` : "") + `<div class="box"><b>${P.filter((p) => p.partner === "aktiv").length} aktive Partner</b> <span style="color:var(--muted)">· Ziel bis 15.11.: 30 Partner in 8 Branchen</span>
         <div style="margin-top:10px"><label for="pSuch" style="margin-top:0">Betrieb aus dem CRM als Partner aufnehmen</label><div style="display:flex;gap:8px"><input id="pSuch" placeholder="Firma, Branche oder Ort"><button class="btn klein" id="pSuchen" type="button">Suchen</button></div><div id="pTreffer"></div></div></div>
-        ${P.length ? `<div class="tabelle"><table><thead><tr><th>Betrieb</th><th>Leistungen</th><th>Ort</th><th>WhatsApp</th><th>Angefragt</th><th>Angebote</th><th>Zusagen</th><th>Ø Antwort</th></tr></thead><tbody>${P.map(zeile).join("")}</tbody></table></div>` : '<div class="leer">Noch keine Partner. Nimm Betriebe aus dem CRM auf oder leg sie mit „+ Partner“ an.</div>'}`;
+        ${PP.length ? `<div class="tabelle"><table><thead><tr><th>Betrieb</th><th>Leistungen</th><th>Ort</th><th>WhatsApp</th><th>Angefragt</th><th>Angebote</th><th>Zusagen</th><th>Ø Antwort</th></tr></thead><tbody>${PP.map(zeile).join("")}</tbody></table></div>` : '<div class="leer">Noch keine Partner. Nimm Betriebe aus dem CRM auf oder leg sie mit „+ Partner“ an.</div>'}`;
       el.querySelectorAll("[data-p]").forEach((r) => r.onclick = () => oeffneP(+r.dataset.p));
+      el.querySelectorAll("[data-auf]").forEach((b) => b.onclick = async (e) => { e.stopPropagation(); await api({ aktion: "partner", kontakt: +b.dataset.auf, partner: "aktiv" }); toast("Als Partner aufgenommen – Leistungen und WhatsApp-Okay im Profil ergänzen"); await laden(); oeffneP(+b.dataset.auf); });
       const suchen = async () => {
         const q = $("pSuch").value.trim(); if (!q) return;
         const d = await api({ aktion: "kandidaten", q });
@@ -235,6 +242,7 @@
         <p style="color:var(--muted);margin:12px 0 0">Gebühren werden zur Info berechnet (9/29/59 €, Langzeit 199 €), in der Startphase aber nicht verlangt. Kalte WhatsApp-Nachrichten ohne Okay sind tabu: erst anrufen.</p></div>`;
     }
   }
+  function tabZahl() { const n = P.filter((p) => p.partner === "interessiert").length; const b = document.querySelector('.tabs button[data-v="partner"]'); if (b) b.textContent = "Partner-Betriebe" + (n ? ` (${n} neu)` : ""); }
   function setze(v) { ansicht = v; document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === v)); zeichne(); }
 
   /* ---------- Panel ---------- */
@@ -315,7 +323,7 @@
       const d = await api({ aktion: "kandidaten", q });
       const schon = new Set(bs.map((b) => b.kontakt_id));
       const l = d.kandidaten.filter((k) => !schon.has(k.id));
-      p.querySelector("#kListe").innerHTML = l.map((k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}</small></label></div>`).join("") || '<p style="color:var(--muted)">Keine Treffer.</p>';
+      p.querySelector("#kListe").innerHTML = l.map((k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}</small></label></div>`).join("") || '<p style="color:var(--muted)">Keine Treffer.</p>';
       p.querySelector("#kAnfragen").hidden = !l.length;
     };
     p.querySelector("#kSuchen").onclick = suchen;
@@ -340,10 +348,10 @@
     const k = P.find((x) => x.id === kid); if (!k) return;
     const p = panel(`<div class="kopf"><div><h2>${esc(k.firma)}</h2><small style="color:var(--muted)">${esc([k.kategorie, k.ort || k.region].filter(Boolean).join(" · "))}${k.partner_seit ? " · Partner seit " + dt(k.partner_seit).slice(0, 6) : ""}</small></div><button class="zu" aria-label="Schließen">×</button></div>
       <div class="info"><span>Ansprechpartner</span><b>${esc(k.ansprechpartner || "–")}</b><span>Telefon</span><b>${k.telefon ? `<a href="tel:${esc(String(k.telefon).replace(/[^\d+]/g, ""))}">${esc(k.telefon)}</a>` : "–"}</b><span>E-Mail</span><b>${esc(k.email || "–")}</b><span>Website</span><b>${k.website ? `<a href="${esc(/^https?:/.test(k.website) ? k.website : "https://" + k.website)}" target="_blank" rel="noopener">${esc(k.website)}</a>` : "–"}</b>
-        <span>Anfragen</span><b>${k.angefragt} angefragt · ${k.angebote} Angebote · ${k.zusagen} Zusagen</b></div>
+        ${k.notizen ? `<span>Notizen</span><b style="white-space:pre-wrap;font-weight:500">${esc(k.notizen)}</b>` : ""}<span>Anfragen</span><b>${k.angefragt} angefragt · ${k.angebote} Angebote · ${k.zusagen} Zusagen</b></div>
       <div class="unter"><label for="pLeist">Leistungen (für die Suche)</label><input id="pLeist" value="${esc(k.leistungen || "")}" placeholder="z. B. Elektro, E-Check, Wallbox">
         <label class="check" style="margin-top:12px"><input type="checkbox" id="pWa" ${k.wa_ok_am ? "checked" : ""}> <span>Hat Okay gegeben, Anfragen per WhatsApp zu bekommen${k.wa_ok_am ? " (seit " + dt(k.wa_ok_am) + ")" : ""}</span></label>
-        <label for="pSt">Status</label><select id="pSt"><option value="aktiv" ${k.partner === "aktiv" ? "selected" : ""}>Aktiver Partner</option><option value="pausiert" ${k.partner === "pausiert" ? "selected" : ""}>Pausiert (gerade keine Kapazität)</option><option value="">Kein Partner mehr</option></select>
+        <label for="pSt">Status</label><select id="pSt"><option value="aktiv" ${k.partner === "aktiv" ? "selected" : ""}>Aktiver Partner</option><option value="pausiert" ${k.partner === "pausiert" ? "selected" : ""}>Pausiert (gerade keine Kapazität)</option><option value="interessiert" ${k.partner === "interessiert" ? "selected" : ""}>Interessiert (noch nicht aufgenommen)</option><option value="">Kein Partner mehr</option></select>
         <button class="btn klein" id="pSpeichern" type="button" style="margin-top:12px">Speichern</button></div>
       ${vorlageHtml("Text: Anmeldung mit WhatsApp-Okay", T.anmeldung(k), k.telefon, true)}`);
     p.querySelector("#pSpeichern").onclick = async () => {
