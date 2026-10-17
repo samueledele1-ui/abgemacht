@@ -61,7 +61,7 @@ export default async (req: Request, _context: Context) => {
       sql`SELECT vb.*, k.firma, k.ansprechpartner, k.telefon, k.email, k.kategorie, k.ort AS k_ort, k.wa_ok_am
             FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id ORDER BY vb.angefragt_am`,
       sql`SELECT k.id, k.firma, k.kategorie, k.leistungen, k.ansprechpartner, k.telefon, k.email, k.website, k.ort, k.region,
-                 k.partner, k.partner_seit, k.wa_ok_am,
+                 k.partner, k.partner_seit, k.wa_ok_am, k.notizen, k.quelle, k.created_at,
                  count(vb.id)::int AS angefragt,
                  count(vb.id) FILTER (WHERE vb.status IN ('angebot','gewaehlt','nicht_gewaehlt'))::int AS angebote,
                  count(vb.id) FILTER (WHERE vb.status = 'gewaehlt')::int AS zusagen,
@@ -152,9 +152,9 @@ export default async (req: Request, _context: Context) => {
 
   if (aktion === "partner") {
     const kid = Number(body.kontakt) || 0;
-    const partner = ["aktiv", "pausiert"].includes(String(body.partner)) ? String(body.partner) : null;
+    const partner = ["aktiv", "pausiert", "interessiert"].includes(String(body.partner)) ? String(body.partner) : null;
     const wa = body.wa_ok === true ? "ja" : body.wa_ok === false ? "nein" : "gleich";
-    await sql`UPDATE crm_kontakte SET partner = ${partner}, partner_seit = CASE WHEN ${partner}::text IS NULL THEN NULL ELSE COALESCE(partner_seit, now()) END,
+    await sql`UPDATE crm_kontakte SET partner = ${partner}, partner_seit = CASE WHEN ${partner}::text IS NULL OR ${partner}::text = 'interessiert' THEN NULL ELSE COALESCE(partner_seit, now()) END,
         wa_ok_am = CASE WHEN ${wa}::text = 'ja' THEN COALESCE(wa_ok_am, now()) WHEN ${wa}::text = 'nein' THEN NULL ELSE wa_ok_am END,
         leistungen = COALESCE(${clip(body.leistungen, 300)}, leistungen), updated_at = now()
       WHERE id = ${kid}`;
