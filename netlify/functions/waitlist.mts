@@ -10,7 +10,7 @@ import ical from "node-ical";
 //   POST /api/umfrage      -> Antworten der Umfrage auf /umfrage (+ Benachrichtigung an Samuel, Terminvorschläge an Teilnehmer)
 //   POST /api/termin       -> Terminvorschläge abrufen bzw. Termin festmachen (Seite /termin)
 
-const TYPEN = ["firma", "selbststaendig", "mitarbeiter", "privat"];
+const TYPEN = ["auftraggeber", "anbieter", "beides", "firma", "selbststaendig", "mitarbeiter", "privat"];
 const QUELLEN = ["direkt", "umfrage", "ig", "tt", "li", "wa", "telefon", "seo"];
 const TOKEN_RE = /^[a-f0-9]{64}$/;
 
@@ -82,8 +82,9 @@ function willkommensMail(name: string | null, token: string) {
   return mailLayout(
     `<p style="margin:0 0 12px">Hallo${name ? " " + esc(name) : ""},</p>
 <p style="margin:0 0 12px"><b>Abgemacht!</b> Du stehst jetzt auf der Warteliste.</p>
-<p style="margin:0 0 12px">Sobald Abgemacht in deiner Region startet, bekommst du als Erstes Bescheid. Dann kannst du Unternehmer aus deiner Nähe per Swipe kennenlernen, Aufträge und Jobs finden und in den Branchen-Chats mitreden.</p>
-<p style="margin:0 0 12px">Je mehr Betriebe aus deiner Gegend dabei sind, desto mehr bringt dir die App. Leite diesen Link gern an Kollegen weiter:</p>
+<p style="margin:0 0 12px">Sobald Abgemacht in deiner Region startet, bekommst du als Erstes Bescheid. So funktioniert es: Du schreibst in einem Satz, was du brauchst, wir fragen 5 passende Betriebe aus der Region an, und du sagst beim besten Angebot einfach „Abgemacht“. Einmalig, als Projekt oder langfristig.</p>
+<p style="margin:0 0 12px">Du bietest selbst Leistungen an? Dann bekommst du passende Anfragen aus deiner Nähe und zahlst nur, wenn ein Auftrag zustande kommt. In der Startphase ist alles kostenlos.</p>
+<p style="margin:0 0 12px">Je mehr Betriebe und Auftraggeber aus deiner Gegend dabei sind, desto mehr bringt dir Abgemacht. Leite diesen Link gern weiter:</p>
 ${knopf(`${seite()}/wa`, "Abgemacht weiterempfehlen")}
 <p style="margin:0">Bis bald<br>Samuel von Abgemacht</p>`,
     abmelden
@@ -204,9 +205,10 @@ ${links}
 }
 
 const LABEL: Record<string, Record<string, string>> = {
-  typ: { firma: "Firma", selbststaendig: "Selbstständig", mitarbeiter: "Mitarbeiter", privat: "Privat" },
+  typ: { auftraggeber: "Vergibt Aufträge", anbieter: "Bietet Leistungen an", beides: "Beides", firma: "Firma", selbststaendig: "Selbstständig", mitarbeiter: "Mitarbeiter", privat: "Privat" },
   zahlen: { ja: "Ja", vielleicht: "Vielleicht", nein: "Nein" },
-  nutzung: { taeglich: "Täglich", woechentlich: "Wöchentlich", monatlich: "Monatlich", selten: "Selten" },
+  nutzung: { woechentlich: "Wöchentlich", monatlich: "Monatlich", quartal: "Paar Mal im Jahr", selten: "Selten", taeglich: "Täglich" },
+  auslastung: { voll: "Ausgebucht", gut: "Gut ausgelastet", luecken: "Regelmäßig Lücken", mehr: "Braucht mehr Aufträge" },
 };
 
 function adminUmfrageMail(a: Record<string, unknown>, mailGeschickt: boolean, ohneKalender = false) {
@@ -219,9 +221,10 @@ function adminUmfrageMail(a: Record<string, unknown>, mailGeschickt: boolean, oh
     `<p style="margin:0 0 12px"><b>Neue Antwort in der Umfrage</b></p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.45">
 ${reihe("Typ", LABEL.typ[String(a.typ)] || a.typ)}${reihe("Branche", a.branche)}${reihe("Ort", a.ort)}
-${reihe("Kanäle heute", a.kanaele)}${reihe("Zufriedenheit", a.zufriedenheit ? a.zufriedenheit + " von 5" : null)}
-${reihe("Was nervt", a.nervt)}${reihe("Schon versucht", a.versucht)}${reihe("Funktionen", a.funktionen)}
-${reihe("4,99 € zahlen", LABEL.zahlen[String(a.zahlen)] || a.zahlen)}${reihe("Fairer Preis", a.preis_fair)}${reihe("Nutzung", LABEL.nutzung[String(a.nutzung)] || a.nutzung)}
+${reihe("Aufträge heute über", a.kanaele)}${reihe("Auslastung", LABEL.auslastung[String(a.auslastung)] || a.auslastung)}
+${reihe("9 € pro Auftrag", LABEL.zahlen[String(a.zahlen)] || a.zahlen)}${reihe("Fairer Preis", a.preis_fair)}${reihe("Langzeitaufträge", LABEL.zahlen[String(a.langzeit)] || a.langzeit)}${reihe("Anfragen per", a.kanal)}
+${reihe("Findet Betriebe über", a.suche)}${reihe("Zufriedenheit", a.zufriedenheit ? a.zufriedenheit + " von 5" : null)}${reihe("Braucht Betriebe", LABEL.nutzung[String(a.nutzung)] || a.nutzung)}${reihe("Auftragsarten", a.arten)}
+${reihe("Was nervt", a.nervt)}${reihe("Am wichtigsten", a.funktionen)}
 </table>${kontakt}
 ${knopf(`${seite()}/admin`, "Zur Übersicht")}`
   );
@@ -297,16 +300,23 @@ export default async (req: Request, _context: Context) => {
       kanaele: liste(body.kanaele, ["empfehlung", "linkedin", "netzwerktreffen", "social", "google", "kaltakquise", "portale", "sonstiges"]),
       zufriedenheit: Number.isInteger(z) && z >= 1 && z <= 5 ? z : null,
       nervt: clip(body.nervt, 1000), versucht: clip(body.versucht, 1000),
-      funktionen: liste(body.funktionen, ["personen", "auftraege", "suche", "chats", "verifizierung", "team"]),
+      funktionen: liste(body.funktionen, ["schnell", "geprueft", "whatsapp", "sprache", "langzeit", "luecken", "kostenlos", "personen", "auftraege", "suche", "chats", "verifizierung", "team"]),
       zahlen: eins(body.zahlen, ["ja", "vielleicht", "nein"]), preis_fair: clip(body.preis_fair, 60),
-      nutzung: eins(body.nutzung, ["taeglich", "woechentlich", "monatlich", "selten"]),
+      nutzung: eins(body.nutzung, ["woechentlich", "monatlich", "quartal", "selten", "taeglich"]),
+      auslastung: eins(body.auslastung, ["voll", "gut", "luecken", "mehr"]),
+      langzeit: eins(body.langzeit, ["ja", "vielleicht", "nein"]),
+      kanal: liste(body.kanal, ["whatsapp", "app", "email", "telefon"]),
+      suche: liste(body.suche, ["empfehlung", "google", "portale", "social", "bekannte", "sonstiges"]),
+      arten: liste(body.arten, ["einmalig", "projekt", "langzeit"]),
       kontakt: kontaktOk ? kontakt : null,
     };
     const rows = await sql`
-      INSERT INTO umfrage (typ, branche, ort, kanaele, zufriedenheit, nervt, versucht, funktionen, zahlen, preis_fair, nutzung, kontakt_ok, kontakt, quelle, token, termin_vorschlaege)
+      INSERT INTO umfrage (typ, branche, ort, kanaele, zufriedenheit, nervt, versucht, funktionen, zahlen, preis_fair, nutzung, kontakt_ok, kontakt,
+        version, auslastung, langzeit, kanal, suche, arten, quelle, token, termin_vorschlaege)
       VALUES (
         ${a.typ}, ${a.branche}, ${a.ort}, ${a.kanaele}, ${a.zufriedenheit}, ${a.nervt}, ${a.versucht}, ${a.funktionen},
         ${a.zahlen}, ${a.preis_fair}, ${a.nutzung}, ${kontaktOk}, ${a.kontakt},
+        2, ${a.auslastung}, ${a.langzeit}, ${a.kanal}, ${a.suche}, ${a.arten},
         ${QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "umfrage"},
         ${token}, ${vorschlaege.length ? vorschlaege.map((d) => d.toISOString()) : null}
       ) RETURNING id`;
