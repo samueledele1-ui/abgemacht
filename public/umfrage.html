@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Umfrage – Abgemacht</title>
-<meta name="description" content="3 Minuten, die eine App für Unternehmer aus der Region besser machen.">
+<meta name="description" content="2 Minuten, die Abgemacht besser machen: Wie findest du heute Aufträge oder gute Betriebe in der Region?">
 <link rel="stylesheet" href="/style.css">
 <style>
 .frage{margin-top:26px}
@@ -31,112 +31,159 @@ textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:tr
 
   <section style="padding-top:10px">
     <div class="formbox" id="box">
-      <span class="pill">3 Minuten · anonym, wenn du willst</span>
-      <h2 style="margin-top:12px">Wie findest du heute Kunden und Partner?</h2>
-      <p class="sub" style="margin-bottom:6px">Ich baue Abgemacht, eine App für Unternehmer aus der Region. Deine Antworten entscheiden, was reinkommt. Danke dir! – Samuel</p>
+      <span class="pill">2 Minuten · anonym, wenn du willst</span>
+      <h2 style="margin-top:12px">Wie findest du heute Aufträge oder gute Betriebe?</h2>
+      <p class="sub" style="margin-bottom:6px">Ich baue Abgemacht: Du schreibst in einem Satz, was du brauchst, und passende Betriebe aus der Region machen dir Angebote. Deine Antworten entscheiden, wie es startet. Danke dir! – Samuel</p>
       <div class="fortschritt" aria-hidden="true"><i id="balken"></i></div>
 
       <form id="form" novalidate>
         <div class="frage">
-          <b>1. Was trifft auf dich zu?</b>
-          <div class="wahl" data-name="typ" data-typ="radio">
-            <input type="radio" name="typ" id="ty1" value="firma"><label for="ty1">Inhaber einer Firma</label>
-            <input type="radio" name="typ" id="ty2" value="selbststaendig"><label for="ty2">Selbstständig / Freiberufler</label>
-            <input type="radio" name="typ" id="ty3" value="mitarbeiter"><label for="ty3">Mitarbeiter</label>
-            <input type="radio" name="typ" id="ty4" value="privat"><label for="ty4">Privat</label>
+          <b>Was trifft auf dich zu?</b>
+          <div class="wahl">
+            <input type="radio" name="typ" id="ty1" value="anbieter"><label for="ty1">Ich biete Leistungen an (Betrieb, Selbstständig)</label>
+            <input type="radio" name="typ" id="ty2" value="auftraggeber"><label for="ty2">Ich vergebe Aufträge (Firma, Verwaltung, privat)</label>
+            <input type="radio" name="typ" id="ty3" value="beides"><label for="ty3">Beides</label>
           </div>
         </div>
 
         <div class="frage">
-          <b>2. Branche und Ort</b>
+          <b>Branche und Ort</b>
           <div class="row" style="margin-top:0">
             <div><select id="branche" name="branche" aria-label="Branche">
               <option value="">Branche wählen</option>
-              <option>Handwerk</option><option>Finanzen & Steuern</option><option>Gastronomie</option>
-              <option>Immobilien</option><option>Marketing & Social Media</option><option>KI</option>
-              <option>IT & Software</option><option>Sport & Gesundheit</option><option>Sicherheitsdienst</option>
-              <option>Vertrieb</option><option>Handel</option><option>Sonstiges</option>
+              <option>Handwerk</option><option>Reinigung & Hausmeister</option><option>Garten & Landschaft</option>
+              <option>Umzug & Transport</option><option>Immobilien & Hausverwaltung</option><option>IT & Software</option>
+              <option>Marketing & Social Media</option><option>Foto & Video</option><option>Sport & Gesundheit</option>
+              <option>Finanzen & Steuern</option><option>Gastronomie & Catering</option><option>Sicherheitsdienst</option>
+              <option>Vertrieb</option><option>Handel</option><option>Privat</option><option>Sonstiges</option>
             </select></div>
             <div><input id="ort" name="ort" maxlength="80" placeholder="Stadt oder PLZ" aria-label="Stadt oder PLZ"></div>
           </div>
         </div>
 
-        <div class="frage">
-          <b>3. Wie kommst du heute an neue Kunden, Partner oder Aufträge?</b>
-          <p class="hint">Mehrere Antworten möglich</p>
-          <div class="wahl">
-            <input type="checkbox" name="kanaele" id="k1" value="empfehlung"><label for="k1">Empfehlungen</label>
-            <input type="checkbox" name="kanaele" id="k2" value="linkedin"><label for="k2">LinkedIn</label>
-            <input type="checkbox" name="kanaele" id="k3" value="netzwerktreffen"><label for="k3">Netzwerktreffen, BNI, IHK</label>
-            <input type="checkbox" name="kanaele" id="k4" value="social"><label for="k4">Instagram, Facebook, TikTok</label>
-            <input type="checkbox" name="kanaele" id="k5" value="google"><label for="k5">Google, eigene Website</label>
-            <input type="checkbox" name="kanaele" id="k6" value="kaltakquise"><label for="k6">Kaltakquise</label>
-            <input type="checkbox" name="kanaele" id="k7" value="portale"><label for="k7">Portale wie MyHammer, Check24</label>
-            <input type="checkbox" name="kanaele" id="k8" value="sonstiges"><label for="k8">Sonstiges</label>
+        <div class="teil" data-fuer="anbieter" hidden>
+          <h3 style="margin:30px 0 0;font-size:18px;color:var(--gruen-d)">Du bietest Leistungen an</h3>
+          <div class="frage">
+            <b>Wie kommst du heute an neue Aufträge?</b>
+            <p class="hint">Mehrere Antworten möglich</p>
+            <div class="wahl">
+              <input type="checkbox" name="kanaele" id="k1" value="empfehlung"><label for="k1">Empfehlungen</label>
+              <input type="checkbox" name="kanaele" id="k2" value="google"><label for="k2">Google, eigene Website</label>
+              <input type="checkbox" name="kanaele" id="k3" value="portale"><label for="k3">Portale wie MyHammer, Check24</label>
+              <input type="checkbox" name="kanaele" id="k4" value="social"><label for="k4">Instagram, Facebook</label>
+              <input type="checkbox" name="kanaele" id="k5" value="netzwerktreffen"><label for="k5">Netzwerke, BNI, IHK</label>
+              <input type="checkbox" name="kanaele" id="k6" value="kaltakquise"><label for="k6">Kaltakquise</label>
+              <input type="checkbox" name="kanaele" id="k7" value="sonstiges"><label for="k7">Sonstiges</label>
+            </div>
+          </div>
+          <div class="frage">
+            <b>Wie ausgelastet bist du gerade?</b>
+            <div class="wahl">
+              <input type="radio" name="auslastung" id="a1" value="voll"><label for="a1">Ausgebucht, Wochen Vorlauf</label>
+              <input type="radio" name="auslastung" id="a2" value="gut"><label for="a2">Gut ausgelastet</label>
+              <input type="radio" name="auslastung" id="a3" value="luecken"><label for="a3">Immer wieder Lücken</label>
+              <input type="radio" name="auslastung" id="a4" value="mehr"><label for="a4">Ich brauche mehr Aufträge</label>
+            </div>
+          </div>
+          <div class="frage">
+            <b>Du zahlst nur, wenn ein Auftrag zustande kommt. Wären 9 € für einen vermittelten Auftrag über rund 400 € für dich okay?</b>
+            <div class="wahl">
+              <input type="radio" name="zahlen" id="p1" value="ja"><label for="p1">Ja</label>
+              <input type="radio" name="zahlen" id="p2" value="vielleicht"><label for="p2">Vielleicht</label>
+              <input type="radio" name="zahlen" id="p3" value="nein"><label for="p3">Nein</label>
+            </div>
+            <input name="preis_fair" maxlength="60" placeholder="Was wäre für dich fair? (optional)" style="margin-top:10px">
+          </div>
+          <div class="frage">
+            <b>Interessieren dich auch Langzeitaufträge über Wochen, Monate oder Jahre?</b>
+            <div class="wahl">
+              <input type="radio" name="langzeit" id="l1" value="ja"><label for="l1">Ja</label>
+              <input type="radio" name="langzeit" id="l2" value="vielleicht"><label for="l2">Vielleicht</label>
+              <input type="radio" name="langzeit" id="l3" value="nein"><label for="l3">Nein</label>
+            </div>
+          </div>
+          <div class="frage">
+            <b>Wie willst du Anfragen am liebsten bekommen?</b>
+            <p class="hint">Mehrere Antworten möglich</p>
+            <div class="wahl">
+              <input type="checkbox" name="kanal" id="c1" value="whatsapp"><label for="c1">WhatsApp</label>
+              <input type="checkbox" name="kanal" id="c2" value="app"><label for="c2">App</label>
+              <input type="checkbox" name="kanal" id="c3" value="email"><label for="c3">E-Mail</label>
+              <input type="checkbox" name="kanal" id="c4" value="telefon"><label for="c4">Anruf</label>
+            </div>
           </div>
         </div>
 
-        <div class="frage">
-          <b>4. Wie zufrieden bist du damit?</b>
-          <div class="wahl skala">
-            <input type="radio" name="zufriedenheit" id="z1" value="1"><label for="z1">1</label>
-            <input type="radio" name="zufriedenheit" id="z2" value="2"><label for="z2">2</label>
-            <input type="radio" name="zufriedenheit" id="z3" value="3"><label for="z3">3</label>
-            <input type="radio" name="zufriedenheit" id="z4" value="4"><label for="z4">4</label>
-            <input type="radio" name="zufriedenheit" id="z5" value="5"><label for="z5">5</label>
+        <div class="teil" data-fuer="auftraggeber" hidden>
+          <h3 style="margin:30px 0 0;font-size:18px;color:var(--gruen-d)">Du vergibst Aufträge</h3>
+          <div class="frage">
+            <b>Wie findest du heute Betriebe oder Dienstleister?</b>
+            <p class="hint">Mehrere Antworten möglich</p>
+            <div class="wahl">
+              <input type="checkbox" name="suche" id="s1" value="empfehlung"><label for="s1">Empfehlungen</label>
+              <input type="checkbox" name="suche" id="s2" value="google"><label for="s2">Google</label>
+              <input type="checkbox" name="suche" id="s3" value="portale"><label for="s3">Portale wie MyHammer, Check24</label>
+              <input type="checkbox" name="suche" id="s4" value="social"><label for="s4">Facebook-Gruppen, Instagram</label>
+              <input type="checkbox" name="suche" id="s5" value="bekannte"><label for="s5">Immer dieselben Bekannten</label>
+              <input type="checkbox" name="suche" id="s6" value="sonstiges"><label for="s6">Sonstiges</label>
+            </div>
           </div>
-          <div class="skala-legende"><span>gar nicht</span><span>sehr zufrieden</span></div>
-        </div>
-
-        <div class="frage">
-          <b>5. Was nervt dich beim Netzwerken oder bei der Kundensuche am meisten?</b>
-          <textarea name="nervt" maxlength="1000" placeholder="z. B. Netzwerktreffen kosten viel Zeit und bringen wenig"></textarea>
-        </div>
-
-        <div class="frage">
-          <b>6. Hast du schon Geld oder Zeit in eine Lösung gesteckt? Was war es?</b>
-          <textarea name="versucht" maxlength="1000" placeholder="z. B. BNI-Mitgliedschaft, LinkedIn Premium, Werbeanzeigen"></textarea>
-        </div>
-
-        <div class="frage">
-          <b>7. Welche Funktionen würdest du wirklich nutzen?</b>
-          <p class="hint">Mehrere Antworten möglich</p>
-          <div class="wahl">
-            <input type="checkbox" name="funktionen" id="f1" value="personen"><label for="f1">Unternehmer aus der Nähe per Swipe kennenlernen</label>
-            <input type="checkbox" name="funktionen" id="f2" value="auftraege"><label for="f2">Aufträge und Jobs finden</label>
-            <input type="checkbox" name="funktionen" id="f3" value="suche"><label for="f3">Firmen, Produkte, Kurse suchen</label>
-            <input type="checkbox" name="funktionen" id="f4" value="chats"><label for="f4">Branchen-Chats zum Austausch</label>
-            <input type="checkbox" name="funktionen" id="f5" value="verifizierung"><label for="f5">Geprüfte Profile</label>
-            <input type="checkbox" name="funktionen" id="f6" value="team"><label for="f6">Team-Funktionen für die Firma</label>
+          <div class="frage">
+            <b>Wie zufrieden bist du damit, also mit Tempo und Zuverlässigkeit?</b>
+            <div class="wahl skala">
+              <input type="radio" name="zufriedenheit" id="z1" value="1"><label for="z1">1</label>
+              <input type="radio" name="zufriedenheit" id="z2" value="2"><label for="z2">2</label>
+              <input type="radio" name="zufriedenheit" id="z3" value="3"><label for="z3">3</label>
+              <input type="radio" name="zufriedenheit" id="z4" value="4"><label for="z4">4</label>
+              <input type="radio" name="zufriedenheit" id="z5" value="5"><label for="z5">5</label>
+            </div>
+            <div class="skala-legende"><span>gar nicht</span><span>sehr zufrieden</span></div>
           </div>
-        </div>
-
-        <div class="frage">
-          <b>8. Die Basis ist kostenlos. Würdest du für mehr Funktionen 4,99 € im Monat zahlen?</b>
-          <div class="wahl">
-            <input type="radio" name="zahlen" id="p1" value="ja"><label for="p1">Ja</label>
-            <input type="radio" name="zahlen" id="p2" value="vielleicht"><label for="p2">Vielleicht</label>
-            <input type="radio" name="zahlen" id="p3" value="nein"><label for="p3">Nein</label>
+          <div class="frage">
+            <b>Wie oft brauchst du externe Betriebe oder Dienstleister?</b>
+            <div class="wahl">
+              <input type="radio" name="nutzung" id="n1" value="woechentlich"><label for="n1">Jede Woche</label>
+              <input type="radio" name="nutzung" id="n2" value="monatlich"><label for="n2">Jeden Monat</label>
+              <input type="radio" name="nutzung" id="n3" value="quartal"><label for="n3">Ein paar Mal im Jahr</label>
+              <input type="radio" name="nutzung" id="n4" value="selten"><label for="n4">Selten</label>
+            </div>
           </div>
-          <input name="preis_fair" maxlength="60" placeholder="Was wäre für dich ein fairer Preis? (optional)" style="margin-top:10px">
-        </div>
-
-        <div class="frage">
-          <b>9. Wie oft würdest du so eine App nutzen?</b>
-          <div class="wahl">
-            <input type="radio" name="nutzung" id="n1" value="taeglich"><label for="n1">Täglich</label>
-            <input type="radio" name="nutzung" id="n2" value="woechentlich"><label for="n2">Wöchentlich</label>
-            <input type="radio" name="nutzung" id="n3" value="monatlich"><label for="n3">Monatlich</label>
-            <input type="radio" name="nutzung" id="n4" value="selten"><label for="n4">Selten</label>
+          <div class="frage">
+            <b>Was suchst du meistens?</b>
+            <p class="hint">Mehrere Antworten möglich</p>
+            <div class="wahl">
+              <input type="checkbox" name="arten" id="r1" value="einmalig"><label for="r1">Einmalige Aufträge</label>
+              <input type="checkbox" name="arten" id="r2" value="projekt"><label for="r2">Projekte über Wochen</label>
+              <input type="checkbox" name="arten" id="r3" value="langzeit"><label for="r3">Langfristige Partner (Monate, Jahre)</label>
+            </div>
           </div>
         </div>
 
-        <div class="frage">
-          <b>10. Darf ich dich für ein kurzes Gespräch (15 Minuten) kontaktieren?</b>
-          <p class="hint">Freiwillig. Ohne Angabe bleibt die Umfrage anonym.</p>
-          <input name="kontakt" maxlength="120" placeholder="E-Mail (oder Telefon)">
-          <p class="hint" style="font-size:13px;color:var(--muted);margin:6px 0 0">Mit E-Mail bekommst du direkt Terminvorschläge zum Anklicken.</p>
-          <label class="check"><input type="checkbox" id="kontakt_ok"> <span>Ja, Samuel darf mich für ein Gespräch über Abgemacht kontaktieren. Meine Angaben werden nur dafür genutzt (<a href="/datenschutz" target="_blank">Datenschutz</a>).</span></label>
+        <div class="teil" data-fuer="alle" hidden>
+          <div class="frage">
+            <b>Was nervt dich heute am meisten, beim Finden von Aufträgen oder von guten Betrieben?</b>
+            <textarea name="nervt" maxlength="1000" placeholder="z. B. Keiner ruft zurück, Angebote dauern ewig, Portale kosten viel und bringen wenig"></textarea>
+          </div>
+          <div class="frage">
+            <b>Was wäre dir bei Abgemacht am wichtigsten?</b>
+            <p class="hint">Bis zu drei Antworten</p>
+            <div class="wahl" id="wichtig">
+              <input type="checkbox" name="funktionen" id="f1" value="schnell"><label for="f1">Schnelle Angebote, in 24 bis 48 Stunden</label>
+              <input type="checkbox" name="funktionen" id="f2" value="geprueft"><label for="f2">Geprüfte Betriebe, echte Bewertungen</label>
+              <input type="checkbox" name="funktionen" id="f3" value="whatsapp"><label for="f3">Alles per WhatsApp, ohne App</label>
+              <input type="checkbox" name="funktionen" id="f4" value="sprache"><label for="f4">Per Sprachnachricht statt Formular</label>
+              <input type="checkbox" name="funktionen" id="f5" value="langzeit"><label for="f5">Langfristige Aufträge und Partner</label>
+              <input type="checkbox" name="funktionen" id="f6" value="luecken"><label for="f6">Freie Termine kurzfristig füllen</label>
+              <input type="checkbox" name="funktionen" id="f7" value="kostenlos"><label for="f7">Keine festen Kosten</label>
+            </div>
+          </div>
+          <div class="frage">
+            <b>Darf ich dich für ein kurzes Gespräch (15 Minuten) kontaktieren?</b>
+            <p class="hint">Freiwillig. Ohne Angabe bleibt die Umfrage anonym.</p>
+            <input name="kontakt" maxlength="120" placeholder="E-Mail (oder Telefon)">
+            <p class="hint" style="font-size:13px;color:var(--muted);margin:6px 0 0">Mit E-Mail bekommst du direkt Terminvorschläge zum Anklicken.</p>
+            <label class="check"><input type="checkbox" id="kontakt_ok"> <span>Ja, Samuel darf mich für ein Gespräch über Abgemacht kontaktieren. Meine Angaben werden nur dafür genutzt (<a href="/datenschutz" target="_blank">Datenschutz</a>).</span></label>
+          </div>
         </div>
 
         <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
@@ -158,40 +205,68 @@ textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:tr
 
   function wert(n){ var e = form.querySelector('input[name="'+n+'"]:checked'); return e ? e.value : null; }
   function werte(n){ return [].map.call(form.querySelectorAll('input[name="'+n+'"]:checked'), function(e){ return e.value; }); }
+  function rolle(){ return wert('typ'); }
+  var istA = function(){ return ['anbieter','beides'].indexOf(rolle()) >= 0; };
+  var istK = function(){ return ['auftraggeber','beides'].indexOf(rolle()) >= 0; };
+
+  function teile(){
+    document.querySelector('[data-fuer="anbieter"]').hidden = !istA();
+    document.querySelector('[data-fuer="auftraggeber"]').hidden = !istK();
+    document.querySelector('[data-fuer="alle"]').hidden = !rolle();
+  }
   function fortschritt(){
-    var f = [wert('typ'), form.branche.value, werte('kanaele').length, wert('zufriedenheit'), form.nervt.value.trim(), form.versucht.value.trim(), werte('funktionen').length, wert('zahlen'), wert('nutzung')];
+    var f = [rolle(), form.branche.value];
+    if (istA()) f = f.concat([werte('kanaele').length, wert('auslastung'), wert('zahlen'), wert('langzeit'), werte('kanal').length]);
+    if (istK()) f = f.concat([werte('suche').length, wert('zufriedenheit'), wert('nutzung'), werte('arten').length]);
+    if (rolle()) f = f.concat([form.nervt.value.trim(), werte('funktionen').length]);
     balken.style.width = Math.round(f.filter(Boolean).length / f.length * 100) + '%';
   }
-  form.addEventListener('input', fortschritt); form.addEventListener('change', fortschritt);
+  form.addEventListener('input', fortschritt);
+  form.addEventListener('change', function(e){
+    if (e.target.name === 'typ') teile();
+    if (e.target.name === 'funktionen' && werte('funktionen').length > 3) e.target.checked = false;
+    fortschritt();
+  });
+  var vor = p.get('rolle');
+  if (['anbieter','auftraggeber','beides'].indexOf(vor) >= 0) { var r = form.querySelector('input[name="typ"][value="'+vor+'"]'); if (r) r.checked = true; }
+  teile(); fortschritt();
 
   form.addEventListener('submit', function(e){
     e.preventDefault();
-    if (!wert('typ') || !werte('kanaele').length || !wert('zahlen')) { msg.textContent = 'Bitte beantworte mindestens die Fragen 1, 3 und 8.'; msg.className = 'msg err'; return; }
+    var fehlt = !rolle() ? 'Bitte wähle oben aus, was auf dich zutrifft.'
+      : (istA() && (!werte('kanaele').length || !wert('zahlen'))) ? 'Bitte beantworte noch, wie du an Aufträge kommst und ob 9 € pro Auftrag okay wären.'
+      : (istK() && !werte('suche').length) ? 'Bitte beantworte noch, wie du heute Betriebe findest.' : '';
+    if (fehlt) { msg.textContent = fehlt; msg.className = 'msg err'; return; }
     var kontaktOk = document.getElementById('kontakt_ok').checked;
-    if (kontaktOk && !form.kontakt.value.trim()) { msg.textContent = 'Bitte trag bei Frage 10 noch Telefon oder E-Mail ein.'; msg.className = 'msg err'; return; }
+    if (kontaktOk && !form.kontakt.value.trim()) { msg.textContent = 'Bitte trag beim Gespräch noch Telefon oder E-Mail ein.'; msg.className = 'msg err'; return; }
     btn.disabled = true; btn.textContent = 'Wird gesendet …';
+    var A = istA(), K = istK();
     fetch('/api/umfrage', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
-      typ: wert('typ'), branche: form.branche.value, ort: form.ort.value, kanaele: werte('kanaele'),
-      zufriedenheit: Number(wert('zufriedenheit')) || null, nervt: form.nervt.value, versucht: form.versucht.value,
-      funktionen: werte('funktionen'), zahlen: wert('zahlen'), preis_fair: form.preis_fair.value, nutzung: wert('nutzung'),
+      typ: rolle(), branche: form.branche.value, ort: form.ort.value,
+      kanaele: A ? werte('kanaele') : [], auslastung: A ? wert('auslastung') : null, zahlen: A ? wert('zahlen') : null,
+      preis_fair: A ? form.preis_fair.value : '', langzeit: A ? wert('langzeit') : null, kanal: A ? werte('kanal') : [],
+      suche: K ? werte('suche') : [], zufriedenheit: K ? (Number(wert('zufriedenheit')) || null) : null,
+      nutzung: K ? wert('nutzung') : null, arten: K ? werte('arten') : [],
+      nervt: form.nervt.value, funktionen: werte('funktionen'),
       kontakt_ok: kontaktOk, kontakt: kontaktOk ? form.kontakt.value : '', website: form.website.value, quelle: quelle
     }) })
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!d.ok) throw new Error(d.error || 'Fehler');
       var schonDrauf = false; try { schonDrauf = sessionStorage.getItem('hs_wl') === '1'; } catch(e) {}
-      if (schonDrauf) { box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten fließen direkt in die App ein. Du stehst schon auf der Warteliste, wir melden uns zum Start.</p><a class="btn ghost" href="/">Zur Startseite</a></div>'; window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      if (schonDrauf) { box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten fließen direkt in Abgemacht ein. Du stehst schon auf der Warteliste, wir melden uns zum Start.</p><a class="btn ghost" href="/">Zur Startseite</a></div>'; window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
       box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten helfen mir enorm.</p></div>' +
         '<div class="box2"><b>Willst du als Erster Bescheid bekommen, wenn Abgemacht startet?</b>' +
         '<form id="wl" novalidate style="margin-top:10px"><input id="wlmail" type="email" autocomplete="email" placeholder="du@firma.de">' +
         '<label class="check"><input type="checkbox" id="wlok"> <span>Ich möchte per E-Mail informiert werden und habe die <a href="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen.</span></label>' +
         '<button class="btn" type="submit" style="width:100%;margin-top:12px">Auf die Warteliste</button><div class="msg" id="wlmsg" role="status"></div></form></div>';
+      var typ = rolle();
       document.getElementById('wl').addEventListener('submit', function(ev){
         ev.preventDefault();
         var m = document.getElementById('wlmail').value.trim(), out = document.getElementById('wlmsg');
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m)) { out.textContent = 'Bitte gib eine gültige E-Mail-Adresse ein.'; out.className = 'msg err'; return; }
         if (!document.getElementById('wlok').checked) { out.textContent = 'Bitte bestätige kurz die Datenschutzerklärung.'; out.className = 'msg err'; return; }
-        fetch('/api/waitlist', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: m, typ: wert('typ'), branche: form.branche.value, ort: form.ort.value, consent: true, quelle: 'umfrage' }) })
+        fetch('/api/waitlist', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: m, typ: typ, branche: form.branche.value, ort: form.ort.value, consent: true, quelle: 'umfrage' }) })
           .then(function(r){ return r.json(); })
           .then(function(d){ if (!d.ok) throw new Error(d.error || 'Fehler'); out.textContent = d.status === 'bestaetigt' ? 'Du stehst schon auf der Liste. Danke!' : 'Fast geschafft! Bitte bestätige die E-Mail, die wir dir gerade geschickt haben.'; out.className = 'msg ok'; })
           .catch(function(err){ out.textContent = err.message || 'Das hat nicht geklappt.'; out.className = 'msg err'; });
