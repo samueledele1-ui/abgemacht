@@ -50,7 +50,7 @@ export async function tagesplan(jetzt = new Date()) {
   const heute = datum(jetzt), morgen = plusTage(heute, 1);
   const von = mitternacht(morgen), bis = mitternacht(plusTage(morgen, 1));
 
-  const [termine, gespraeche, faellig, neu, eintraege, wl, umf, aufgaben, demnaechst, gate] = await Promise.all([
+  const [termine, gespraeche, faellig, neu, eintraege, wl, umf, aufgaben, demnaechst, gate, verm, partner] = await Promise.all([
     kalender(von, bis),
     sql`SELECT termin, kontakt, termin_telefon, typ, branche FROM umfrage WHERE termin IS NOT NULL AND termin >= ${new Date(von).toISOString()} AND termin < ${new Date(bis).toISOString()} ORDER BY termin`,
     sql`SELECT firma, ansprechpartner, telefon, region, status, eintrag, naechster_kontakt FROM crm_kontakte
@@ -60,10 +60,12 @@ export async function tagesplan(jetzt = new Date()) {
     sql`SELECT count(*)::int AS n FROM crm_kontakte WHERE status = 'neu' AND naechster_kontakt IS NULL`,
     sql`SELECT count(*) FILTER (WHERE status = 'freigegeben')::int AS frei, count(*) FILTER (WHERE status = 'angeboten')::int AS offen FROM crm_eintraege`,
     sql`SELECT count(*) FILTER (WHERE status = 'bestaetigt')::int AS best, count(*) FILTER (WHERE status = 'bestaetigt' AND confirmed_at > now() - interval '24 hours')::int AS neu FROM waitlist`,
-    sql`SELECT count(*)::int AS n, count(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS neu, count(*) FILTER (WHERE zahlen = 'ja')::int AS ja FROM umfrage`,
+    sql`SELECT count(*)::int AS n, count(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS neu, count(*) FILTER (WHERE zahlen = 'ja')::int AS ja FROM umfrage WHERE version >= 2`,
     sql`SELECT phase, text, typ, von, bis FROM fahrplan_aufgaben WHERE NOT erledigt AND von <= ${morgen}::date AND bis >= ${morgen}::date ORDER BY (von = bis) DESC, typ DESC, von, id`,
     sql`SELECT phase, text, von FROM fahrplan_aufgaben WHERE NOT erledigt AND von > ${morgen}::date AND typ <> 'gate' ORDER BY von, id LIMIT 4`,
     sql`SELECT text, von FROM fahrplan_aufgaben WHERE typ = 'gate' AND NOT erledigt AND von >= ${morgen}::date ORDER BY von LIMIT 1`,
+    sql`SELECT id, leistung, ort, status, auftraggeber, created_at FROM vermittlungen WHERE status IN ('neu', 'angefragt', 'angebote', 'abgemacht') ORDER BY created_at`,
+    sql`SELECT count(*) FILTER (WHERE partner = 'aktiv')::int AS aktiv, count(*) FILTER (WHERE partner = 'aktiv' AND wa_ok_am IS NOT NULL)::int AS wa FROM crm_kontakte`,
   ]);
 
   const H = (t: string) => `<tr><td style="padding:20px 24px 6px;font-size:16px;font-weight:bold;color:#138A6B">${t}</td></tr>`;
@@ -100,8 +102,11 @@ export async function tagesplan(jetzt = new Date()) {
   // Zahlen
   const zahlen = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px">
     <tr><td style="padding:2px 16px 2px 0">Warteliste bestätigt</td><td><b>${wl[0].best}</b> / 100${wl[0].neu ? ` <span style="color:#138A6B">(+${wl[0].neu} heute)</span>` : ""}</td></tr>
-    <tr><td style="padding:2px 16px 2px 0">Umfrage-Antworten</td><td><b>${umf[0].n}</b> / 20${umf[0].neu ? ` <span style="color:#138A6B">(+${umf[0].neu} heute)</span>` : ""} · ${umf[0].ja} würden zahlen</td></tr>
-    <tr><td style="padding:2px 16px 2px 0">Start-Einträge freigegeben</td><td><b>${eintraege[0].frei}</b> / 20${eintraege[0].offen ? ` · ${eintraege[0].offen} Freigabe offen` : ""}</td></tr></table>`;
+    <tr><td style="padding:2px 16px 2px 0">Umfrage-Antworten (neu)</td><td><b>${umf[0].n}</b> / 30${umf[0].neu ? ` <span style="color:#138A6B">(+${umf[0].neu} heute)</span>` : ""} · ${umf[0].ja} Betriebe: 9 € okay</td></tr>
+    <tr><td style="padding:2px 16px 2px 0">Partner-Betriebe aktiv</td><td><b>${partner[0].aktiv}</b> / 30 · ${partner[0].wa} mit WhatsApp-Okay</td></tr>
+    <tr><td style="padding:2px 16px 2px 0">Start-Einträge freigegeben</td><td><b>${eintraege[0].frei}</b>${eintraege[0].offen ? ` · ${eintraege[0].offen} Freigabe offen` : ""}</td></tr></table>`;
+  const VSL: Record<string, string> = { neu: "neu, Betriebe anfragen", angefragt: "wartet auf Angebote", angebote: "Angebote an Kunden schicken", abgemacht: "nach dem Termin bewerten lassen" };
+  const vermHtml = verm.length ? ul(verm.map((v) => li(`<b>${esc(v.leistung || "Anfrage")}</b>${v.ort ? " · " + esc(v.ort) : ""}${v.auftraggeber ? ` <span style="color:#5B6B65">(${esc(v.auftraggeber)})</span>` : ""} – ${VSL[v.status] || v.status}`))) : leer("Keine offenen Vermittlungen.");
 
   const seite = (Netlify.env.get("PUBLIC_URL") || "https://ab-gemacht.info").replace(/\/$/, "");
   const html = `<!doctype html><html lang="de"><body style="margin:0;background:#F6F8F7;font-family:Arial,Helvetica,sans-serif;color:#14231E">
@@ -109,11 +114,12 @@ export async function tagesplan(jetzt = new Date()) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border:1px solid #E2E8E5;border-radius:16px">
 <tr><td style="padding:24px 24px 0;font-size:21px;font-weight:bold">🤝 Morgen: ${esc(tagLang(morgen))}</td></tr>
 ${H("📅 Termine")}${B(termineHtml)}
+${H(`🤝 Offene Vermittlungen (${verm.length})`)}${B(vermHtml)}
 ${H(`📞 Fällige Kontakte (${faellig.length})`)}${B(kontakteHtml)}
 ${H("🗺️ Fahrplan")}${B(fp || leer("Keine offenen Aufgaben für morgen."))}
 ${naechstes.length ? H("⏭️ Als Nächstes") + B(ul(naechstes)) : ""}
 ${H("📊 Stand Gate 1")}${B(zahlen)}
-<tr><td style="padding:20px 24px 24px"><a href="${seite}/crm" style="display:inline-block;background:#138A6B;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:999px">CRM öffnen</a> &nbsp; <a href="${seite}/admin" style="color:#138A6B">Übersicht</a></td></tr>
+<tr><td style="padding:20px 24px 24px"><a href="${seite}/vermittlung" style="display:inline-block;background:#138A6B;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:999px">Vermittlung</a> &nbsp; <a href="${seite}/crm" style="color:#138A6B">CRM</a> &nbsp; <a href="${seite}/admin" style="color:#138A6B">Übersicht</a></td></tr>
 </table></td></tr></table></body></html>`;
 
   return { betreff: `Morgen (${kurz(morgen)}): ${tz.length} Termin${tz.length === 1 ? "" : "e"}, ${faellig.length} Anruf${faellig.length === 1 ? "" : "e"}, ${aufgaben.length} Aufgabe${aufgaben.length === 1 ? "" : "n"}`, html };
