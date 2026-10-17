@@ -71,19 +71,29 @@
     </div>
 
     <h2 style="font-size:24px;margin-top:30px">Umfrage</h2>
+    <p class="sub" id="uStand" style="margin-bottom:10px"></p>
     <div class="zwei">
       <div class="box"><h3>Wer hat geantwortet?</h3><div id="uTyp"></div></div>
-      <div class="box"><h3>Würden 4,99 € im Monat zahlen</h3><div id="uZahlen"></div></div>
-      <div class="box"><h3>So finden sie heute Kunden</h3><div id="uKanaele"></div></div>
-      <div class="box"><h3>Diese Funktionen würden sie nutzen</h3><div id="uFunk"></div></div>
-      <div class="box"><h3>Zufriedenheit mit der Kundensuche heute</h3><div id="uZufr"></div></div>
-      <div class="box"><h3>Wie oft sie die App nutzen würden</h3><div id="uNutz"></div></div>
+      <div class="box"><h3>Was ihnen am wichtigsten ist</h3><div id="uFunk"></div></div>
     </div>
+    <h3 style="margin:22px 0 8px">Betriebe und Anbieter</h3>
     <div class="zwei">
-      <div class="box zitate"><h3>Was am meisten nervt</h3><div id="uNervt"></div></div>
-      <div class="box zitate"><h3>Was sie schon ausprobiert haben</h3><div id="uVersucht"></div></div>
+      <div class="box"><h3>9 € pro vermitteltem Auftrag okay?</h3><div id="uZahlen"></div></div>
+      <div class="box"><h3>Auslastung</h3><div id="uAusl"></div></div>
+      <div class="box"><h3>So kommen sie heute an Aufträge</h3><div id="uKanaele"></div></div>
+      <div class="box"><h3>Interesse an Langzeitaufträgen</h3><div id="uLang"></div></div>
+      <div class="box"><h3>Anfragen am liebsten per</h3><div id="uKanal"></div></div>
     </div>
     <div class="box zitate"><h3>Fairer Preis aus ihrer Sicht</h3><div id="uPreis"></div></div>
+    <h3 style="margin:22px 0 8px">Auftraggeber</h3>
+    <div class="zwei">
+      <div class="box"><h3>So finden sie heute Betriebe</h3><div id="uSuche"></div></div>
+      <div class="box"><h3>Zufriedenheit damit</h3><div id="uZufr"></div></div>
+      <div class="box"><h3>Wie oft sie Betriebe brauchen</h3><div id="uNutz"></div></div>
+      <div class="box"><h3>Was sie suchen</h3><div id="uArten"></div></div>
+    </div>
+    <div class="box zitate"><h3>Was am meisten nervt</h3><div id="uNervt"></div></div>
+    <details class="box"><summary style="cursor:pointer;font-weight:700">Alte Umfrage (Netzwerk-App, Pro 4,99 €): <span id="v1Zahl"></span></summary><div id="v1" style="margin-top:12px"></div></details>
 
     <div class="box">
       <div class="kopf"><h3>Gesprächspartner aus der Umfrage</h3></div>
@@ -106,11 +116,15 @@
 
 <script>
 const L = {
-  typ: { firma: "Firma", selbststaendig: "Selbstständig", mitarbeiter: "Mitarbeiter", privat: "Privat" },
+  typ: { auftraggeber: "Vergibt Aufträge", anbieter: "Bietet Leistungen an", beides: "Beides", firma: "Firma", selbststaendig: "Selbstständig", mitarbeiter: "Mitarbeiter", privat: "Privat" },
+  auslastung: { voll: "Ausgebucht", gut: "Gut ausgelastet", luecken: "Immer wieder Lücken", mehr: "Braucht mehr Aufträge" },
+  kanal: { whatsapp: "WhatsApp", app: "App", email: "E-Mail", telefon: "Anruf" },
+  suche: { empfehlung: "Empfehlungen", google: "Google", portale: "Portale", social: "Facebook, Instagram", bekannte: "Immer dieselben Bekannten", sonstiges: "Sonstiges" },
+  arten: { einmalig: "Einmalige Aufträge", projekt: "Projekte über Wochen", langzeit: "Langfristige Partner" },
   kanaele: { empfehlung: "Empfehlungen", linkedin: "LinkedIn", netzwerktreffen: "Netzwerktreffen, BNI", social: "Instagram, Facebook", google: "Google, Website", kaltakquise: "Kaltakquise", portale: "Portale (MyHammer usw.)", sonstiges: "Sonstiges" },
-  funktionen: { personen: "Personen entdecken", auftraege: "Aufträge, Stellen", suche: "Suche nach Firmen", chats: "Branchen-Chats", verifizierung: "Verifizierte Profile", team: "Team-Zugang" },
+  funktionen: { schnell: "Schnelle Angebote", geprueft: "Geprüfte Betriebe", whatsapp: "Per WhatsApp", sprache: "Per Sprachnachricht", langzeit: "Langzeitaufträge", luecken: "Freie Termine füllen", kostenlos: "Keine festen Kosten", personen: "Personen entdecken", auftraege: "Aufträge, Stellen", suche: "Suche nach Firmen", chats: "Branchen-Chats", verifizierung: "Verifizierte Profile", team: "Team-Zugang" },
   zahlen: { ja: "Ja", vielleicht: "Vielleicht", nein: "Nein" },
-  nutzung: { taeglich: "Täglich", woechentlich: "Wöchentlich", monatlich: "Monatlich", selten: "Selten" },
+  nutzung: { woechentlich: "Jede Woche", monatlich: "Jeden Monat", quartal: "Paar Mal im Jahr", selten: "Selten", taeglich: "Täglich" },
   quelle: { direkt: "Direkt", umfrage: "Umfrage", ig: "Instagram", tt: "TikTok", li: "LinkedIn", wa: "WhatsApp", telefon: "Telefon", seo: "Google" },
   status: { bestaetigt: "bestätigt", offen: "offen", abgemeldet: "abgemeldet" }
 };
@@ -162,29 +176,43 @@ function zeige(d) {
   $("kKontakt").textContent = kontakte.length;
   $("stand").textContent = "Stand: " + new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) + " Uhr";
 
-  const zahlenJa = u.filter((x) => x.zahlen === "ja").length;
-  const problem = u.filter((x) => x.zufriedenheit != null && x.zufriedenheit <= 3).length;
+  const u2 = u.filter((x) => (x.version || 1) >= 2), u1 = u.filter((x) => (x.version || 1) < 2);
+  const anb = u2.filter((x) => x.typ === "anbieter" || x.typ === "beides");
+  const kun = u2.filter((x) => x.typ === "auftraggeber" || x.typ === "beides");
+  const zahlenJa = anb.filter((x) => x.zahlen === "ja").length;
+  const kapazitaet = anb.filter((x) => x.auslastung === "luecken" || x.auslastung === "mehr").length;
+  const unzufrieden = kun.filter((x) => x.zufriedenheit != null && x.zufriedenheit <= 3).length;
   $("ziele").innerHTML =
     zielZeile("Bestätigte Anmeldungen auf der Warteliste", best, 100) +
-    zielZeile("Umfrage-Antworten", u.length, 20) +
-    zielZeile("Unzufrieden mit der Kundensuche (1–3 von 5)", problem, 12) +
-    zielZeile("Würden 4,99 € zahlen", zahlenJa, 6);
+    zielZeile("Umfrage-Antworten (neue Umfrage)", u2.length, 30) +
+    zielZeile("Betriebe: 9 € pro Auftrag okay", zahlenJa, 6) +
+    zielZeile("Betriebe mit Lücken oder Bedarf an Aufträgen", kapazitaet, 8) +
+    zielZeile("Auftraggeber unzufrieden mit der Suche heute (1–3 von 5)", unzufrieden, 8);
+  $("uStand").textContent = `${u2.length} Antworten in der neuen Umfrage: ${anb.length} Anbieter, ${kun.length} Auftraggeber (bei „Beides“ in beiden gezählt).`;
 
-  balken("uTyp", zaehle(u.map((x) => x.typ)), L.typ, u.length);
-  balken("uZahlen", zaehle(u.map((x) => x.zahlen)), L.zahlen, u.length, ["ja", "vielleicht", "nein"]);
-  balken("uKanaele", zaehle(u.flatMap((x) => x.kanaele || [])), L.kanaele, u.length);
-  balken("uFunk", zaehle(u.flatMap((x) => x.funktionen || [])), L.funktionen, u.length);
-  const zf = zaehle(u.map((x) => x.zufriedenheit));
+  balken("uTyp", zaehle(u2.map((x) => x.typ)), L.typ, u2.length);
+  balken("uFunk", zaehle(u2.flatMap((x) => x.funktionen || [])), L.funktionen, u2.length);
+  balken("uZahlen", zaehle(anb.map((x) => x.zahlen)), L.zahlen, anb.length, ["ja", "vielleicht", "nein"]);
+  balken("uAusl", zaehle(anb.map((x) => x.auslastung)), L.auslastung, anb.length, ["voll", "gut", "luecken", "mehr"]);
+  balken("uKanaele", zaehle(anb.flatMap((x) => x.kanaele || [])), L.kanaele, anb.length);
+  balken("uLang", zaehle(anb.map((x) => x.langzeit)), L.zahlen, anb.length, ["ja", "vielleicht", "nein"]);
+  balken("uKanal", zaehle(anb.flatMap((x) => x.kanal || [])), L.kanal, anb.length);
+  zitate("uPreis", anb, "preis_fair");
+  balken("uSuche", zaehle(kun.flatMap((x) => x.suche || [])), L.suche, kun.length);
   const zfL = { 1: "1 – gar nicht", 2: "2", 3: "3", 4: "4", 5: "5 – sehr" };
-  balken("uZufr", zf, zfL, u.length, ["1", "2", "3", "4", "5"]);
-  balken("uNutz", zaehle(u.map((x) => x.nutzung)), L.nutzung, u.length, ["taeglich", "woechentlich", "monatlich", "selten"]);
-  zitate("uNervt", u, "nervt");
-  zitate("uVersucht", u, "versucht");
-  zitate("uPreis", u, "preis_fair");
+  balken("uZufr", zaehle(kun.map((x) => x.zufriedenheit)), zfL, kun.length, ["1", "2", "3", "4", "5"]);
+  balken("uNutz", zaehle(kun.map((x) => x.nutzung)), L.nutzung, kun.length, ["woechentlich", "monatlich", "quartal", "selten"]);
+  balken("uArten", zaehle(kun.flatMap((x) => x.arten || [])), L.arten, kun.length, ["einmalig", "projekt", "langzeit"]);
+  zitate("uNervt", u2, "nervt");
+  $("v1Zahl").textContent = u1.length + " Antworten, " + u1.filter((x) => x.zahlen === "ja").length + "× würden 4,99 € zahlen";
+  $("v1").innerHTML = '<div class="zwei"><div><h3>Wer</h3><div id="v1Typ"></div></div><div><h3>Zufriedenheit Kundensuche</h3><div id="v1Zufr"></div></div></div><div class="zitate"><h3>Was nervt</h3><div id="v1Nervt"></div></div>';
+  balken("v1Typ", zaehle(u1.map((x) => x.typ)), L.typ, u1.length);
+  balken("v1Zufr", zaehle(u1.map((x) => x.zufriedenheit)), zfL, u1.length, ["1", "2", "3", "4", "5"]);
+  zitate("v1Nervt", u1, "nervt");
 
   const zeit = (d) => d ? new Date(d).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + " Uhr" : "";
   const sortiert = [...kontakte].sort((a, b) => (a.termin ? new Date(a.termin) : Infinity) - (b.termin ? new Date(b.termin) : Infinity));
-  tabelle("uKontakte", ["Termin", "Kontakt", "Telefon", "Typ", "Branche", "Ort", "Zahlt?"],
+  tabelle("uKontakte", ["Termin", "Kontakt", "Telefon", "Rolle", "Branche", "Ort", "9 € okay?"],
     sortiert.map((x) => [x.termin ? `<b>${zeit(x.termin)}</b>` : (x.termin_mail_at ? "Vorschläge geschickt" : "selbst melden"), esc(x.kontakt), esc(x.termin_telefon), esc(L.typ[x.typ] || ""), esc(x.branche), esc(x.ort), esc(L.zahlen[x.zahlen] || "")]));
 
   balken("wQuelle", zaehle(w.filter((x) => x.status === "bestaetigt").map((x) => x.quelle)), L.quelle);
