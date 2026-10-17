@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vermittlung – Abgemacht</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#138A6B">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .wrap{max-width:1180px}
+  #login{max-width:420px;margin:40px auto}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 14px}
+  .top h1{font-size:30px;margin:0}
+  .knoepfe{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .klein{padding:9px 15px;font-size:14px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;cursor:pointer}
+  .kpi .z{font-size:26px;font-weight:800;line-height:1.1}
+  .kpi .t{color:var(--muted);font-size:13px}
+  .kpi.rot .z{color:#C0392B}.kpi.gruen .z{color:var(--gruen)}
+  .tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:12px;overflow-x:auto}
+  .tabs button{flex:1;border:0;background:none;font:inherit;font-weight:700;font-size:14px;padding:9px 14px;border-radius:999px;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .tabs button[aria-pressed=true]{background:var(--gruen);color:#fff}
+  .filter{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:12px}
+  .filter input,.filter select{padding:10px 12px}
+  .karte{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center;cursor:pointer;margin-bottom:8px}
+  .karte:hover{border-color:var(--gruen)}
+  .karte .m{flex:1;min-width:0}
+  .karte b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karte small{color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .karte .rechts{text-align:right;flex:none;font-size:13px}
+  .anruf{flex:none;width:44px;height:44px;border-radius:50%;background:var(--gruen);color:#fff;display:grid;place-items:center;text-decoration:none;font-size:20px}
+  .faellig{color:#C0392B;font-weight:700}
+  .st{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .s-neu{background:#EEF0EF;color:#4A5751}.s-wiedervorlage{background:#FBF1DF;color:var(--gold)}.s-mailbox{background:#F0E9FA;color:var(--lila)}
+  .s-mail_gewuenscht{background:#DFF1F5;color:var(--tuerkis)}.s-warteliste{background:var(--gruen-l);color:var(--gruen-d)}.s-bestaetigt{background:var(--gruen);color:#fff}
+  .s-kein_interesse,.s-nicht_erreichbar{background:#F3F3F3;color:#888}.s-keine_anrufe{background:#FADADD;color:#A12B36}
+  h3.ab{font-size:15px;color:var(--muted);margin:18px 0 8px;text-transform:uppercase;letter-spacing:.04em}
+  .pipe{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:10px;overflow-x:auto;padding-bottom:10px}
+  .spalte{background:rgba(255,255,255,.6);border:1px solid var(--line);border-radius:16px;padding:10px;min-height:120px}
+  .spalte h4{margin:2px 4px 10px;font-size:14px;display:flex;justify-content:space-between}
+  .spalte .karte{padding:10px}
+  .tabelle{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:16px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-size:13px;cursor:pointer;position:sticky;top:0;background:#fff}
+  tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg)}
+  .box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  .leer{color:var(--muted);text-align:center;padding:30px 10px}
+  /* Detail */
+  .scrim{position:fixed;inset:0;background:rgba(20,35,30,.35);z-index:40}
+  .panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--bg);z-index:41;overflow-y:auto;box-shadow:-20px 0 60px -20px rgba(0,0,0,.35);padding:18px 18px 40px}
+  .panel .kopf{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .panel h2{font-size:22px;margin:0 0 2px}
+  .zu{border:0;background:#fff;border-radius:50%;width:38px;height:38px;font-size:20px;cursor:pointer;flex:none;border:1px solid var(--line)}
+  .grossanruf{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:14px 0 6px;font-size:18px;padding:16px}
+  .info{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin-top:10px}
+  .info span:nth-child(odd){color:var(--muted)}
+  .info a{overflow-wrap:anywhere}
+  .erg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .erg button{border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px 10px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left}
+  .erg button:hover{border-color:var(--gruen)}
+  .erg button small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+  .erg .gut{background:var(--gruen-l);border-color:#BFE5D7}
+  .unter{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:8px}
+  .unter label{margin-top:0}
+  .unter .reihe{display:flex;gap:8px;margin-top:8px}
+  textarea{width:100%;font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#FBFCFC;min-height:70px;resize:vertical}
+  .verlauf{list-style:none;padding:0;margin:0;font-size:14px}
+  .verlauf li{padding:8px 0;border-bottom:1px solid var(--line)}
+  .verlauf small{color:var(--muted);display:block}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .formgrid label{margin:10px 0 4px;font-size:13px}
+  .formgrid .ganz{grid-column:1/-1}
+  .msg{font-size:14px;margin-top:8px}.msg.err{color:#C0392B}.msg.ok{color:var(--gruen-d)}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#14231E;color:#fff;padding:12px 18px;border-radius:14px;font-size:14px;z-index:60;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .bars .bar{display:grid;grid-template-columns:110px 1fr 40px;gap:10px;align-items:center;font-size:14px;margin:6px 0}
+  .bars .spur{height:12px;border-radius:99px;background:var(--gruen-l);overflow:hidden;display:flex}
+  .bars .spur i{display:block;height:100%}
+  .legende{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);margin-top:8px}
+  .legende span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:5px;vertical-align:-1px}
+  @media (max-width:760px){
+    .kpis{grid-template-columns:repeat(3,1fr)}.kpi:nth-child(n+4){display:none}
+    .filter{grid-template-columns:1fr 1fr}.filter input{grid-column:1/-1}
+    .top h1{font-size:24px}
+    .formgrid{grid-template-columns:1fr}
+  }
+  .tag2{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:99px;margin-left:4px;vertical-align:1px}
+  .t-lang{background:#E6ECFA;color:#2C4E9E}.t-proj{background:#FBF1DF;color:var(--gold)}.t-wa{background:var(--gruen-l);color:var(--gruen-d)}.t-p{background:#F0E9FA;color:var(--lila)}
+  .v-neu{background:#FADADD;color:#A12B36}.v-angefragt{background:#FBF1DF;color:var(--gold)}.v-angebote{background:var(--gruen-l);color:var(--gruen-d)}
+  .v-abgemacht{background:var(--gruen);color:#fff}.v-erledigt{background:#EEF0EF;color:#4A5751}.v-verloren{background:#F3F3F3;color:#888}
+  .b-angefragt{background:#FBF1DF;color:var(--gold)}.b-angebot{background:var(--gruen-l);color:var(--gruen-d)}.b-gewaehlt{background:var(--gruen);color:#fff}
+  .b-abgesagt,.b-keine_antwort,.b-nicht_gewaehlt{background:#F3F3F3;color:#888}
+  .vb{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:8px}
+  .vb .zeile{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .vb .reihe{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .vb input,.vb select{padding:8px 10px;font-size:14px}
+  .kand{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .kand input{width:18px;height:18px;flex:none;accent-color:var(--gruen)}
+  .kand label{margin:0;font-weight:600;flex:1;cursor:pointer}
+  .kand small{color:var(--muted);font-weight:500;display:block}
+  .vorlage{white-space:pre-wrap;background:#FBFCFC;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-top:8px}
+  .knopfreihe{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .kpis5{grid-template-columns:repeat(5,1fr)}
+  details.box summary{cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a><span class="knoepfe"><a class="btn ghost klein" href="/crm">Akquise</a> <a class="btn ghost klein" href="/admin">Übersicht</a> <button class="btn ghost klein" id="raus" hidden>Abmelden</button></span></header>
+
+  <form id="login" class="formbox">
+    <h2 style="font-size:24px">Vermittlung</h2>
+    <p class="sub" style="margin-bottom:6px">Anfragen, Partner-Betriebe, Angebote und „Abgemacht“.</p>
+    <label for="pw">Passwort</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <button class="btn" style="margin-top:16px;width:100%">Öffnen</button>
+    <div class="msg" id="loginMsg"></div>
+  </form>
+
+  <main id="app" hidden>
+    <div class="top">
+      <h1>Vermittlung</h1>
+      <div class="knoepfe"><button class="btn klein" id="neuA">+ Anfrage</button><button class="btn ghost klein" id="neuP">+ Partner</button></div>
+    </div>
+    <div class="kpis kpis5" id="kpis"></div>
+    <div class="tabs" role="tablist">
+      <button data-v="anfragen" aria-pressed="true">Anfragen</button>
+      <button data-v="partner" aria-pressed="false">Partner-Betriebe</button>
+      <button data-v="hilfe" aria-pressed="false">So geht's</button>
+    </div>
+    <div id="ansicht"></div>
+  </main>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const TZ = "Europe/Berlin";
+  const dt = (d) => d ? new Intl.DateTimeFormat("de-DE", { timeZone: TZ, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(d)) : "";
+  const VS = { neu: "Neu", angefragt: "Betriebe angefragt", angebote: "Angebote da", abgemacht: "Abgemacht", erledigt: "Erledigt", verloren: "Verloren" };
+  const BS = { angefragt: "Angefragt", angebot: "Angebot", abgesagt: "Abgesagt", keine_antwort: "Keine Antwort", gewaehlt: "Gewählt", nicht_gewaehlt: "Nicht gewählt" };
+  const ARTL = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Langzeit" };
+  const KANL = { whatsapp: "WhatsApp", telefon: "Telefon", email: "E-Mail", web: "Website", persoenlich: "Persönlich" };
+  let pw = null, V = [], B = [], P = [], ansicht = "anfragen";
+
+  function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 3200); }
+  async function api(daten) {
+    const r = await fetch("/api/vermittlung", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pw, ...daten }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || "Fehler " + r.status);
+    return d;
+  }
+  async function laden() { const d = await api({ aktion: "liste" }); V = d.vermittlungen; B = d.betriebe; P = d.partner; zeichne(); }
+
+  /* ---------- Texte (wie im Textvorlagen-Dokument) ---------- */
+  const artText = (v) => v.art === "langzeit" ? "Langzeit" + (v.laufzeit ? ", " + v.laufzeit : "") : v.art === "projekt" ? "Projekt" + (v.laufzeit ? ", " + v.laufzeit : "") : "";
+  const T = {
+    anfrage: (v) => `Neue Anfrage für dich:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}${v.beschreibung ? "\nKurzbeschreibung: „" + v.beschreibung + "“" : ""}\n\nHast du Interesse? Schick mir einfach Termin und Preis – gern auch als Sprachnachricht. Passt es nicht, reicht ein kurzes „Nein“.`,
+    erinnerung: (v) => `Kurze Erinnerung zur Anfrage (${v.leistung || "Auftrag"}, ${v.ort || "Region Ulm"}). Hast du Zeit dafür? Wenn ich bis morgen Mittag nichts höre, frage ich einen anderen Betrieb.`,
+    verstanden: (v) => `Danke! So habe ich dich verstanden:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}\nPasst das? Dann frage ich jetzt passende Betriebe für dich an und melde mich mit Angeboten.`,
+    angebote: (v, liste) => `Deine Angebote sind da:\n\n${liste.map((b, i) => `${i + 1} · ${b.firma} – ${b.preis || "Preis auf Anfrage"}${b.angebot ? "\n" + b.angebot : ""}`).join("\n\n")}\n\nAntworte einfach mit ${liste.map((_, i) => i + 1).join(", ").replace(/, (\d+)$/, " oder $1")}. Bei Fragen ruf ich dich auch gern kurz an.`,
+    abgemachtKunde: (v, b) => `Abgemacht ✅ Mit ${b.firma}${b.preis ? " für " + b.preis : ""}.\nDer Betrieb hat bestätigt und meldet sich bei dir. Ich erinnere dich vorher noch einmal.`,
+    zusage: (v, b) => `Abgemacht ✅ Der Kunde hat dein Angebot angenommen${b.preis ? ": " + b.preis : ""}.\nKontakt: ${v.auftraggeber || "[Name]"}, ${v.kontakt || "[Telefon]"}${v.ort ? ", " + v.ort : ""}.\nBitte melde dich kurz bei ihm zur Bestätigung. Danke dir!`,
+    absage: () => `Danke für dein Angebot! Diesmal hat sich der Kunde für einen anderen Betrieb entschieden. Bei der nächsten passenden Anfrage melde ich mich wieder.`,
+    gepasst: (v) => `Hat mit ${v.gewaehlt_firma || "dem Betrieb"} alles gepasst? Antworte mit 1 bis 5 Sternen – das hilft anderen bei der Auswahl. Danke!`,
+    anmeldung: (k) => `Hi${k.ansprechpartner ? " " + k.ansprechpartner.split(" ")[0] : ""}, ich bin Samuel von Abgemacht. Ich vermittle Aufträge aus der Region Ulm an geprüfte Betriebe – in der Testphase kostenlos, ohne Abo und ohne Vertrag.\nDarf ich dir passende Anfragen hier per WhatsApp schicken? Du entscheidest bei jeder Anfrage selbst, ob du ein Angebot machst. Ein kurzes „Ja“ reicht. Abmelden geht jederzeit mit „Stopp“.`,
+  };
+  const nummer = (t) => { let n = String(t || "").replace(/\(0\)/g, "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "49" + n.slice(1); return n.length >= 8 ? n : ""; };
+  const waLink = (tel, text) => nummer(tel) ? `https://wa.me/${nummer(tel)}?text=${encodeURIComponent(text)}` : "";
+  function vorlageHtml(titel, text, tel, waOk) {
+    const link = waLink(tel, text);
+    const warn = tel && !waOk ? '<small style="color:#A3480A;display:block;margin-top:6px">Noch kein WhatsApp-Okay: erst anrufen oder /anmeldung schicken.</small>' : "";
+    return `<details class="unter"><summary style="cursor:pointer;font-weight:700;font-size:14px">${esc(titel)}</summary><div class="vorlage">${esc(text)}</div>
+      <div class="knopfreihe"><button class="btn ghost klein" type="button" data-kopie="${esc(text)}">Kopieren</button>${link ? `<a class="btn klein" href="${esc(link)}" target="_blank" rel="noopener">In WhatsApp öffnen</a>` : ""}</div>${warn}</details>`;
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-kopie]"); if (!b) return;
+    navigator.clipboard.writeText(b.dataset.kopie).then(() => toast("Text kopiert"), () => toast("Kopieren nicht möglich"));
+  });
+
+  /* ---------- Ansichten ---------- */
+  function kpis() {
+    const offen = V.filter((v) => ["neu", "angefragt", "angebote"].includes(v.status));
+    const abg = V.filter((v) => ["abgemacht", "erledigt"].includes(v.status));
+    const aktiv = P.filter((p) => p.partner === "aktiv");
+    $("kpis").innerHTML = [
+      [offen.length, "offene Anfragen", offen.some((v) => v.status === "neu") ? "rot" : ""],
+      [V.filter((v) => v.status === "angefragt").length, "warten auf Angebote", ""],
+      [abg.length, "Abgemacht", "gruen"],
+      [aktiv.length, "aktive Partner", ""],
+      [aktiv.filter((p) => p.wa_ok_am).length, "mit WhatsApp-Okay", ""],
+    ].map(([z, t, c]) => `<div class="kpi ${c}"><div class="z">${z}</div><div class="t">${t}</div></div>`).join("");
+  }
+  const artTag = (v) => v.art === "langzeit" ? `<span class="tag2 t-lang">Langzeit${v.laufzeit ? " · " + esc(v.laufzeit) : ""}</span>` : v.art === "projekt" ? `<span class="tag2 t-proj">Projekt${v.laufzeit ? " · " + esc(v.laufzeit) : ""}</span>` : "";
+  function vKarte(v) {
+    const bs = B.filter((b) => b.vermittlung_id === v.id);
+    const ang = bs.filter((b) => ["angebot", "gewaehlt", "nicht_gewaehlt"].includes(b.status)).length;
+    return `<div class="karte" data-v="${v.id}"><div class="m"><b>${esc(v.leistung || "Anfrage")}${v.ort ? " · " + esc(v.ort) : ""}${artTag(v)}</b>
+      <small>${esc(v.auftraggeber || "Unbekannt")}${v.zeitraum ? " · " + esc(v.zeitraum) : ""}${v.budget ? " · " + esc(v.budget) : ""}${v.gewaehlt_firma ? " · mit " + esc(v.gewaehlt_firma) : ""}</small></div>
+      <div class="rechts"><span class="st v-${v.status}">${VS[v.status]}</span><br><small style="color:var(--muted)">${bs.length} angefragt · ${ang} Angebote</small></div></div>`;
+  }
+  function zeichne() {
+    kpis();
+    const el = $("ansicht");
+    if (ansicht === "anfragen") {
+      const gruppe = (sts, t) => { const l = V.filter((v) => sts.includes(v.status)); return l.length ? `<h3 class="ab">${t} (${l.length})</h3>${l.map(vKarte).join("")}` : ""; };
+      el.innerHTML = V.length ? gruppe(["neu"], "Neu, noch keine Betriebe angefragt") + gruppe(["angefragt"], "Warten auf Angebote") + gruppe(["angebote"], "Angebote an Auftraggeber schicken") + gruppe(["abgemacht"], "Abgemacht, nach dem Auftrag bewerten lassen") + gruppe(["erledigt", "verloren"], "Abgeschlossen")
+        : `<div class="leer">Noch keine Anfragen. Leg die erste mit „+ Anfrage“ an, sobald jemand schreibt oder anruft.</div>`;
+      el.querySelectorAll("[data-v]").forEach((k) => k.onclick = () => oeffneV(+k.dataset.v));
+    } else if (ansicht === "partner") {
+      const zeile = (p) => `<tr data-p="${p.id}"><td><b>${esc(p.firma)}</b>${p.partner === "pausiert" ? '<span class="tag2 t-proj">pausiert</span>' : ""}</td><td>${esc(p.leistungen || p.kategorie || "")}</td><td>${esc(p.ort || p.region || "")}</td>
+        <td>${p.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : "–"}</td><td>${p.angefragt}</td><td>${p.angebote}</td><td>${p.zusagen}</td><td>${p.antwort_h != null ? esc(String(p.antwort_h).replace(".", ",")) + " Std." : "–"}</td></tr>`;
+      el.innerHTML = `<div class="box"><b>${P.filter((p) => p.partner === "aktiv").length} aktive Partner</b> <span style="color:var(--muted)">· Ziel bis 15.11.: 30 Partner in 8 Branchen</span>
+        <div style="margin-top:10px"><label for="pSuch" style="margin-top:0">Betrieb aus dem CRM als Partner aufnehmen</label><div style="display:flex;gap:8px"><input id="pSuch" placeholder="Firma, Branche oder Ort"><button class="btn klein" id="pSuchen" type="button">Suchen</button></div><div id="pTreffer"></div></div></div>
+        ${P.length ? `<div class="tabelle"><table><thead><tr><th>Betrieb</th><th>Leistungen</th><th>Ort</th><th>WhatsApp</th><th>Angefragt</th><th>Angebote</th><th>Zusagen</th><th>Ø Antwort</th></tr></thead><tbody>${P.map(zeile).join("")}</tbody></table></div>` : '<div class="leer">Noch keine Partner. Nimm Betriebe aus dem CRM auf oder leg sie mit „+ Partner“ an.</div>'}`;
+      el.querySelectorAll("[data-p]").forEach((r) => r.onclick = () => oeffneP(+r.dataset.p));
+      const suchen = async () => {
+        const q = $("pSuch").value.trim(); if (!q) return;
+        const d = await api({ aktion: "kandidaten", q });
+        $("pTreffer").innerHTML = d.kandidaten.filter((k) => !k.partner).map((k) => `<div class="kand"><span style="flex:1"><b>${esc(k.firma)}</b><small>${esc([k.kategorie, k.ort || k.region].filter(Boolean).join(" · "))}</small></span><button class="btn ghost klein" data-neu="${k.id}" type="button">Als Partner</button></div>`).join("") || '<p style="color:var(--muted)">Keine Treffer ohne Partner-Status.</p>';
+        $("pTreffer").querySelectorAll("[data-neu]").forEach((b) => b.onclick = async () => { await api({ aktion: "partner", kontakt: +b.dataset.neu, partner: "aktiv" }); toast("Als Partner aufgenommen"); await laden(); });
+      };
+      $("pSuchen").onclick = suchen; $("pSuch").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } };
+    } else {
+      el.innerHTML = `<div class="box"><h3 style="margin-top:0">Ablauf einer Vermittlung</h3><ol style="line-height:1.7;margin:0;padding-left:20px">
+        <li>Anfrage kommt rein (WhatsApp, Anruf, Mail): mit „+ Anfrage“ anlegen und dem Auftraggeber den Text „So habe ich dich verstanden“ schicken.</li>
+        <li>In der Anfrage passende Betriebe suchen und bis zu 5 auswählen. Partner mit WhatsApp-Okay bekommen den Anfrage-Text per WhatsApp. Alle anderen anrufen und dabei fragen, ob sie Partner werden wollen.</li>
+        <li>Antworten eintragen: Preis und Angebot beim jeweiligen Betrieb, Status auf „Angebot“.</li>
+        <li>Text „Deine Angebote sind da“ an den Auftraggeber schicken. Er antwortet mit einer Nummer.</li>
+        <li>Beim gewählten Betrieb „Abgemacht“ drücken. Die Texte für Kunde, Zusage und Absagen stehen dann bereit.</li>
+        <li>Nach dem Termin „Hat's gepasst?“ schicken, Bewertung eintragen, Status „Erledigt“.</li></ol>
+        <p style="color:var(--muted);margin:12px 0 0">Gebühren werden zur Info berechnet (9/29/59 €, Langzeit 199 €), in der Startphase aber nicht verlangt. Kalte WhatsApp-Nachrichten ohne Okay sind tabu: erst anrufen.</p></div>`;
+    }
+  }
+  function setze(v) { ansicht = v; document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === v)); zeichne(); }
+
+  /* ---------- Panel ---------- */
+  function schliessen() { document.querySelectorAll(".scrim,.panel").forEach((n) => n.remove()); }
+  function panel(html) {
+    schliessen();
+    const s = document.createElement("div"); s.className = "scrim"; s.onclick = schliessen;
+    const p = document.createElement("div"); p.className = "panel"; p.innerHTML = html;
+    document.body.append(s, p);
+    p.querySelector(".zu")?.addEventListener("click", schliessen);
+    return p;
+  }
+  const feld = (n, l, wert, typ = "text", ganz) => `<div class="${ganz ? "ganz" : ""}"><label for="v_${n}">${l}</label><input id="v_${n}" data-f="${n}" type="${typ}" value="${esc(wert ?? "")}"></div>`;
+  const auswahl = (n, l, wert, opts) => `<div><label for="v_${n}">${l}</label><select id="v_${n}" data-f="${n}">${Object.entries(opts).map(([k, t]) => `<option value="${k}" ${wert === k ? "selected" : ""}>${t}</option>`).join("")}</select></div>`;
+  function vForm(v) {
+    return `<div class="formgrid">
+      ${feld("auftraggeber", "Auftraggeber", v.auftraggeber)}${feld("kontakt", "Telefon oder E-Mail", v.kontakt)}
+      ${auswahl("kanal", "Kam über", v.kanal || "whatsapp", KANL)}${feld("leistung", "Leistung *", v.leistung)}
+      ${feld("ort", "Ort", v.ort)}${feld("zeitraum", "Zeitraum / Rhythmus", v.zeitraum)}
+      ${feld("budget", "Budget", v.budget)}${auswahl("art", "Art", v.art || "einmalig", ARTL)}
+      ${feld("laufzeit", "Laufzeit (bei Projekt/Langzeit)", v.laufzeit)}${v.id ? auswahl("status", "Status", v.status, VS) : "<div></div>"}
+      <div class="ganz"><label for="v_beschreibung">Beschreibung (Worte des Auftraggebers)</label><textarea id="v_beschreibung" data-f="beschreibung">${esc(v.beschreibung || "")}</textarea></div>
+      ${v.id ? feld("auftragswert", "Auftragswert in €", v.auftragswert, "text") + feld("bewertung", "Bewertung 1–5", v.bewertung, "number") : ""}
+      <div class="ganz"><label for="v_notizen">Notizen</label><textarea id="v_notizen" data-f="notizen">${esc(v.notizen || "")}</textarea></div></div>`;
+  }
+  const werte = (root) => { const o = {}; root.querySelectorAll("[data-f]").forEach((e) => o[e.dataset.f] = e.value); return o; };
+
+  function neueAnfrage() {
+    const p = panel(`<div class="kopf"><div><h2>Neue Anfrage</h2><small style="color:var(--muted)">Wer schreibt, was braucht er?</small></div><button class="zu" aria-label="Schließen">×</button></div>
+      ${vForm({})}<button class="btn" id="vSpeichern" style="width:100%;margin-top:14px">Anlegen</button><div class="msg" id="vmsg"></div>`);
+    p.querySelector("#vSpeichern").onclick = async () => {
+      try { const d = await api({ aktion: "neu", ...werte(p) }); await laden(); oeffneV(d.id); toast("Anfrage angelegt"); }
+      catch (e) { p.querySelector("#vmsg").textContent = e.message; p.querySelector("#vmsg").className = "msg err"; }
+    };
+  }
+
+  function oeffneV(id) {
+    const v = V.find((x) => x.id === id); if (!v) return;
+    const bs = B.filter((b) => b.vermittlung_id === id);
+    const mitAngebot = bs.filter((b) => ["angebot", "gewaehlt", "nicht_gewaehlt"].includes(b.status));
+    const gew = bs.find((b) => b.status === "gewaehlt");
+    const vbHtml = bs.map((b) => `<div class="vb" data-vb="${b.id}">
+        <div class="zeile"><b>${esc(b.firma)}${b.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}</b><span class="st b-${b.status}">${BS[b.status]}</span></div>
+        <small style="color:var(--muted)">${esc([b.ansprechpartner, b.telefon, b.k_ort].filter(Boolean).join(" · "))} · angefragt ${dt(b.angefragt_am)}</small>
+        <div class="reihe"><select data-g="status">${Object.entries(BS).filter(([k]) => k !== "gewaehlt" && k !== "nicht_gewaehlt").map(([k, t]) => `<option value="${k}" ${b.status === k ? "selected" : ""}>${t}</option>`).join("")}${["gewaehlt", "nicht_gewaehlt"].includes(b.status) ? `<option selected value="${b.status}">${BS[b.status]}</option>` : ""}</select>
+          <input data-g="preis" placeholder="Preis, z. B. 380 €" value="${esc(b.preis || "")}" style="flex:1;min-width:120px"></div>
+        <textarea data-g="angebot" placeholder="Angebot: Termin, was drin ist" style="margin-top:6px;min-height:50px">${esc(b.angebot || "")}</textarea>
+        <div class="knopfreihe"><button class="btn ghost klein" data-sp="${b.id}" type="button">Speichern</button>${b.telefon ? `<a class="btn ghost klein" href="tel:${esc(String(b.telefon).replace(/[^\d+]/g, ""))}">Anrufen</a>` : ""}${b.status === "angebot" ? `<button class="btn klein" data-wahl="${b.id}" type="button">Abgemacht</button>` : ""}</div>
+        ${b.status === "angefragt" ? vorlageHtml("Text: Anfrage an diesen Betrieb", T.anfrage(v), b.telefon, b.wa_ok_am) + vorlageHtml("Text: Erinnerung", T.erinnerung(v), b.telefon, b.wa_ok_am) : ""}
+        ${b.status === "gewaehlt" ? vorlageHtml("Text: Zusage an den Betrieb", T.zusage(v, b), b.telefon, b.wa_ok_am) : ""}
+        ${b.status === "nicht_gewaehlt" ? vorlageHtml("Text: Absage", T.absage(), b.telefon, b.wa_ok_am) : ""}
+      </div>`).join("");
+    const kundenTexte = [
+      vorlageHtml("Text an Auftraggeber: So habe ich dich verstanden", T.verstanden(v), v.kontakt, v.kanal === "whatsapp"),
+      mitAngebot.length ? vorlageHtml("Text an Auftraggeber: Deine Angebote sind da", T.angebote(v, mitAngebot.filter((b) => b.status !== "nicht_gewaehlt")), v.kontakt, v.kanal === "whatsapp") : "",
+      gew ? vorlageHtml("Text an Auftraggeber: Abgemacht", T.abgemachtKunde(v, gew), v.kontakt, v.kanal === "whatsapp") : "",
+      ["abgemacht", "erledigt"].includes(v.status) ? vorlageHtml("Text an Auftraggeber: Hat's gepasst?", T.gepasst(v), v.kontakt, v.kanal === "whatsapp") : "",
+    ].join("");
+    const p = panel(`<div class="kopf"><div><h2>${esc(v.leistung || "Anfrage")}${artTag(v)}</h2><small style="color:var(--muted)">#${v.id} · ${dt(v.created_at)} · ${esc(KANL[v.kanal] || "")}</small></div><button class="zu" aria-label="Schließen">×</button></div>
+      <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Gebühr nach Modell: ${esc(String(v.gebuehr).replace(".", ","))} € (Startphase: gratis)</span>` : ""}</div>
+      <h3 class="ab">Texte an den Auftraggeber</h3>${kundenTexte}
+      <h3 class="ab">Angefragte Betriebe (${bs.length})</h3>${vbHtml || '<div class="leer" style="padding:14px">Noch keine. Unten passende Betriebe suchen.</div>'}
+      <div class="unter"><label for="kSuch">Betriebe suchen und anfragen (bis zu 5)</label><div style="display:flex;gap:8px"><input id="kSuch" value="${esc((v.leistung || "").split(/[ ,&]/)[0])}" placeholder="Branche, Leistung oder Firma"><button class="btn klein" id="kSuchen" type="button">Suchen</button></div>
+        <div id="kListe"></div><button class="btn klein" id="kAnfragen" type="button" hidden style="margin-top:10px">Ausgewählte anfragen</button>
+        <small style="color:var(--muted);display:block;margin-top:6px">Kein passender Betrieb dabei? Über Google Maps suchen, anrufen und mit „+ Partner“ anlegen.</small></div>
+      <details class="unter" id="vEdit"><summary style="cursor:pointer;font-weight:700">Anfrage bearbeiten</summary>${vForm(v)}
+        <div class="knopfreihe"><button class="btn klein" id="vSpeichern" type="button">Speichern</button><button class="btn ghost klein" id="vLoeschen" type="button">Löschen</button></div><div class="msg" id="vmsg"></div></details>`);
+    p.querySelectorAll("[data-sp]").forEach((b) => b.onclick = async () => {
+      const box = b.closest("[data-vb]"); const g = (n) => box.querySelector(`[data-g="${n}"]`).value;
+      try { await api({ aktion: "vb", vb: +b.dataset.sp, status: g("status"), preis: g("preis"), angebot: g("angebot") }); await laden(); oeffneV(id); toast("Gespeichert"); } catch (e) { toast(e.message); }
+    });
+    p.querySelectorAll("[data-wahl]").forEach((b) => b.onclick = async () => {
+      const box = b.closest("[data-vb]"); const preis = box.querySelector('[data-g="preis"]').value;
+      try { await api({ aktion: "vb", vb: +b.dataset.wahl, status: "angebot", preis, angebot: box.querySelector('[data-g="angebot"]').value }); const d = await api({ aktion: "waehlen", vb: +b.dataset.wahl, auftragswert: preis }); await laden(); oeffneV(id); toast("Abgemacht!" + (d.gebuehr ? " Gebühr nach Modell: " + d.gebuehr + " €" : "")); } catch (e) { toast(e.message); }
+    });
+    const suchen = async () => {
+      const q = p.querySelector("#kSuch").value.trim(); if (!q) return;
+      const d = await api({ aktion: "kandidaten", q });
+      const schon = new Set(bs.map((b) => b.kontakt_id));
+      const l = d.kandidaten.filter((k) => !schon.has(k.id));
+      p.querySelector("#kListe").innerHTML = l.map((k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}</small></label></div>`).join("") || '<p style="color:var(--muted)">Keine Treffer.</p>';
+      p.querySelector("#kAnfragen").hidden = !l.length;
+    };
+    p.querySelector("#kSuchen").onclick = suchen;
+    p.querySelector("#kSuch").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } };
+    p.querySelector("#kAnfragen").onclick = async () => {
+      const ids = [...p.querySelectorAll("#kListe input:checked")].map((x) => +x.value);
+      if (!ids.length) return toast("Bitte Betriebe auswählen.");
+      try { await api({ aktion: "anfragen", id, kontakte: ids }); await laden(); oeffneV(id); toast(ids.length + " Betrieb(e) angefragt – jetzt Text schicken oder anrufen"); } catch (e) { toast(e.message); }
+    };
+    p.querySelector("#vSpeichern").onclick = async () => {
+      const form = p.querySelector("#vEdit");
+      try { await api({ aktion: "aendern", id, ...werte(form) }); await laden(); oeffneV(id); toast("Gespeichert"); }
+      catch (e) { p.querySelector("#vmsg").textContent = e.message; p.querySelector("#vmsg").className = "msg err"; }
+    };
+    p.querySelector("#vLoeschen").onclick = async (e) => {
+      if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich löschen?"; return; }
+      await api({ aktion: "loeschen", id }); schliessen(); await laden(); toast("Anfrage gelöscht");
+    };
+  }
+
+  function oeffneP(kid) {
+    const k = P.find((x) => x.id === kid); if (!k) return;
+    const p = panel(`<div class="kopf"><div><h2>${esc(k.firma)}</h2><small style="color:var(--muted)">${esc([k.kategorie, k.ort || k.region].filter(Boolean).join(" · "))}${k.partner_seit ? " · Partner seit " + dt(k.partner_seit).slice(0, 6) : ""}</small></div><button class="zu" aria-label="Schließen">×</button></div>
+      <div class="info"><span>Ansprechpartner</span><b>${esc(k.ansprechpartner || "–")}</b><span>Telefon</span><b>${k.telefon ? `<a href="tel:${esc(String(k.telefon).replace(/[^\d+]/g, ""))}">${esc(k.telefon)}</a>` : "–"}</b><span>E-Mail</span><b>${esc(k.email || "–")}</b><span>Website</span><b>${k.website ? `<a href="${esc(/^https?:/.test(k.website) ? k.website : "https://" + k.website)}" target="_blank" rel="noopener">${esc(k.website)}</a>` : "–"}</b>
+        <span>Anfragen</span><b>${k.angefragt} angefragt · ${k.angebote} Angebote · ${k.zusagen} Zusagen</b></div>
+      <div class="unter"><label for="pLeist">Leistungen (für die Suche)</label><input id="pLeist" value="${esc(k.leistungen || "")}" placeholder="z. B. Elektro, E-Check, Wallbox">
+        <label class="check" style="margin-top:12px"><input type="checkbox" id="pWa" ${k.wa_ok_am ? "checked" : ""}> <span>Hat Okay gegeben, Anfragen per WhatsApp zu bekommen${k.wa_ok_am ? " (seit " + dt(k.wa_ok_am) + ")" : ""}</span></label>
+        <label for="pSt">Status</label><select id="pSt"><option value="aktiv" ${k.partner === "aktiv" ? "selected" : ""}>Aktiver Partner</option><option value="pausiert" ${k.partner === "pausiert" ? "selected" : ""}>Pausiert (gerade keine Kapazität)</option><option value="">Kein Partner mehr</option></select>
+        <button class="btn klein" id="pSpeichern" type="button" style="margin-top:12px">Speichern</button></div>
+      ${vorlageHtml("Text: Anmeldung mit WhatsApp-Okay", T.anmeldung(k), k.telefon, true)}`);
+    p.querySelector("#pSpeichern").onclick = async () => {
+      try { await api({ aktion: "partner", kontakt: kid, partner: p.querySelector("#pSt").value || null, wa_ok: p.querySelector("#pWa").checked, leistungen: p.querySelector("#pLeist").value }); await laden(); schliessen(); toast("Gespeichert"); } catch (e) { toast(e.message); }
+    };
+  }
+
+  function neuerPartner() {
+    const f = (n, l, ganz) => `<div class="${ganz ? "ganz" : ""}"><label for="n_${n}">${l}</label><input id="n_${n}" data-f="${n}"></div>`;
+    const p = panel(`<div class="kopf"><div><h2>Neuer Partner-Betrieb</h2><small style="color:var(--muted)">Wird auch im CRM angelegt</small></div><button class="zu" aria-label="Schließen">×</button></div>
+      <div class="formgrid">${f("firma", "Firma *")}${f("kategorie", "Branche")}${f("leistungen", "Leistungen", true)}${f("ansprechpartner", "Ansprechpartner")}${f("telefon", "Telefon / WhatsApp")}${f("email", "E-Mail")}${f("website", "Website")}${f("ort", "Ort")}${f("region", "Region")}</div>
+      <label class="check"><input type="checkbox" id="nWa"> <span>Hat Okay gegeben, Anfragen per WhatsApp zu bekommen</span></label>
+      <button class="btn" id="nSpeichern" style="width:100%;margin-top:14px">Anlegen</button><div class="msg" id="nmsg"></div>`);
+    p.querySelector("#nSpeichern").onclick = async () => {
+      try { await api({ aktion: "partner_neu", ...werte(p), wa_ok: p.querySelector("#nWa").checked }); await laden(); schliessen(); setze("partner"); toast("Partner angelegt"); }
+      catch (e) { p.querySelector("#nmsg").textContent = e.message; p.querySelector("#nmsg").className = "msg err"; }
+    };
+  }
+
+  function abmelden() { pw = null; try { sessionStorage.removeItem("hs_admin"); } catch {} $("app").hidden = true; $("raus").hidden = true; $("login").hidden = false; schliessen(); }
+  async function start(p) { pw = p; await laden(); $("login").hidden = true; $("app").hidden = false; $("raus").hidden = false; }
+  $("login").onsubmit = async (e) => {
+    e.preventDefault(); const m = $("loginMsg"); m.textContent = "";
+    try { await start($("pw").value); try { sessionStorage.setItem("hs_admin", pw); } catch {} }
+    catch (err) { m.textContent = err.message; m.className = "msg err"; pw = null; }
+  };
+  $("raus").onclick = abmelden;
+  $("neuA").onclick = neueAnfrage;
+  $("neuP").onclick = neuerPartner;
+  document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => setze(b.dataset.v));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") schliessen(); });
+  let gespeichert = null; try { gespeichert = sessionStorage.getItem("hs_admin"); } catch {}
+  if (gespeichert) start(gespeichert).catch(() => abmelden());
+})();
+</script>
+</body>
+</html>
