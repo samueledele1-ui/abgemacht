@@ -3,12 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Abgemacht – Geschäftskontakte per Swipe</title>
-<meta name="description" content="Abgemacht verbindet Unternehmer, Selbstständige und Fachkräfte aus deiner Region. Jetzt auf die Warteliste.">
-<meta property="og:title" content="Abgemacht – Geschäftskontakte per Swipe">
-<meta property="og:description" content="Unternehmer aus deiner Region kennenlernen, Aufträge finden, in Branchen-Chats austauschen. Jetzt auf die Warteliste.">
+<title>Abgemacht – Schreib, was du brauchst. Wir machen's ab.</title>
+<meta name="description" content="Abgemacht bringt Auftraggeber und geprüfte Betriebe aus der Region zusammen. Ein Satz reicht: Wir fragen 5 passende Betriebe an, du bekommst Angebote. Für Auftraggeber kostenlos.">
+<meta property="og:title" content="Abgemacht – Schreib, was du brauchst. Wir machen's ab.">
+<meta property="og:description" content="Ein Satz oder eine Sprachnachricht: 5 passende Betriebe aus deiner Region werden angefragt, du vergleichst Angebote und sagst „Abgemacht“. Einmalig, als Projekt oder langfristig.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='28' fill='%23138A6B'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle'%3E🤝%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/style.css">
+<style>
+  .anfrage{position:absolute;inset:16px;display:flex;flex-direction:column;gap:10px}
+  .anfrage .karte{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px;box-shadow:0 10px 26px -18px rgba(20,35,30,.4)}
+  .anfrage .klein{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .anfrage .satz{font-size:14px;line-height:1.4;margin-top:4px}
+  .anfrage .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .anfrage .chips span{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--gruen-l);color:var(--gruen-d)}
+  .anfrage .chips span.lz{background:#E6ECFA;color:#2C4E9E}
+  .angebot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .angebot b{font-size:14px;display:block}
+  .angebot small{font-size:12px;color:var(--muted)}
+  .angebot .ok{flex:none;background:var(--gruen);color:#fff;font-weight:700;font-size:12px;padding:7px 11px;border-radius:999px}
+  .schritte{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s}
+  .schritt{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px;position:relative}
+  .schritt::before{counter-increment:s;content:counter(s);width:36px;height:36px;border-radius:50%;background:var(--gruen);color:#fff;font-weight:800;display:grid;place-items:center;margin-bottom:12px}
+  .schritt h3{margin:0 0 6px;font-size:18px}.schritt p{margin:0;color:var(--muted);font-size:15px}
+  .seiten{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .seite{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}
+  .seite h3{margin:0 0 4px;font-size:20px}
+  .seite .wer{color:var(--muted);font-size:14px;margin:0 0 12px}
+  .seite ul{margin:0;padding-left:20px;font-size:15px;line-height:1.6}
+  .seite.b{border:2px solid var(--gruen)}
+  .arten3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .art3{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px;border-top:5px solid var(--c)}
+  .art3 b{font-size:17px;display:block;margin-bottom:4px}
+  .art3 p{margin:0;color:var(--muted);font-size:15px}
+  .preis .stufen{list-style:none;padding:0}
+  .preis .stufen li{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:7px 0;color:var(--ink)}
+  .preis .stufen li span{color:var(--muted)}
+  .typen3{grid-template-columns:repeat(3,1fr)}
+  @media (max-width:860px){.schritte,.seiten,.arten3{grid-template-columns:1fr}}
+  @media (max-width:560px){.typen3{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -19,65 +52,101 @@
 
   <div class="hero">
     <div>
-      <span class="pill">Bald verfügbar · kostenlos starten</span>
-      <h1>Geschäftskontakte, <em>per Swipe</em> statt Visitenkarte.</h1>
-      <p class="lead">Abgemacht verbindet Unternehmer, Selbstständige und Fachkräfte aus deiner Region. Neue Kontakte kennenlernen, Aufträge und Jobs finden und dich in deiner Branche austauschen, alles in einer App.</p>
+      <span class="pill">Startet in Ulm &amp; Neu-Ulm · für Auftraggeber kostenlos</span>
+      <h1>Schreib, was du brauchst. <em>Wir machen's ab.</em></h1>
+      <p class="lead">Abgemacht bringt Auftraggeber und geprüfte Betriebe aus deiner Region zusammen. Ein Satz oder eine Sprachnachricht reicht: Wir fragen 5 passende Betriebe an, du vergleichst die Angebote und sagst einfach „Abgemacht“. Für einen Termin, ein Projekt über Wochen oder einen Auftrag über Jahre.</p>
       <div class="cta">
         <a class="btn" href="#warteliste">Platz sichern</a>
-        <a class="btn ghost" href="#funktionen">So funktioniert's</a>
+        <a class="btn ghost" href="#so-gehts">So funktioniert's</a>
       </div>
       <p class="zaehler" id="zaehler" hidden></p>
     </div>
     <div class="phone" aria-hidden="true">
       <div class="screen">
-        <div class="swipecard back"></div>
-        <div class="swipecard">
-          <div class="av">LK</div>
-          <h3>Lena Kraus</h3>
-          <div class="pos">Inhaberin · Kraus Elektrotechnik</div>
-          <div class="tags"><span class="tag">Handwerk</span><span class="tag l">Smart Home</span><span class="tag o">Ulm</span></div>
-          <p style="color:var(--muted);font-size:14px;margin:14px 0 0">Meisterbetrieb mit 8 Leuten. Offen für Kooperationen mit Bauträgern und Installateuren.</p>
+        <div class="anfrage">
+          <div class="karte">
+            <div class="klein">Deine Anfrage</div>
+            <div class="satz">„Brauche diese Woche einen Elektriker für eine Mietwohnung in Neu-Ulm, bis 400 €.“</div>
+            <div class="chips"><span>Elektro</span><span>Neu-Ulm</span><span>diese Woche</span></div>
+          </div>
+          <div class="klein" style="margin:4px 2px 0">4 von 5 Betrieben haben geantwortet</div>
+          <div class="karte angebot"><div><b>Elektrobetrieb A</b><small>380 € · Do, 10:00 · ★ 4,9</small></div><span class="ok">Abgemacht</span></div>
+          <div class="karte angebot"><div><b>Elektrobetrieb B</b><small>340 € · Fr, 14:00 · ★ 4,6</small></div><span class="ok">Abgemacht</span></div>
+          <div class="karte">
+            <div class="klein">Auch langfristig</div>
+            <div class="chips"><span class="lz">Büroreinigung · 12 Monate</span><span class="lz">Wartung · 2 Jahre</span></div>
+          </div>
         </div>
-        <div class="actions"><span>✕</span><span class="ja">🤝</span></div>
       </div>
     </div>
   </div>
 
-  <section id="funktionen">
-    <h2>Was dich erwartet</h2>
-    <p class="sub">Gebaut für Leute, die Dinge lieber direkt abmachen, als zehn E-Mails zu schreiben.</p>
-    <div class="grid">
-      <div class="feat c1"><div class="ic">👋</div><h3>Personen swipen</h3><p>Lerne Unternehmer und Fachleute in deiner Nähe kennen. Beide sagen ja, dann seid ihr verbunden.</p></div>
-      <div class="feat c2"><div class="ic">📋</div><h3>Aufträge & Jobs</h3><p>Angebote, Gesuche und Stellen im eigenen Swipe-Bereich. Mit Bild oder kurzem Video.</p></div>
-      <div class="feat c3"><div class="ic">🔎</div><h3>Gezielt suchen</h3><p>Finde Firmen, Produkte und Kurse nach Branche und Umkreis.</p></div>
-      <div class="feat c4"><div class="ic">💬</div><h3>Branchen-Chats</h3><p>Offene Runden für Handwerk, KI, Vertrieb, Gastro und mehr. Plus ein Chat für ganz Deutschland.</p></div>
-      <div class="feat c5"><div class="ic">✅</div><h3>Geprüfte Profile</h3><p>Firmen und Selbstständige werden verifiziert, damit du weißt, mit wem du redest.</p></div>
-      <div class="feat c6"><div class="ic">👥</div><h3>Für Teams</h3><p>Gemeinsamer Posteingang, Bewerbungen und Online-Terminbuchung für dein Unternehmen.</p></div>
+  <section id="so-gehts">
+    <h2>So funktioniert's</h2>
+    <p class="sub">Kein Rumtelefonieren, kein Warten auf die Empfehlung vom Nachbarn.</p>
+    <div class="schritte">
+      <div class="schritt"><h3>Sag, was du brauchst</h3><p>Ein Satz oder eine Sprachnachricht, in der App oder per WhatsApp. Wir erkennen Leistung, Ort, Zeitraum und Budget.</p></div>
+      <div class="schritt"><h3>Wir fragen 5 Betriebe an</h3><p>Passende, geprüfte Betriebe aus deiner Region bekommen deine Anfrage. Antwortet einer nicht, fragen wir den nächsten.</p></div>
+      <div class="schritt"><h3>Vergleichen und „Abgemacht“</h3><p>Du siehst Preis, Termin und echte Bewertungen. Ein Tipp auf „Abgemacht“, und beide haben alle Details.</p></div>
+    </div>
+  </section>
+
+  <section id="fuer-wen">
+    <h2>Für beide Seiten gemacht</h2>
+    <p class="sub">Firmen, Selbstständige, Hausverwaltungen und Privatleute vergeben Aufträge. Betriebe und Selbstständige aus jeder Branche bekommen sie.</p>
+    <div class="seiten">
+      <div class="seite">
+        <h3>Du vergibst Aufträge</h3>
+        <p class="wer">Firmen, Hausverwaltungen, Praxen, Privatleute</p>
+        <ul>
+          <li>Für dich komplett kostenlos</li>
+          <li>Angebote von mehreren Betrieben, statt fünfmal anzurufen</li>
+          <li>Per App oder einfach per WhatsApp, auch als Sprachnachricht</li>
+          <li>Bewertungen nur von echten, abgeschlossenen Aufträgen</li>
+          <li>Einmalig, als Projekt oder als Langzeitauftrag</li>
+        </ul>
+      </div>
+      <div class="seite b">
+        <h3>Du bietest Leistungen an</h3>
+        <p class="wer">Handwerk, Reinigung, IT, Marketing, Training und jede andere Branche</p>
+        <ul>
+          <li>Keine Grundgebühr: Du zahlst nur, wenn's abgemacht ist</li>
+          <li>Passende Anfragen aus deiner Nähe, mit Ort, Zeitraum und Budget</li>
+          <li>Angebot per Sprachnachricht, die KI macht es schön</li>
+          <li>Freie Zeit melden und Lücken im Kalender füllen</li>
+          <li>Profil in einer Minute, direkt aus deiner Website</li>
+        </ul>
+      </div>
     </div>
   </section>
 
   <section>
-    <h2>Alles, was du anbieten kannst</h2>
-    <p class="sub">Jede Art hat ihre eigene Farbe, damit du auf einen Blick siehst, worum es geht.</p>
-    <div class="arten">
-      <span class="art" style="--c:var(--gruen)">Angebote</span>
-      <span class="art" style="--c:var(--gold)">Gesuche</span>
-      <span class="art" style="--c:var(--lila)">Produkte</span>
-      <span class="art" style="--c:var(--orange)">Kurse & Mentoring</span>
-      <span class="art" style="--c:var(--tuerkis)">Firmen</span>
-      <span class="art" style="--c:var(--blau)">Jobs</span>
+    <h2>Einmalig, Projekt oder Langzeit</h2>
+    <p class="sub">Nicht nur der schnelle Handgriff: Auch Aufträge über Wochen oder Jahre laufen über Abgemacht.</p>
+    <div class="arten3">
+      <div class="art3" style="--c:var(--gruen)"><b>Einmalig</b><p>Ein Termin, ein Auftrag. Zum Beispiel die Steckdose, der Umzug oder das Fotoshooting.</p></div>
+      <div class="art3" style="--c:var(--gold)"><b>Projekt</b><p>Über einige Wochen, mit festem Team. Zum Beispiel eine neue Website oder eine Renovierung.</p></div>
+      <div class="art3" style="--c:var(--blau)"><b>Langzeit</b><p>Monate oder Jahre. Zum Beispiel Büroreinigung, Wartungsvertrag oder Personal Training.</p></div>
     </div>
   </section>
 
   <section>
     <h2>Fair im Preis</h2>
-    <p class="sub">Kostenlos starten. Ohne Provision auf deine Aufträge.</p>
+    <p class="sub">Auftraggeber zahlen nie. Betriebe zahlen nur bei einem bestätigten Auftrag, in der Startphase gar nichts.</p>
     <div class="preise">
-      <div class="preis"><b>Gratis</b><div class="p">0 €</div><ul><li>Profil mit Foto und Video</li><li>Firmen, Angebote und Jobs suchen</li><li>Aufträge und Jobs einstellen, mit Bild</li><li>Chat und Branchen-Chats</li><li>10 neue Kontakte pro Tag</li></ul></div>
-      <div class="preis hi"><b>Pro</b><div class="p">4,99 € <small>/ Monat</small></div><ul><li>Erster Monat gratis, monatlich kündbar</li><li>Unbegrenzt Kontakte knüpfen</li><li>Sehen, wer dich kennenlernen will</li><li>Bewerbungen, Statistiken, Terminbuchung</li><li>1 Gratis-Boost im Monat</li></ul></div>
-      <div class="preis"><b>Boost</b><div class="p">2,99 € <small>einmalig</small></div><ul><li>Für jeden Auftrag, Job, Kurs oder jedes Angebot</li><li>Eintrag wird weiter oben gezeigt</li><li>Ohne Abo</li></ul></div>
+      <div class="preis"><b>Auftraggeber</b><div class="p">0 €</div><ul><li>Anfragen stellen, so oft du willst</li><li>Angebote vergleichen</li><li>Chat und WhatsApp</li><li>Bewerten nach dem Auftrag</li></ul></div>
+      <div class="preis hi"><b>Betriebe</b><div class="p">ab 9 € <small>pro Auftrag</small></div>
+        <ul class="stufen">
+          <li><span>bis 500 € Auftragswert</span>9 €</li>
+          <li><span>500 bis 2.000 €</span>29 €</li>
+          <li><span>über 2.000 €</span>59 €</li>
+          <li><span>Langzeitauftrag, einmalig</span>199 €</li>
+        </ul>
+        <p style="margin:10px 0 0;color:var(--muted);font-size:14px">Keine Grundgebühr, kein Abo. Nur fällig, wenn der Kunde „Abgemacht“ sagt.</p>
+      </div>
+      <div class="preis"><b>Pro für Betriebe</b><div class="p">29 € <small>/ Monat</small></div><ul><li>Halbe Gebühr auf jeden Auftrag</li><li>Weiter oben in den Ergebnissen</li><li>Statistiken und Online-Terminbuchung</li><li>Monatlich kündbar</li></ul></div>
     </div>
-    <p class="hinweis">Geplante Preise zum Start, Änderungen vorbehalten. Wer auf der Warteliste steht, erfährt es zuerst.</p>
+    <p class="hinweis">Geplante Preise zum Start, Änderungen vorbehalten. In der Startphase zahlen Betriebe keine Gebühren. Wer auf der Warteliste steht, erfährt es zuerst.</p>
   </section>
 
   <section id="warteliste">
@@ -88,23 +157,23 @@
         <form id="form" novalidate>
           <div class="row">
             <div><label for="email">E-Mail *</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="du@firma.de"></div>
-            <div><label for="name">Name</label><input id="name" name="name" autocomplete="name" maxlength="80" placeholder="Vor- und Nachname"></div>
+            <div><label for="name">Name oder Firma</label><input id="name" name="name" autocomplete="name" maxlength="80" placeholder="Vor- und Nachname oder Firma"></div>
           </div>
-          <label>Ich bin</label>
-          <div class="typen">
-            <input type="radio" name="typ" id="t1" value="firma"><label for="t1">Firma</label>
-            <input type="radio" name="typ" id="t2" value="selbststaendig"><label for="t2">Selbstständig</label>
-            <input type="radio" name="typ" id="t3" value="mitarbeiter"><label for="t3">Mitarbeiter</label>
-            <input type="radio" name="typ" id="t4" value="privat"><label for="t4">Privat</label>
+          <label>Ich möchte</label>
+          <div class="typen typen3">
+            <input type="radio" name="typ" id="t1" value="auftraggeber"><label for="t1">Aufträge vergeben</label>
+            <input type="radio" name="typ" id="t2" value="anbieter"><label for="t2">Aufträge bekommen</label>
+            <input type="radio" name="typ" id="t3" value="beides"><label for="t3">Beides</label>
           </div>
           <div class="row">
             <div><label for="branche">Branche</label>
               <select id="branche" name="branche">
                 <option value="">Bitte wählen</option>
-                <option>Handwerk</option><option>Finanzen & Steuern</option><option>Gastronomie</option>
-                <option>Immobilien</option><option>Marketing & Social Media</option><option>KI</option>
-                <option>IT & Software</option><option>Sport & Gesundheit</option><option>Sicherheitsdienst</option>
-                <option>Vertrieb</option><option>Handel</option><option>Sonstiges</option>
+                <option>Handwerk</option><option>Reinigung & Hausmeister</option><option>Garten & Landschaft</option>
+                <option>Umzug & Transport</option><option>Immobilien & Hausverwaltung</option><option>IT & Software</option>
+                <option>Marketing & Social Media</option><option>Foto & Video</option><option>Sport & Gesundheit</option>
+                <option>Finanzen & Steuern</option><option>Gastronomie & Catering</option><option>Sicherheitsdienst</option>
+                <option>Vertrieb</option><option>Handel</option><option>Privat</option><option>Sonstiges</option>
               </select></div>
             <div><label for="ort">Stadt oder PLZ</label><input id="ort" name="ort" maxlength="80" autocomplete="address-level2" placeholder="z. B. Ulm"></div>
           </div>
@@ -119,8 +188,8 @@
         <h2 id="dankeTitel">Du bist dabei!</h2>
         <p class="sub" id="dankeText">Wir melden uns, sobald es losgeht.</p>
         <div class="mitreden">
-          <b>Rede mit, was Abgemacht zuerst kann</b>
-          <p>9 kurze Fragen, etwa 2 Minuten. Du entscheidest, wo die App am Start steht und was danach kommt.</p>
+          <b>Rede mit, wie Abgemacht startet</b>
+          <p>Ein paar kurze Fragen, etwa 2 Minuten. Du entscheidest mit, was zum Start wichtig ist.</p>
           <a class="btn" id="umfrageLink" href="/umfrage">Zur Umfrage</a>
         </div>
         <button class="btn ghost" id="teilen" type="button">Mit Kollegen teilen</button>
@@ -133,7 +202,7 @@
       <button class="popup-zu" id="popupZu" type="button" aria-label="Schließen">×</button>
       <div class="big">🗳️</div>
       <h2 id="popupTitel">Danke! Willst du mitreden?</h2>
-      <p class="sub">Abgemacht wird gerade gebaut, und du kannst mitentscheiden, was die App zum Start kann und was später kommt. 9 kurze Fragen, etwa 2 Minuten.</p>
+      <p class="sub">Abgemacht wird gerade gebaut, und du kannst mitentscheiden, wie es startet. Ein paar kurze Fragen, etwa 2 Minuten.</p>
       <a class="btn" id="popupLink" href="/umfrage" style="width:100%">Ja, ich rede mit</a>
       <button class="btn ghost" id="popupSpaeter" type="button" style="width:100%;margin-top:10px">Später</button>
     </div>
@@ -181,7 +250,7 @@
       document.getElementById('formteil').hidden = true;
       document.getElementById('danke').hidden = false;
       var titel = document.getElementById('dankeTitel'), text = document.getElementById('dankeText');
-      try { sessionStorage.setItem('hs_wl', '1'); } catch(e) {}
+      try { sessionStorage.setItem('hs_wl', '1'); sessionStorage.setItem('hs_typ', typ ? typ.value : ''); } catch(e) {}
       setTimeout(oeffnePopup, 700);
       if (res.d.status === 'bestaetigt') { text.textContent = 'Diese E-Mail steht schon auf der Liste. Wir melden uns!'; }
       else if (res.d.mail) { titel.textContent = 'Fast geschafft!'; text.textContent = 'Wir haben dir eine E-Mail geschickt. Bitte bestätige darin mit einem Klick deine Anmeldung. Schau notfalls im Spam-Ordner nach.'; }
@@ -190,12 +259,16 @@
     .finally(function(){ btn.disabled = false; btn.textContent = 'Auf die Warteliste'; });
   });
 
-  // Nach der Anmeldung: Einladung zur Umfrage (Quelle wird mitgegeben)
-  var umfrageUrl = '/umfrage' + (['ig','tt','li','wa'].indexOf(quelle) >= 0 ? '?quelle=' + quelle : '');
-  document.getElementById('umfrageLink').href = umfrageUrl;
-  document.getElementById('popupLink').href = umfrageUrl;
+  // Nach der Anmeldung: Einladung zur Umfrage (Quelle und Rolle werden mitgegeben)
+  function umfrageUrl(){
+    var q = [];
+    if (['ig','tt','li','wa'].indexOf(quelle) >= 0) q.push('quelle=' + quelle);
+    var t = form.querySelector('input[name=typ]:checked');
+    if (t) q.push('rolle=' + t.value);
+    return '/umfrage' + (q.length ? '?' + q.join('&') : '');
+  }
   var popup = document.getElementById('popup');
-  function oeffnePopup(){ popup.hidden = false; document.getElementById('popupLink').focus(); }
+  function oeffnePopup(){ var u = umfrageUrl(); document.getElementById('umfrageLink').href = u; document.getElementById('popupLink').href = u; popup.hidden = false; document.getElementById('popupLink').focus(); }
   function schliessePopup(){ popup.hidden = true; }
   document.getElementById('popupZu').addEventListener('click', schliessePopup);
   document.getElementById('popupSpaeter').addEventListener('click', schliessePopup);
@@ -203,7 +276,7 @@
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !popup.hidden) schliessePopup(); });
 
   document.getElementById('teilen').addEventListener('click', function(){
-    var data = { title: 'Abgemacht', text: 'Geschäftskontakte per Swipe – hier geht\'s zur Warteliste:', url: location.origin };
+    var data = { title: 'Abgemacht', text: 'Schreib, was du brauchst – Betriebe aus der Region machen dir Angebote. Hier geht\'s zur Warteliste:', url: location.origin };
     if (navigator.share) navigator.share(data).catch(function(){});
     else if (navigator.clipboard) navigator.clipboard.writeText(location.origin).then(function(){ document.getElementById('teilen').textContent = 'Link kopiert ✓'; });
   });
