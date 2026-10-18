@@ -82,7 +82,7 @@ export async function tagesplan(jetzt = new Date()) {
 
   // Kontakte
   const ueber = faellig.filter((k) => new Date(k.naechster_kontakt as string).getTime() < von);
-  const zeile = (k: any) => li(`<b>${esc(k.firma)}</b>${k.ansprechpartner ? " · " + esc(k.ansprechpartner) : ""} – <a href="tel:${esc(String(k.telefon || "").replace(/[^\d+]/g, ""))}" style="color:#138A6B">${esc(k.telefon || "")}</a> <span style="color:#5B6B65">· ${new Date(k.naechster_kontakt).getTime() < von ? "überfällig seit " + kurz(datum(new Date(k.naechster_kontakt))) : uhr(k.naechster_kontakt)}${k.eintrag === "angeboten" ? " · Start-Eintrag nachfassen" : ""}</span>`);
+  const zeile = (k: any) => li(`<b>${esc(k.firma)}</b>${k.ansprechpartner ? " · " + esc(k.ansprechpartner) : ""} – <a href="tel:${esc(String(k.telefon || "").replace(/[^\d+]/g, ""))}" style="color:#138A6B">${esc(k.telefon || "")}</a> <span style="color:#5B6B65">· ${new Date(k.naechster_kontakt).getTime() < von ? "überfällig seit " + kurz(datum(new Date(k.naechster_kontakt))) : uhr(k.naechster_kontakt)}${k.eintrag === "angeboten" ? " · Partner-Freigabe nachfassen" : ""}</span>`);
   const kontakteHtml = (faellig.length ? ul(faellig.map(zeile)) : leer("Keine Rückrufe fällig.")) +
     `<p style="margin:8px 0 0;color:#5B6B65;font-size:14px">${neu[0].n} Kontakte noch nie angerufen.${ueber.length ? ` Davon oben ${ueber.length} überfällig.` : ""}</p>`;
 
@@ -104,7 +104,7 @@ export async function tagesplan(jetzt = new Date()) {
     <tr><td style="padding:2px 16px 2px 0">Warteliste bestätigt</td><td><b>${wl[0].best}</b> / 100${wl[0].neu ? ` <span style="color:#138A6B">(+${wl[0].neu} heute)</span>` : ""}</td></tr>
     <tr><td style="padding:2px 16px 2px 0">Umfrage-Antworten (neu)</td><td><b>${umf[0].n}</b> / 30${umf[0].neu ? ` <span style="color:#138A6B">(+${umf[0].neu} heute)</span>` : ""} · ${umf[0].ja} Betriebe: 9 € okay</td></tr>
     <tr><td style="padding:2px 16px 2px 0">Partner-Betriebe aktiv</td><td><b>${partner[0].aktiv}</b> / 30 · ${partner[0].wa} mit WhatsApp-Okay</td></tr>
-    <tr><td style="padding:2px 16px 2px 0">Start-Einträge freigegeben</td><td><b>${eintraege[0].frei}</b>${eintraege[0].offen ? ` · ${eintraege[0].offen} Freigabe offen` : ""}</td></tr></table>`;
+    <tr><td style="padding:2px 16px 2px 0">Partner-Freigaben</td><td><b>${eintraege[0].frei}</b>${eintraege[0].offen ? ` · ${eintraege[0].offen} Freigabe offen` : ""}</td></tr></table>`;
   const VSL: Record<string, string> = { neu: "neu, Betriebe anfragen", angefragt: "wartet auf Angebote", angebote: "Angebote an Kunden schicken", abgemacht: "nach dem Termin bewerten lassen" };
   const vermHtml = verm.length ? ul(verm.map((v) => li(`<b>${esc(v.leistung || "Anfrage")}</b>${v.ort ? " · " + esc(v.ort) : ""}${v.auftraggeber ? ` <span style="color:#5B6B65">(${esc(v.auftraggeber)})</span>` : ""} – ${VSL[v.status] || v.status}`))) : leer("Keine offenen Vermittlungen.");
 
