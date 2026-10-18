@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Abgemacht – Schreib, was du brauchst. Wir machen's ab.</title>
-<meta name="description" content="Abgemacht bringt Auftraggeber und geprüfte Betriebe aus der Region zusammen. Ein Satz reicht: Wir fragen 5 passende Betriebe an, du bekommst Angebote. Für Auftraggeber kostenlos.">
-<meta property="og:title" content="Abgemacht – Schreib, was du brauchst. Wir machen's ab.">
-<meta property="og:description" content="Ein Satz oder eine Sprachnachricht: 5 passende Betriebe aus deiner Region werden angefragt, du vergleichst Angebote und sagst „Abgemacht“. Einmalig, als Projekt oder langfristig.">
+<title>Abgemacht – Handwerker und Dienstleister in Ulm und Neu-Ulm vermittelt</title>
+<meta name="description" content="Sie brauchen einen Handwerker oder Dienstleister in Ulm, Neu-Ulm oder Umgebung? Einmal Anfrage schicken, wir holen passende Angebote aus der Region. Für Auftraggeber kostenlos.">
+<meta property="og:title" content="Abgemacht – Sagen Sie, was Sie brauchen. Wir machen's ab.">
+<meta property="og:description" content="Handwerker und Dienstleister aus Ulm, Neu-Ulm und Umgebung: Einmal Anfrage schicken, passende Angebote bekommen, „Abgemacht“ sagen. Kostenlos für Auftraggeber.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='28' fill='%23138A6B'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle'%3E🤝%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/marke.css">
@@ -35,6 +35,7 @@
   .anf{position:absolute;left:5%;top:50%;transform:translateY(-50%);width:44%;background:#fff;color:var(--ink);border-radius:18px;padding:13px 14px;box-shadow:0 18px 40px -18px rgba(0,0,0,.6);z-index:2}
   .anf .kopf{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted)}
   .anf .mic{width:22px;height:22px;border-radius:50%;background:var(--minze);display:grid;place-items:center}
+  .anf .neu{margin-left:auto;font-size:10.5px;color:var(--gruen);font-weight:800;letter-spacing:.04em}
   .anf .welle{display:flex;gap:2px;align-items:center;height:14px;margin-left:auto}
   .anf .welle b{width:3px;border-radius:2px;background:var(--gruen);height:30%;animation:welle 1.1s ease-in-out infinite}
   .anf .welle b:nth-child(2){animation-delay:.15s}.anf .welle b:nth-child(3){animation-delay:.3s}.anf .welle b:nth-child(4){animation-delay:.45s}.anf .welle b:nth-child(5){animation-delay:.6s}
@@ -113,29 +114,60 @@
   .extras b{font-family:var(--disp)}
   .hinweis{font-size:13.5px;color:var(--muted);margin-top:14px}
 
-  /* Warteliste */
-  #warteliste{background:var(--tanne);color:#fff;border-radius:36px;padding:56px 24px;margin:20px 0 10px}
-  #warteliste .innen{display:grid;grid-template-columns:.85fr 1.15fr;gap:40px;align-items:start;max-width:980px;margin:0 auto}
-  #warteliste h2{font-size:clamp(32px,4.4vw,50px);line-height:1.02;margin:0 0 14px}
-  #warteliste .intro p{color:#BFE5D7;font-size:17px;margin:0 0 18px}
-  #warteliste .intro ul{list-style:none;padding:0;margin:0;color:#E5F5EE}
-  #warteliste .intro li{padding:6px 0 6px 26px;position:relative}
-  #warteliste .intro li::before{content:"";position:absolute;left:0;top:13px;width:12px;height:12px;border-radius:50%;background:var(--sonne)}
+  /* Anfrage- und Partner-Formular */
+  .formband{background:var(--tanne);color:#fff;border-radius:36px;padding:56px 24px;margin:20px 0 10px}
+  .formband .innen{display:grid;grid-template-columns:.85fr 1.15fr;gap:40px;align-items:start;max-width:1000px;margin:0 auto}
+  .formband h2{font-size:clamp(32px,4.4vw,50px);line-height:1.02;margin:0 0 14px}
+  .formband .intro p{color:#BFE5D7;font-size:17px;margin:0 0 18px}
+  .formband .intro ul{list-style:none;padding:0;margin:0;color:#E5F5EE}
+  .formband .intro li{padding:6px 0 6px 26px;position:relative}
+  .formband .intro li::before{content:"";position:absolute;left:0;top:13px;width:12px;height:12px;border-radius:50%;background:var(--sonne)}
+  .formband.hellband{background:#fff;color:var(--ink);box-shadow:0 30px 70px -50px rgba(13,79,62,.6)}
+  .formband.hellband .intro p{color:var(--muted)}.formband.hellband .intro ul{color:var(--ink)}
   .formbox{max-width:none;margin:0;border:0;color:var(--ink);border-radius:26px;box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+  .hellband .formbox{background:var(--nebel);box-shadow:none}
   .formbox h3{font-size:22px;margin:0 0 4px}
+  .formbox .klein{font-size:13.5px;color:var(--muted);margin:2px 0 0}
+  .kacheln.zwei{grid-template-columns:1fr 1fr}
+  textarea{width:100%;font:inherit;padding:12px 14px;min-height:92px;resize:vertical;color:var(--ink)}
+  label .opt{font-weight:500;color:var(--muted);font-size:13px}
   .danke .stempel{font-size:30px;margin:10px 0 18px}
-  .mitreden{background:var(--sonne-l)}
+  .direkt{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .direkt a{color:#fff;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,.35);border-radius:999px;padding:10px 16px}
+  .direkt a:hover{border-color:#fff}
+
+  /* Beispiele */
+  .beispiele{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .beispiele a{display:block;background:#fff;border-radius:18px;padding:16px;text-decoration:none;color:var(--ink);border:1.5px solid transparent;transition:border-color .15s,transform .15s}
+  .beispiele a:hover{border-color:var(--gruen);transform:translateY(-2px)}
+  .beispiele b{display:block;font-size:16px;margin:6px 0 2px}
+  .beispiele small{color:var(--muted);font-size:13.5px;line-height:1.35;display:block}
+  .beispiele .ico{font-size:22px}
+  .wer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+  .wer-grid div{background:var(--minze);border-radius:18px;padding:16px}
+  .wer-grid b{display:block;font-family:var(--disp);font-size:17px;margin-bottom:4px;color:var(--tanne)}
+  .wer-grid span{font-size:14px;color:var(--ink)}
+
+  /* FAQ */
+  .faq details{background:#fff;border-radius:16px;padding:14px 18px;margin:0 0 10px}
+  .faq summary{font-weight:700;cursor:pointer;font-size:16.5px}
+  .faq p{margin:8px 0 0;color:var(--muted)}
+
   @media (max-width:900px){
     .hero2{grid-template-columns:1fr;gap:28px}
     .netz{aspect-ratio:auto;height:430px}
-    .ablauf,.zwei-seiten,.preis-grid,#warteliste .innen{grid-template-columns:1fr}
+    .ablauf,.zwei-seiten,.preis-grid,.formband .innen{grid-template-columns:1fr}
     .ablauf::before{display:none}
+    .beispiele,.wer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .beispiele a,.wer-grid div{min-width:0;overflow-wrap:anywhere;hyphens:auto}
   }
   @media (max-width:560px){
     .netz{height:400px}.netz .status{display:none}.anf{width:56%;left:4%}.b .t{display:none}.netz.s2 .b .t{display:block}.b .t{font-size:10.5px}
     .zeit{padding:22px 16px}.spur .balken small{display:none}.achse span{font-size:11px}
     .staffel{grid-template-columns:1fr}.staffel .rest{grid-template-columns:1fr 1fr}
-    #warteliste{border-radius:24px;padding:36px 16px}
+    .formband{border-radius:24px;padding:36px 16px}
+    .kacheln.zwei{grid-template-columns:1fr 1fr}.kacheln.zwei label{flex-direction:column;align-items:flex-start}
+    header .btn.ghost{display:none}
   }
 </style>
 </head>
@@ -143,19 +175,18 @@
 <div class="wrap">
   <header>
     <a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a>
-    <a class="btn" href="#warteliste">Auf die Warteliste</a>
+    <span style="display:flex;gap:10px"><a class="btn ghost" href="#betriebe">Für Betriebe</a><a class="btn" href="#anfrage">Anfrage stellen</a></span>
   </header>
 
   <div class="hero2">
     <div>
-      <div class="ort"><i></i>Startet in Ulm und Neu-Ulm</div>
-      <h1>Schreib, was du brauchst. <span>Wir machen's ab.</span></h1>
-      <p class="lead">Ein Satz oder eine Sprachnachricht reicht. Wir fragen 5 passende Betriebe aus deiner Region an, du vergleichst die Angebote und sagst „Abgemacht“. Für einen Termin, ein Projekt über Wochen oder einen Auftrag über Jahre. Für Auftraggeber kostenlos.</p>
+      <div class="ort"><i></i>Aktiv in Ulm, Neu-Ulm und Umgebung</div>
+      <h1>Sagen Sie, was Sie brauchen. <span>Wir machen's ab.</span></h1>
+      <p class="lead">Ob Elektriker, Treppenhausreinigung oder Malerarbeiten: Sie schildern uns Ihren Auftrag einmal. Wir fragen passende Betriebe aus der Region an und schicken Ihnen die Angebote. Sie entscheiden und sagen „Abgemacht“. Für Auftraggeber kostenlos.</p>
       <div class="cta">
-        <a class="btn" href="#warteliste">Platz sichern</a>
+        <a class="btn" href="#anfrage">Anfrage stellen</a>
         <a class="btn ghost" href="#so-gehts">So funktioniert's</a>
       </div>
-      <p class="zaehler" id="zaehler" hidden></p>
     </div>
 
     <div class="netz muster" id="netz" role="img" aria-label="Eine Anfrage geht an fünf Betriebe in Ulm und Neu-Ulm, vier schicken ein Angebot, eins wird abgemacht.">
@@ -167,152 +198,186 @@
         <path class="l" pathLength="1" d="M49 46 C 58 54, 70 62, 82 65"/>
         <path class="l" pathLength="1" d="M49 46 C 52 62, 58 74, 68 80"/>
       </svg>
-      <div class="status" aria-hidden="true"><span id="netzStatus">Anfrage wird verschickt …</span></div>
+      <div class="status" aria-hidden="true"><span id="netzStatus">Anfrage geht raus …</span></div>
       <div class="anf" aria-hidden="true">
-        <div class="kopf"><span class="mic"><svg width="12" height="12" viewBox="0 0 24 24" fill="#0D4F3E"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12h-2Z"/></svg></span>Sprachnachricht<span class="welle"><b></b><b></b><b></b><b></b><b></b></span></div>
-        <p>„Brauche diese Woche einen Elektriker in Neu-Ulm, bis 400 €.“</p>
-        <div class="chips"><span>Elektro</span><span>Neu-Ulm</span><span>diese Woche</span></div>
+        <div class="kopf"><span class="mic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0D4F3E" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg></span>Neue Anfrage<span class="neu">NEU</span></div>
+        <p>„Treppenhausreinigung für ein Haus mit 8 Parteien in Neu-Ulm, alle 14 Tage.“</p>
+        <div class="chips"><span>Reinigung</span><span>Neu-Ulm</span><span>regelmäßig</span></div>
       </div>
-      <div class="b" style="--x:74%;--y:13%" aria-hidden="true"><i>SÖ</i><span class="t">Söflingen<em>420 €</em></span></div>
-      <div class="b wahl1" style="--x:84%;--y:30%" aria-hidden="true"><i>NU</i><span class="t">Neu-Ulm<em>380 € · Do</em></span></div>
-      <div class="b" style="--x:86%;--y:51%" aria-hidden="true"><i>WI</i><span class="t">Wiblingen<em>395 €</em></span></div>
-      <div class="b" style="--x:82%;--y:71%" aria-hidden="true"><i>SE</i><span class="t">Senden<em>keine Zeit</em></span></div>
-      <div class="b" style="--x:68%;--y:87%" aria-hidden="true"><i>PF</i><span class="t">Pfuhl<em>360 € · Mo</em></span></div>
+      <div class="b" style="--x:74%;--y:13%" aria-hidden="true"><i>SÖ</i><span class="t">Söflingen<em>140 € mtl.</em></span></div>
+      <div class="b wahl1" style="--x:84%;--y:30%" aria-hidden="true"><i>NU</i><span class="t">Neu-Ulm<em>125 € mtl.</em></span></div>
+      <div class="b" style="--x:86%;--y:51%" aria-hidden="true"><i>WI</i><span class="t">Wiblingen<em>135 € mtl.</em></span></div>
+      <div class="b" style="--x:82%;--y:71%" aria-hidden="true"><i>SE</i><span class="t">Senden<em>ausgebucht</em></span></div>
+      <div class="b" style="--x:68%;--y:87%" aria-hidden="true"><i>PF</i><span class="t">Pfuhl<em>150 € mtl.</em></span></div>
       <span class="donau-n" aria-hidden="true">Donau</span>
       <span class="stempel" aria-hidden="true">✓ Abgemacht</span>
     </div>
   </div>
 
   <section class="abschnitt" id="so-gehts">
-    <h2>Kein Rumtelefonieren mehr</h2>
-    <p class="sub">Statt fünfmal anzurufen und auf Rückrufe zu warten, schreibst du einmal, was du brauchst.</p>
+    <h2>Einmal schildern statt fünfmal anrufen</h2>
+    <p class="sub">Kein Abtelefonieren, kein Warten auf Rückrufe. Wir kümmern uns darum, dass sich die richtigen Betriebe bei Ihnen melden.</p>
     <div class="ablauf">
-      <div><h3>Sag, was du brauchst</h3><p>Ein Satz oder eine Sprachnachricht, in der App oder per WhatsApp. Wir erkennen Leistung, Ort, Zeitraum und Budget.</p></div>
-      <div><h3>5 Betriebe werden angefragt</h3><p>Passende, geprüfte Betriebe aus deiner Region bekommen deine Anfrage. Antwortet einer nicht, fragen wir den nächsten.</p></div>
-      <div><h3>Vergleichen und „Abgemacht“</h3><p>Du siehst Preis, Termin und echte Bewertungen. Ein Tipp auf „Abgemacht“, und beide haben alle Details.</p></div>
+      <div><h3>Anfrage schicken</h3><p>Kurz schreiben, was zu tun ist, wo und bis wann. Das dauert eine Minute. Wir melden uns innerhalb eines Werktags, falls noch etwas fehlt.</p></div>
+      <div><h3>Wir fragen Betriebe an</h3><p>Passende Betriebe aus der Region bekommen Ihre Anfrage, zunächst ohne Ihren Namen und Ihre Kontaktdaten. Sagt einer ab, fragen wir den nächsten.</p></div>
+      <div><h3>Vergleichen und „Abgemacht“</h3><p>Sie bekommen die Angebote mit Preis und Termin. Entscheiden Sie sich für eines, bringen wir Sie mit dem Betrieb zusammen.</p></div>
     </div>
   </section>
 
-  <section class="abschnitt" id="fuer-wen">
-    <h2>Für beide Seiten gemacht</h2>
-    <p class="sub">Firmen, Hausverwaltungen, Praxen und Privatleute vergeben Aufträge. Betriebe und Selbstständige aus jeder Branche bekommen sie.</p>
-    <div class="zwei-seiten">
-      <div class="hell">
-        <h3>Du vergibst Aufträge</h3>
-        <p class="wer">Firmen, Hausverwaltungen, Praxen, Privatleute</p>
-        <ul>
-          <li>Für dich komplett kostenlos</li>
-          <li>Angebote von mehreren Betrieben auf einen Blick</li>
-          <li>Per App oder per WhatsApp, auch als Sprachnachricht</li>
-          <li>Bewertungen nur von echten, abgeschlossenen Aufträgen</li>
-          <li>Einmalig, als Projekt oder als Langzeitauftrag</li>
-        </ul>
+  <section class="abschnitt" id="beispiele">
+    <h2>Wofür Sie uns schreiben können</h2>
+    <p class="sub">Handwerk und Dienstleistungen rund um Haus, Wohnung und Büro. Ein Klick füllt die Anfrage schon vor.</p>
+    <div class="beispiele">
+      <a href="#anfrage" data-leistung="Elektriker"><span class="ico">🔌</span><b>Elektriker</b><small>Steckdosen, Leuchten, E-Check</small></a>
+      <a href="#anfrage" data-leistung="Treppenhausreinigung"><span class="ico">🧽</span><b>Treppenhausreinigung</b><small>Wöchentlich oder 14-tägig</small></a>
+      <a href="#anfrage" data-leistung="Hausmeisterservice"><span class="ico">🧰</span><b>Hausmeisterservice</b><small>Kleinreparaturen, Winterdienst</small></a>
+      <a href="#anfrage" data-leistung="Gartenpflege"><span class="ico">🌳</span><b>Gartenpflege</b><small>Rasen, Hecke, Grünschnitt</small></a>
+      <a href="#anfrage" data-leistung="Malerarbeiten"><span class="ico">🎨</span><b>Malerarbeiten</b><small>Wohnung, Treppenhaus, Büro</small></a>
+      <a href="#anfrage" data-leistung="Sanitär / Installateur"><span class="ico">🚿</span><b>Sanitär</b><small>Tropfender Hahn bis neues Bad</small></a>
+      <a href="#anfrage" data-leistung="Umzug / Entrümpelung"><span class="ico">📦</span><b>Umzug & Entrümpelung</b><small>Wohnung, Büro, Keller</small></a>
+      <a href="#anfrage" data-leistung="Renovierung nach Auszug"><span class="ico">🏠</span><b>Renovierung nach Auszug</b><small>Schnell wieder vermietbar</small></a>
+    </div>
+    <div class="wer-grid">
+      <div><b>Hausverwaltungen</b><span>Reparaturen, Reinigung, Hausmeister, Winterdienst</span></div>
+      <div><b>Makler & Vermieter</b><span>Renovierung, Reinigung und Kleinreparaturen zwischen zwei Mietern</span></div>
+      <div><b>Firmen & Praxen</b><span>Büroreinigung, Wartung, IT, kleine Umbauten</span></div>
+      <div><b>Privatleute</b><span>Vom tropfenden Hahn bis zum neuen Bad</span></div>
+    </div>
+  </section>
+
+  <section id="anfrage" class="formband muster">
+    <div class="innen">
+      <div class="intro">
+        <h2>Ihre Anfrage</h2>
+        <p>Eine Minute ausfüllen, den Rest erledigen wir. Wir melden uns innerhalb eines Werktags.</p>
+        <ul><li>Für Auftraggeber kostenlos und unverbindlich</li><li>Betriebe aus Ulm, Neu-Ulm und Umgebung</li><li>Ihre Kontaktdaten bekommt nur der Betrieb, den Sie wählen</li><li>Einmalig, als Projekt oder regelmäßig</li></ul>
+        <div class="direkt"><a href="mailto:hallo@ab-gemacht.info?subject=Anfrage">✉ Lieber per E-Mail</a></div>
       </div>
-      <div class="dunkel muster">
-        <h3>Du bietest Leistungen an</h3>
-        <p class="wer">Handwerk, Reinigung, IT, Marketing, Training und jede andere Branche</p>
-        <ul>
-          <li>Keine Grundgebühr: Du zahlst nur, wenn's abgemacht ist</li>
-          <li>Passende Anfragen aus deiner Nähe, mit Ort, Zeitraum und Budget</li>
-          <li>Angebot per Sprachnachricht, die KI macht es sauber</li>
-          <li>Freie Zeit melden und Lücken im Kalender füllen</li>
-          <li>Profil in einer Minute, direkt aus deiner Website</li>
-        </ul>
+      <div class="formbox">
+        <div id="anfrageTeil">
+          <form id="anfrageForm" novalidate>
+            <label>Die Anfrage ist</label>
+            <div class="kacheln zwei">
+              <input type="radio" name="typ" id="a_firma" value="firma" checked><label for="a_firma"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5l8-2v18M12 8h8v13M8 8h.01M8 12h.01M8 16h.01M16 12h.01M16 16h.01"/></svg>Für meine Firma<small>Hausverwaltung, Büro, Praxis …</small></label>
+              <input type="radio" name="typ" id="a_privat" value="privat"><label for="a_privat"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Privat<small>Für Haus oder Wohnung</small></label>
+            </div>
+            <label for="leistung">Was brauchen Sie? *</label>
+            <input id="leistung" name="leistung" maxlength="200" required placeholder="z. B. Treppenhausreinigung, Elektriker, Malerarbeiten">
+            <label for="beschreibung">Details <span class="opt">(optional)</span></label>
+            <textarea id="beschreibung" name="beschreibung" maxlength="3000" placeholder="Umfang, Besonderheiten, Zugang … Je genauer, desto besser die Angebote."></textarea>
+            <div class="row">
+              <div><label for="a_ort">Ort oder PLZ *</label><input id="a_ort" name="ort" maxlength="80" required placeholder="z. B. 89231 Neu-Ulm"></div>
+              <div><label for="zeitraum">Wann?</label>
+                <select id="zeitraum" name="zeitraum"><option>So schnell wie möglich</option><option>Diese Woche</option><option>In den nächsten 2–4 Wochen</option><option>Flexibel</option></select></div>
+            </div>
+            <label>Art des Auftrags</label>
+            <div class="wahl">
+              <input type="radio" name="art" id="art1" value="einmalig" checked><label for="art1">Einmalig</label>
+              <input type="radio" name="art" id="art2" value="projekt"><label for="art2">Projekt über Wochen</label>
+              <input type="radio" name="art" id="art3" value="langzeit"><label for="art3">Regelmäßig</label>
+            </div>
+            <label for="budget">Budget <span class="opt">(optional)</span></label>
+            <input id="budget" name="budget" maxlength="60" placeholder="z. B. bis 500 € oder offen">
+            <div class="row">
+              <div><label for="a_name">Ihr Name *</label><input id="a_name" name="name" maxlength="80" autocomplete="name" required></div>
+              <div id="firmaFeld"><label for="a_firmaname">Firma</label><input id="a_firmaname" name="firma" maxlength="120" autocomplete="organization"></div>
+            </div>
+            <div class="row">
+              <div><label for="a_tel">Telefon</label><input id="a_tel" name="telefon" type="tel" maxlength="40" autocomplete="tel" placeholder="für Rückfragen"></div>
+              <div><label for="a_mail">E-Mail</label><input id="a_mail" name="email" type="email" maxlength="254" autocomplete="email"></div>
+            </div>
+            <p class="klein">Telefon oder E-Mail reicht.</p>
+            <div class="hp" aria-hidden="true"><label for="a_website">Website</label><input id="a_website" name="website" tabindex="-1" autocomplete="off"></div>
+            <label class="check"><input type="checkbox" id="a_consent"> <span>Ich habe die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen. Meine Angaben werden zur Bearbeitung der Anfrage gespeichert und ohne Namen und Kontaktdaten an passende Betriebe weitergegeben.</span></label>
+            <button class="btn" id="anfrageBtn" type="submit" style="width:100%;margin-top:18px">Anfrage abschicken</button>
+            <div class="msg" id="anfrageMsg" role="status"></div>
+          </form>
+        </div>
+        <div class="danke" id="anfrageDanke" hidden>
+          <span class="stempel" id="anfrageStempel">✓ Angekommen</span>
+          <h2>Danke für Ihre Anfrage!</h2>
+          <p class="sub" id="anfrageDankeText">Wir melden uns innerhalb eines Werktags und fragen dann passende Betriebe an.</p>
+          <button class="btn ghost" id="nochEine" type="button">Weitere Anfrage stellen</button>
+        </div>
       </div>
     </div>
   </section>
 
   <section class="abschnitt">
     <h2>Für einen Tag oder für Jahre</h2>
-    <p class="sub">Nicht nur der schnelle Handgriff: Auch Projekte und feste Partner für Monate oder Jahre laufen über Abgemacht.</p>
-    <div class="zeit" role="img" aria-label="Zeitachse: Einmalige Aufträge dauern einen Tag, Projekte einige Wochen, Langzeitaufträge Monate bis Jahre.">
-      <div class="spur e" aria-hidden="true"><div class="balken">Einmalig</div><span class="bsp">Steckdose, Umzug, Fotoshooting</span></div>
-      <div class="spur p" aria-hidden="true"><div class="balken">Projekt<small>Website, Renovierung</small></div></div>
-      <div class="spur l" aria-hidden="true"><div class="balken">Langzeit<small>Büroreinigung, Wartung, Training</small></div></div>
+    <p class="sub">Nicht nur der schnelle Handgriff: Auch Projekte und feste Partner für regelmäßige Arbeiten vermitteln wir.</p>
+    <div class="zeit" role="img" aria-label="Zeitachse: Einmalige Aufträge dauern einen Tag, Projekte einige Wochen, regelmäßige Aufträge Monate bis Jahre.">
+      <div class="spur e" aria-hidden="true"><div class="balken">Einmalig</div><span class="bsp">Steckdose, Entrümpelung, Reparatur</span></div>
+      <div class="spur p" aria-hidden="true"><div class="balken">Projekt<small>Renovierung, Malerarbeiten</small></div></div>
+      <div class="spur l" aria-hidden="true"><div class="balken">Regelmäßig<small>Treppenhaus, Hausmeister, Garten</small></div></div>
       <div class="achse" aria-hidden="true"><span style="left:0%">1 Tag</span><span style="left:22%">1 Woche</span><span style="left:48%">3 Monate</span><span style="left:74%">1 Jahr</span><span style="left:98%">2+ Jahre</span></div>
     </div>
   </section>
 
-  <section class="abschnitt">
-    <h2>Gezahlt wird nur, wenn's abgemacht ist</h2>
-    <p class="sub">Auftraggeber zahlen nie. Betriebe zahlen eine kleine Gebühr pro bestätigtem Auftrag, in der Startphase gar nichts.</p>
+  <section class="abschnitt" id="betriebe">
+    <h2>Sie sind Betrieb? Bekommen Sie Aufträge aus der Region</h2>
+    <p class="sub">Handwerk, Reinigung, Hausmeister, Garten und mehr: Als Partner-Betrieb bekommen Sie passende Anfragen mit Ort, Zeitraum und Budget. Sie entscheiden, ob Sie ein Angebot machen.</p>
     <div class="preis-grid">
-      <div class="karte"><b>Auftraggeber</b><div class="gross">0 €</div><p>Anfragen stellen, so oft du willst, Angebote vergleichen, Chat und WhatsApp, Bewerten nach dem Auftrag.</p></div>
-      <div class="karte"><b>Betriebe, je nach Auftragswert</b>
+      <div class="karte"><b>Startphase</b><div class="gross">0 €</div><p>Bis auf Weiteres kostenlos. Gebühren kommen erst nach Ankündigung mit 4 Wochen Vorlauf und nur mit Ihrer Zustimmung.</p></div>
+      <div class="karte"><b>Danach geplant: nur bei Auftrag, je nach Auftragswert</b>
         <div class="staffel" role="img" aria-label="Gebühr pro Auftrag: 9 Euro bis 500 Euro Auftragswert, 29 Euro bis 2.000 Euro, 59 Euro darüber.">
           <div class="st"><b>9 €</b><small>bis 500 €</small></div>
           <div class="rest"><div class="st b2"><b>29 €</b><small>500 bis 2.000 €</small></div><div class="st b3"><b>59 €</b><small>über 2.000 €</small></div></div>
         </div>
-        <div class="extras"><span><b>199 €</b> einmalig für einen Langzeitauftrag</span><span><b>Pro 29 €</b> im Monat: halbe Gebühr, monatlich kündbar</span></div>
-        <p class="hinweis">Keine Grundgebühr, kein Abo. Geplante Preise zum Start, Änderungen vorbehalten. In der Startphase zahlen Betriebe nichts.</p>
+        <div class="extras"><span><b>199 €</b> einmalig für einen regelmäßigen Auftrag</span><span>Keine Grundgebühr, kein Abo</span></div>
+        <p class="hinweis">Geplante Preise, Änderungen vorbehalten. Einzelheiten in den <a href="/bedingungen">Bedingungen</a>.</p>
       </div>
     </div>
   </section>
 
-  <section id="warteliste" class="muster">
+  <section id="partner" class="formband hellband">
     <div class="innen">
       <div class="intro">
-        <h2>Sichere dir deinen Platz</h2>
-        <p>Wir melden uns, sobald Abgemacht in deiner Region startet. Kein Spam.</p>
-        <ul><li>Auftraggeber: kostenlos, für immer</li><li>Betriebe: in der Startphase ohne Gebühren</li><li>Die ersten Anfragen gehen an die Warteliste</li></ul>
+        <h2>Partner-Betrieb werden</h2>
+        <p>Tragen Sie sich ein, wir rufen Sie kurz an und stimmen Leistungen und Einsatzgebiet ab.</p>
+        <ul><li>Nur Anfragen, die zu Ihnen passen</li><li>Kein Profil, keine App, keine Grundgebühr</li><li>Anfragen per Telefon, E-Mail oder WhatsApp</li><li>Jederzeit ohne Frist beenden</li></ul>
       </div>
       <div class="formbox">
-        <div id="formteil">
-          <h3>In 30 Sekunden eingetragen</h3>
-          <form id="form" novalidate>
-            <label>Ich möchte</label>
-            <div class="kacheln">
-              <input type="radio" name="typ" id="t1" value="auftraggeber"><label for="t1"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg>Aufträge vergeben<small>Ich suche Betriebe</small></label>
-              <input type="radio" name="typ" id="t2" value="anbieter"><label for="t2"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>Aufträge bekommen<small>Ich biete Leistungen an</small></label>
-              <input type="radio" name="typ" id="t3" value="beides"><label for="t3"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>Beides<small>Mal so, mal so</small></label>
-            </div>
+        <div id="partnerTeil">
+          <form id="partnerForm" novalidate>
             <div class="row">
-              <div><label for="email">E-Mail *</label><input id="email" name="email" type="email" autocomplete="email" required placeholder="du@firma.de"></div>
-              <div><label for="name">Name oder Firma</label><input id="name" name="name" autocomplete="name" maxlength="80" placeholder="Vor- und Nachname oder Firma"></div>
+              <div><label for="p_firma">Betrieb *</label><input id="p_firma" name="firma" maxlength="120" autocomplete="organization" required></div>
+              <div><label for="p_name">Ansprechpartner</label><input id="p_name" name="name" maxlength="80" autocomplete="name"></div>
             </div>
+            <label for="p_leistungen">Was bieten Sie an? *</label>
+            <input id="p_leistungen" name="leistungen" maxlength="300" required placeholder="z. B. Elektroinstallation, E-Check, Kleinreparaturen">
+            <label for="p_ort">Einsatzgebiet</label>
+            <input id="p_ort" name="ort" maxlength="120" placeholder="z. B. Ulm, Neu-Ulm, 20 km Umkreis">
             <div class="row">
-              <div><label for="branche">Branche</label>
-                <select id="branche" name="branche">
-                  <option value="">Bitte wählen</option>
-                  <option>Handwerk</option><option>Reinigung & Hausmeister</option><option>Garten & Landschaft</option>
-                  <option>Umzug & Transport</option><option>Immobilien & Hausverwaltung</option><option>IT & Software</option>
-                  <option>Marketing & Social Media</option><option>Foto & Video</option><option>Sport & Gesundheit</option>
-                  <option>Finanzen & Steuern</option><option>Gastronomie & Catering</option><option>Sicherheitsdienst</option>
-                  <option>Vertrieb</option><option>Handel</option><option>Privat</option><option>Sonstiges</option>
-                </select></div>
-              <div><label for="ort">Stadt oder PLZ</label><input id="ort" name="ort" maxlength="80" autocomplete="address-level2" placeholder="z. B. Ulm"></div>
+              <div><label for="p_tel">Telefon</label><input id="p_tel" name="telefon" type="tel" maxlength="40" autocomplete="tel"></div>
+              <div><label for="p_mail">E-Mail</label><input id="p_mail" name="email" type="email" maxlength="254" autocomplete="email"></div>
             </div>
-            <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
-            <label class="check"><input type="checkbox" id="consent"> <span>Ich möchte per E-Mail informiert werden, wenn Abgemacht startet, und habe die <a href="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen. Abmelden geht jederzeit.</span></label>
-            <button class="btn" id="senden" type="submit" style="width:100%;margin-top:18px">Auf die Warteliste</button>
-            <div class="msg" id="msg" role="status"></div>
+            <p class="klein">Telefon oder E-Mail reicht.</p>
+            <div class="hp" aria-hidden="true"><label for="p_website">Website</label><input id="p_website" name="website" tabindex="-1" autocomplete="off"></div>
+            <label class="check"><input type="checkbox" id="p_wa"> <span>Ich möchte Anfragen gern per WhatsApp bekommen. <span class="opt">(Widerruf jederzeit mit „Stopp“)</span></span></label>
+            <label class="check"><input type="checkbox" id="p_consent"> <span>Ich habe die <a href="/bedingungen" target="_blank">Bedingungen</a> und <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</span></label>
+            <button class="btn" id="partnerBtn" type="submit" style="width:100%;margin-top:18px">Partner-Betrieb werden</button>
+            <div class="msg" id="partnerMsg" role="status"></div>
           </form>
         </div>
-        <div class="danke" id="danke" hidden>
-          <span class="stempel" id="dankeStempel">✓ Abgemacht</span>
-          <h2 id="dankeTitel">Du bist dabei!</h2>
-          <p class="sub" id="dankeText">Wir melden uns, sobald es losgeht.</p>
-          <div class="mitreden">
-            <b>Rede mit, wie Abgemacht startet</b>
-            <p>Ein paar kurze Fragen, etwa 2 Minuten. Du entscheidest mit, was zum Start wichtig ist.</p>
-            <a class="btn" id="umfrageLink" href="/umfrage">Zur Umfrage</a>
-          </div>
-          <button class="btn ghost" id="teilen" type="button">Mit Kollegen teilen</button>
+        <div class="danke" id="partnerDanke" hidden>
+          <span class="stempel" id="partnerStempel">✓ Abgemacht</span>
+          <h2>Danke!</h2>
+          <p class="sub">Wir melden uns in den nächsten Tagen kurz telefonisch.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <div class="popup" id="popup" hidden role="dialog" aria-modal="true" aria-labelledby="popupTitel">
-    <div class="popup-box">
-      <button class="popup-zu" id="popupZu" type="button" aria-label="Schließen">×</button>
-      <div class="big">🗳️</div>
-      <h2 id="popupTitel">Danke! Willst du mitreden?</h2>
-      <p class="sub">Abgemacht wird gerade gebaut, und du kannst mitentscheiden, wie es startet. Ein paar kurze Fragen, etwa 2 Minuten.</p>
-      <a class="btn" id="popupLink" href="/umfrage" style="width:100%">Ja, ich rede mit</a>
-      <button class="btn ghost" id="popupSpaeter" type="button" style="width:100%;margin-top:10px">Später</button>
-    </div>
-  </div>
+  <section class="abschnitt faq">
+    <h2>Häufige Fragen</h2>
+    <details><summary>Was kostet mich das als Auftraggeber?</summary><p>Nichts. Anfragen sind für Auftraggeber kostenlos und unverbindlich, auch wenn Sie sich am Ende für keines der Angebote entscheiden.</p></details>
+    <details><summary>Mit wem schließe ich den Vertrag?</summary><p>Direkt mit dem Betrieb, den Sie wählen. Abgemacht vermittelt nur. Preis, Termin und Ausführung vereinbaren Sie mit dem Betrieb.</p></details>
+    <details><summary>Wer sieht meine Daten?</summary><p>Die angefragten Betriebe sehen zunächst nur Leistung, Ort, Zeitraum, Budget und Ihre Beschreibung. Name und Kontaktdaten gibt es erst für den Betrieb, dessen Angebot Sie annehmen.</p></details>
+    <details><summary>Wie schnell bekomme ich Angebote?</summary><p>Wir melden uns innerhalb eines Werktags. Wie schnell Angebote kommen, hängt vom Auftrag ab. Bei kleineren Arbeiten oft schon nach ein, zwei Tagen.</p></details>
+    <details><summary>In welcher Region sind Sie aktiv?</summary><p>In Ulm, Neu-Ulm und Umgebung, zum Beispiel Senden, Blaustein, Langenau, Illertissen und Weißenhorn. Schreiben Sie uns gern auch, wenn Sie etwas weiter weg sind.</p></details>
+    <details><summary>Ich habe eine Hausverwaltung und regelmäßig Aufträge. Geht das auch?</summary><p>Genau dafür ist Abgemacht gemacht. Schicken Sie uns einfach die erste Anfrage oder schreiben Sie an <a href="mailto:hallo@ab-gemacht.info">hallo@ab-gemacht.info</a>, dann sprechen wir kurz über Ihre Objekte.</p></details>
+  </section>
 
   <footer>
     <span>© 2026 Abgemacht · <a href="/finden">Branchen und Orte</a></span>
@@ -324,7 +389,7 @@
 /* Hero: Anfrage -> 5 Betriebe -> Angebote -> Abgemacht (läuft in Schleife, bei reduzierter Bewegung nur das Endbild) */
 (function(){
   var n = document.getElementById('netz'), st = document.getElementById('netzStatus');
-  var texte = ['Anfrage wird verschickt …', '5 Betriebe angefragt', '4 Angebote in 3 Stunden', 'Abgemacht mit dem Betrieb aus Neu-Ulm'];
+  var texte = ['Anfrage geht raus …', '5 Betriebe angefragt', '4 Angebote erhalten', 'Abgemacht mit dem Betrieb aus Neu-Ulm'];
   function setze(i){ n.classList.toggle('s1', i >= 1); n.classList.toggle('s2', i >= 2); n.classList.toggle('s3', i >= 3); st.textContent = texte[i]; }
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { setze(3); return; }
   var i = 0, dauer = [1100, 1700, 2300, 3600];
@@ -336,66 +401,86 @@
   var p = new URLSearchParams(location.search);
   var quelle = p.get('quelle') || 'direkt';
   try { if (p.get('quelle')) sessionStorage.setItem('hs_quelle', quelle); else quelle = sessionStorage.getItem('hs_quelle') || 'direkt'; } catch(e) {}
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  function $(id){ return document.getElementById(id); }
 
-  // Zähler erst ab 25 Anmeldungen zeigen
-  fetch('/api/waitlist').then(function(r){return r.json()}).then(function(d){
-    if (d && d.count >= 25) { var z = document.getElementById('zaehler'); z.innerHTML = '<b>' + d.count + '</b> Leute stehen schon auf der Warteliste.'; z.hidden = false; }
-  }).catch(function(){});
-
-  var form = document.getElementById('form'), msg = document.getElementById('msg'), btn = document.getElementById('senden');
-  // Von den Google-Seiten (/finden/...): Branche und Ort vorausfüllen
-  (function(){
-    var b = p.get('branche'), o = p.get('ort'), sel = document.getElementById('branche');
-    if (b) for (var i = 0; i < sel.options.length; i++) if (sel.options[i].text === b) sel.selectedIndex = i;
-    if (o) document.getElementById('ort').value = o.slice(0, 80);
-  })();
-  function zeige(text, ok){ msg.textContent = text; msg.className = 'msg ' + (ok ? 'ok' : 'err'); }
-
-  form.addEventListener('submit', function(e){
-    e.preventDefault();
-    var email = form.email.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { zeige('Bitte gib eine gültige E-Mail-Adresse ein.'); form.email.focus(); return; }
-    if (!document.getElementById('consent').checked) { zeige('Bitte bestätige kurz die Datenschutzerklärung.'); return; }
-    var typ = form.querySelector('input[name=typ]:checked');
-    btn.disabled = true; btn.textContent = 'Wird gesendet …';
-    fetch('/api/waitlist', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ email: email, name: form.name.value, typ: typ ? typ.value : null, branche: form.branche.value, ort: form.ort.value, website: form.website.value, consent: true, quelle: quelle })
-    }).then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
-    .then(function(res){
-      if (!res.ok || !res.d.ok) throw new Error(res.d && res.d.error || 'Fehler');
-      document.getElementById('formteil').hidden = true;
-      document.getElementById('danke').hidden = false; document.getElementById('dankeStempel').classList.add('drauf');
-      var titel = document.getElementById('dankeTitel'), text = document.getElementById('dankeText');
-      try { sessionStorage.setItem('hs_wl', '1'); sessionStorage.setItem('hs_typ', typ ? typ.value : ''); } catch(e) {}
-      setTimeout(oeffnePopup, 700);
-      if (res.d.status === 'bestaetigt') { text.textContent = 'Diese E-Mail steht schon auf der Liste. Wir melden uns!'; }
-      else if (res.d.mail) { titel.textContent = 'Fast geschafft!'; text.textContent = 'Wir haben dir eine E-Mail geschickt. Bitte bestätige darin mit einem Klick deine Anmeldung. Schau notfalls im Spam-Ordner nach.'; }
-    })
-    .catch(function(err){ zeige(err.message && err.message !== 'Failed to fetch' ? err.message : 'Das hat nicht geklappt. Bitte versuch es gleich nochmal.'); })
-    .finally(function(){ btn.disabled = false; btn.textContent = 'Auf die Warteliste'; });
+  /* Vorausfüllen: von den Google-Seiten (/finden/...) oder aus den Beispielen */
+  if (p.get('leistung')) $('leistung').value = p.get('leistung').slice(0, 200);
+  if (p.get('ort')) $('a_ort').value = p.get('ort').slice(0, 80);
+  document.querySelectorAll('[data-leistung]').forEach(function(a){
+    a.addEventListener('click', function(){ $('leistung').value = a.getAttribute('data-leistung'); setTimeout(function(){ $('beschreibung').focus({preventScroll:true}); }, 450); });
   });
 
-  // Nach der Anmeldung: Einladung zur Umfrage (Quelle und Rolle werden mitgegeben)
-  function umfrageUrl(){
-    var q = [];
-    if (['ig','tt','li','wa'].indexOf(quelle) >= 0) q.push('quelle=' + quelle);
-    var t = form.querySelector('input[name=typ]:checked');
-    if (t) q.push('rolle=' + t.value);
-    return '/umfrage' + (q.length ? '?' + q.join('&') : '');
-  }
-  var popup = document.getElementById('popup');
-  function oeffnePopup(){ var u = umfrageUrl(); document.getElementById('umfrageLink').href = u; document.getElementById('popupLink').href = u; popup.hidden = false; document.getElementById('popupLink').focus(); }
-  function schliessePopup(){ popup.hidden = true; }
-  document.getElementById('popupZu').addEventListener('click', schliessePopup);
-  document.getElementById('popupSpaeter').addEventListener('click', schliessePopup);
-  popup.addEventListener('click', function(e){ if (e.target === popup) schliessePopup(); });
-  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !popup.hidden) schliessePopup(); });
+  /* Firma-Feld nur bei „Für meine Firma“ */
+  function firmaSichtbar(){ $('firmaFeld').style.visibility = $('a_firma').checked ? 'visible' : 'hidden'; }
+  document.querySelectorAll('input[name=typ]').forEach(function(r){ r.addEventListener('change', firmaSichtbar); });
+  firmaSichtbar();
 
-  document.getElementById('teilen').addEventListener('click', function(){
-    var data = { title: 'Abgemacht', text: 'Schreib, was du brauchst – Betriebe aus der Region machen dir Angebote. Hier geht\'s zur Warteliste:', url: location.origin };
-    if (navigator.share) navigator.share(data).catch(function(){});
-    else if (navigator.clipboard) navigator.clipboard.writeText(location.origin).then(function(){ document.getElementById('teilen').textContent = 'Link kopiert ✓'; });
+  function senden(opt){
+    var msg = $(opt.msg), btn = $(opt.btn), text = btn.textContent;
+    function zeige(t){ msg.textContent = t; msg.className = 'msg err'; }
+    var fehler = opt.pruefen();
+    if (fehler) { zeige(fehler[0]); if (fehler[1]) $(fehler[1]).focus(); return; }
+    btn.disabled = true; btn.textContent = 'Wird gesendet …'; msg.textContent = '';
+    fetch(opt.url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(opt.daten()) })
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
+      .then(function(res){
+        if (!res.ok || !res.d.ok) throw new Error(res.d && res.d.error || 'Fehler');
+        $(opt.teil).hidden = true; $(opt.danke).hidden = false; $(opt.stempel).classList.add('drauf');
+        if (opt.fertig) opt.fertig(res.d);
+      })
+      .catch(function(err){ zeige(err.message && err.message !== 'Failed to fetch' && err.message !== 'Fehler' ? err.message : 'Das hat nicht geklappt. Bitte versuchen Sie es gleich noch einmal oder schreiben Sie an hallo@ab-gemacht.info.'); })
+      .finally(function(){ btn.disabled = false; btn.textContent = text; });
+  }
+
+  var af = $('anfrageForm');
+  af.addEventListener('submit', function(e){
+    e.preventDefault();
+    senden({
+      url: '/api/anfrage', msg: 'anfrageMsg', btn: 'anfrageBtn', teil: 'anfrageTeil', danke: 'anfrageDanke', stempel: 'anfrageStempel',
+      pruefen: function(){
+        if (!af.leistung.value.trim()) return ['Bitte schreiben Sie kurz, was Sie brauchen.', 'leistung'];
+        if (!af.ort.value.trim()) return ['Bitte geben Sie den Ort oder die PLZ an.', 'a_ort'];
+        if (!af.name.value.trim()) return ['Bitte geben Sie Ihren Namen an.', 'a_name'];
+        var m = af.email.value.trim(), t = af.telefon.value.trim();
+        if (!m && !t) return ['Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.', 'a_tel'];
+        if (m && !EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'a_mail'];
+        if (!$('a_consent').checked) return ['Bitte bestätigen Sie kurz die Datenschutzhinweise.'];
+      },
+      daten: function(){
+        return { typ: af.querySelector('input[name=typ]:checked').value, leistung: af.leistung.value, beschreibung: af.beschreibung.value, ort: af.ort.value,
+          zeitraum: af.zeitraum.value, art: af.querySelector('input[name=art]:checked').value, budget: af.budget.value, name: af.name.value,
+          firma: af.firma.value, telefon: af.telefon.value, email: af.email.value, website: af.website.value, consent: true, quelle: quelle };
+      },
+      fertig: function(d){
+        if (d.mail) $('anfrageDankeText').textContent = 'Eine Bestätigung ist per E-Mail unterwegs. Wir melden uns innerhalb eines Werktags und fragen dann passende Betriebe an.';
+        $('anfrage').scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+    });
+  });
+  $('nochEine').addEventListener('click', function(){
+    ['leistung','beschreibung','budget'].forEach(function(n){ af[n].value = ''; });
+    $('anfrageDanke').hidden = true; $('anfrageTeil').hidden = false; $('anfrageStempel').classList.remove('drauf'); $('leistung').focus();
+  });
+
+  var pf = $('partnerForm');
+  pf.addEventListener('submit', function(e){
+    e.preventDefault();
+    senden({
+      url: '/api/partner', msg: 'partnerMsg', btn: 'partnerBtn', teil: 'partnerTeil', danke: 'partnerDanke', stempel: 'partnerStempel',
+      pruefen: function(){
+        if (!pf.firma.value.trim()) return ['Bitte geben Sie den Namen Ihres Betriebs an.', 'p_firma'];
+        if (!pf.leistungen.value.trim()) return ['Bitte schreiben Sie kurz, was Sie anbieten.', 'p_leistungen'];
+        var m = pf.email.value.trim(), t = pf.telefon.value.trim();
+        if (!m && !t) return ['Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.', 'p_tel'];
+        if (m && !EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'p_mail'];
+        if (!$('p_consent').checked) return ['Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.'];
+      },
+      daten: function(){
+        return { firma: pf.firma.value, name: pf.name.value, leistungen: pf.leistungen.value, ort: pf.ort.value, telefon: pf.telefon.value,
+          email: pf.email.value, wa: $('p_wa').checked, website: pf.website.value, consent: true, quelle: quelle };
+      }
+    });
   });
 })();
 </script>
