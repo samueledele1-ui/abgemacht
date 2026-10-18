@@ -11,7 +11,7 @@ import ical from "node-ical";
 //   POST /api/termin       -> Terminvorschläge abrufen bzw. Termin festmachen (Seite /termin)
 
 const TYPEN = ["auftraggeber", "anbieter", "beides", "firma", "selbststaendig", "mitarbeiter", "privat"];
-const QUELLEN = ["direkt", "umfrage", "ig", "tt", "li", "wa", "telefon", "seo"];
+const QUELLEN = ["direkt", "umfrage", "ig", "tt", "li", "wa", "telefon", "seo", "karte", "flyer"];
 const TOKEN_RE = /^[a-f0-9]{64}$/;
 
 const clip = (v: unknown, n = 120): string | null => {
@@ -93,7 +93,7 @@ ${knopf(`${seite()}/wa`, "Abgemacht weiterempfehlen")}
 
 
 /* ---------- Interessierte Betriebe automatisch ins CRM (Vermittlung → Partner-Betriebe → Interessenten) ---------- */
-async function crmInteressent(sql: any, d: { email?: string | null; telefon?: string | null; name?: string | null; branche?: string | null; ort?: string | null; typ?: string | null; quelle: string; notiz: string }) {
+async function crmInteressent(sql: any, d: { email?: string | null; telefon?: string | null; name?: string | null; firma?: string | null; leistungen?: string | null; branche?: string | null; ort?: string | null; typ?: string | null; quelle: string; notiz: string }) {
   if (!["anbieter", "beides"].includes(String(d.typ))) return;
   try {
     const email = d.email ? d.email.toLowerCase() : null;
@@ -108,12 +108,13 @@ async function crmInteressent(sql: any, d: { email?: string | null; telefon?: st
       const id = vorh[0].id;
       await sql`UPDATE crm_kontakte SET partner = COALESCE(partner, 'interessiert'), kategorie = COALESCE(kategorie, ${d.branche ?? null}),
         ort = COALESCE(ort, ${d.ort ?? null}), warteliste_email = COALESCE(warteliste_email, ${email}),
+        leistungen = COALESCE(leistungen, ${d.leistungen ?? null}), ansprechpartner = COALESCE(ansprechpartner, ${d.firma ? d.name ?? null : null}),
         notizen = CASE WHEN notizen IS NULL OR notizen = '' THEN ${notiz} ELSE notizen || E'\n' || ${notiz} END, updated_at = now() WHERE id = ${id}`;
       await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${id}, 'partner', ${d.notiz})`;
     } else {
-      const r = await sql`INSERT INTO crm_kontakte (firma, kategorie, ansprechpartner, telefon, email, ort, notizen, warteliste_email, quelle, status, partner, naechster_kontakt)
-        VALUES (${d.name || email || d.telefon}, ${d.branche ?? null}, ${d.name ?? null}, ${d.telefon ?? null}, ${email}, ${d.ort ?? null}, ${notiz}, ${email},
-                ${d.quelle}, 'neu', 'interessiert', now()) RETURNING id`;
+      const r = await sql`INSERT INTO crm_kontakte (firma, kategorie, ansprechpartner, telefon, email, ort, notizen, warteliste_email, quelle, status, partner, naechster_kontakt, leistungen)
+        VALUES (${d.firma || d.name || email || d.telefon}, ${d.branche ?? null}, ${d.name ?? null}, ${d.telefon ?? null}, ${email}, ${d.ort ?? null}, ${notiz}, ${email},
+                ${d.quelle}, 'neu', 'interessiert', now(), ${d.leistungen ?? null}) RETURNING id`;
       await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r[0].id}, 'partner', ${d.notiz})`;
     }
   } catch (e) {
@@ -446,6 +447,86 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     return Response.json({ ok: true, gebucht: true, termin: s, text: terminText(start) });
   }
 
+  /* Anfrage von der Website -> direkt ins Vermittlungssystem (/vermittlung, Status „neu“) */
+  if (pfad === "/api/anfrage") {
+    if (clip(body.website)) return Response.json({ ok: true });
+    const leistung = clip(body.leistung, 200);
+    const ort = clip(body.ort, 80);
+    const name = clip(body.name, 80);
+    const firma = body.typ === "firma" ? clip(body.firma, 120) : null;
+    const telefon = clip(body.telefon, 40);
+    const email = (clip(body.email, 254) || "").toLowerCase() || null;
+    if (!leistung) return fehler("Bitte schreiben Sie kurz, was Sie brauchen.");
+    if (!ort) return fehler("Bitte geben Sie den Ort oder die PLZ an.");
+    if (!name) return fehler("Bitte geben Sie Ihren Namen an.");
+    if (!telefon && !email) return fehler("Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.");
+    if (email && !EMAIL_RE.test(email)) return fehler("Bitte prüfen Sie die E-Mail-Adresse.");
+    if (telefon && telefon.replace(/\D/g, "").length < 6) return fehler("Bitte prüfen Sie die Telefonnummer.");
+    if (body.consent !== true) return fehler("Bitte bestätigen Sie kurz die Datenschutzhinweise.");
+    const kontakt = [telefon, email].filter(Boolean).join(" · ");
+    const kurz = await sql`SELECT count(*)::int AS n FROM vermittlungen WHERE kanal = 'web' AND kontakt = ${kontakt} AND created_at > now() - interval '1 hour'`;
+    if (kurz[0].n >= 3) return fehler("Ihre Anfrage ist schon bei uns. Wir melden uns in Kürze.", 429);
+    const art = ["einmalig", "projekt", "langzeit"].includes(String(body.art)) ? String(body.art) : "einmalig";
+    const zeitraum = clip(body.zeitraum, 80);
+    const budget = clip(body.budget, 60);
+    const beschreibung = clip(body.beschreibung, 3000);
+    const quelle = QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "direkt";
+    const auftraggeber = firma ? `${firma} (${name})` : name;
+    const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, beschreibung, notizen)
+      VALUES (${auftraggeber}, ${kontakt}, 'web', ${leistung}, ${ort}, ${zeitraum}, ${budget}, ${art}, ${beschreibung},
+              ${"Über die Website · " + (firma ? "Firma" : "Privat") + (quelle !== "direkt" ? " · Quelle: " + quelle : "")})
+      RETURNING id`;
+    const nr = r[0].id;
+    const ART: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
+    const zeile = (k: string, w: string | null) => w ? `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:5px 0">${esc(w)}</td></tr>` : "";
+    const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}</table>`;
+    await sendeMail(adminMail(), "Samuel", `Neue Anfrage #${nr}: ${leistung} in ${ort}`, mailLayout(
+      `<p style="margin:0 0 12px"><b>Neue Anfrage über die Website</b></p>${tabelle}
+<p style="margin:14px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>${esc(auftraggeber)}</b>${firma ? "" : " (privat)"}<br>${esc(kontakt)}</p>
+${knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")}`));
+    if (email) await sendeMail(email, name, `Ihre Anfrage ist angekommen: ${leistung}`, mailLayout(
+      `<p style="margin:0 0 12px">Hallo ${esc(name)},</p>
+<p style="margin:0 0 12px">vielen Dank, Ihre Anfrage ist bei uns angekommen:</p>${tabelle}
+<p style="margin:14px 0 12px">So geht es weiter: Wir melden uns innerhalb eines Werktags, klären offene Fragen und fragen dann passende Betriebe aus der Region an. Ihren Namen und Ihre Kontaktdaten bekommt ein Betrieb erst, wenn Sie sich für sein Angebot entscheiden.</p>
+<p style="margin:0 0 12px">Für Sie ist das kostenlos. Falls Sie noch etwas ergänzen möchten, antworten Sie einfach auf diese E-Mail.</p>
+<p style="margin:0">Viele Grüße<br>Samuel von Abgemacht</p>`));
+    return Response.json({ ok: true, nr, mail: !!email });
+  }
+
+  /* Betrieb möchte Partner werden -> CRM (Vermittlung → Partner → Interessenten) */
+  if (pfad === "/api/partner") {
+    if (clip(body.website)) return Response.json({ ok: true });
+    const firma = clip(body.firma, 120);
+    const leistungen = clip(body.leistungen, 300);
+    const telefon = clip(body.telefon, 40);
+    const email = (clip(body.email, 254) || "").toLowerCase() || null;
+    if (!firma) return fehler("Bitte geben Sie den Namen Ihres Betriebs an.");
+    if (!leistungen) return fehler("Bitte schreiben Sie kurz, was Sie anbieten.");
+    if (!telefon && !email) return fehler("Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.");
+    if (email && !EMAIL_RE.test(email)) return fehler("Bitte prüfen Sie die E-Mail-Adresse.");
+    if (body.consent !== true) return fehler("Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.");
+    const name = clip(body.name, 80);
+    const gebiet = clip(body.ort, 120);
+    const wa = body.wa === true;
+    const quelle = QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "direkt";
+    await crmInteressent(sql, { email, telefon, name, firma, leistungen, ort: gebiet, branche: clip(body.branche, 60), typ: "anbieter", quelle: "website",
+      notiz: `Partner-Anfrage über die Website: ${leistungen}${gebiet ? ", Gebiet: " + gebiet : ""}${wa ? ", wünscht Anfragen per WhatsApp" : ""}${quelle !== "direkt" ? " (Quelle: " + quelle + ")" : ""}` });
+    await sendeMail(adminMail(), "Samuel", `Neuer Partner-Interessent: ${firma}`, mailLayout(
+      `<p style="margin:0 0 12px"><b>Ein Betrieb möchte Partner werden</b></p>
+<p style="margin:0 0 6px"><b>${esc(firma)}</b>${name ? " · " + esc(name) : ""}</p>
+<p style="margin:0 0 6px">Leistungen: ${esc(leistungen)}</p>
+${gebiet ? `<p style="margin:0 0 6px">Gebiet: ${esc(gebiet)}</p>` : ""}
+<p style="margin:0 0 6px">${esc([telefon, email].filter(Boolean).join(" · "))}</p>
+<p style="margin:0 0 6px">WhatsApp-Anfragen: ${wa ? "gewünscht (beim Freigabe-Gespräch bestätigen)" : "nein"}</p>
+${knopf(`${seite()}/vermittlung`, "In Vermittlung → Partner öffnen")}`));
+    if (email) await sendeMail(email, name, "Danke für Ihr Interesse an Abgemacht", mailLayout(
+      `<p style="margin:0 0 12px">Hallo${name ? " " + esc(name) : ""},</p>
+<p style="margin:0 0 12px">vielen Dank für Ihr Interesse, mit ${esc(firma)} Partner-Betrieb bei Abgemacht zu werden.</p>
+<p style="margin:0 0 12px">Wir melden uns in den nächsten Tagen kurz telefonisch, um Leistungen und Einsatzgebiet abzustimmen. Danach bekommen Sie passende Anfragen aus der Region. In der Startphase ist das für Sie kostenlos, die Bedingungen finden Sie unter <a href="${seite()}/bedingungen">${seite().replace(/^https?:\/\//, "")}/bedingungen</a>.</p>
+<p style="margin:0">Viele Grüße<br>Samuel von Abgemacht</p>`));
+    return Response.json({ ok: true });
+  }
+
   /* Neue Anmeldung */
   if (pfad !== "/api/waitlist") return fehler("Nicht gefunden.", 404);
 
@@ -491,4 +572,4 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
   return Response.json({ ok: true, neu: r.neu, mail });
 };
 
-export const config: Config = { path: ["/api/waitlist", "/api/bestaetigen", "/api/abmelden", "/api/umfrage", "/api/termin"] };
+export const config: Config = { path: ["/api/waitlist", "/api/bestaetigen", "/api/abmelden", "/api/umfrage", "/api/termin", "/api/anfrage", "/api/partner"] };
