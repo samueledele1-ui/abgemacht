@@ -103,6 +103,7 @@
   .knopfreihe{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .kpis5{grid-template-columns:repeat(5,1fr)}
   details.box summary{cursor:pointer;font-weight:700}
+  @media (max-width:760px){.klein-z .z{font-size:18px}}
 </style>
 <link rel="manifest" href="/buero.webmanifest">
 <meta name="theme-color" content="#0D4F3E">
@@ -248,58 +249,166 @@
         <li>Text „Deine Angebote sind da“ an den Auftraggeber schicken. Er antwortet mit einer Nummer.</li>
         <li>Beim gewählten Betrieb „Abgemacht“ drücken. Die Texte für Kunde, Zusage und Absagen stehen dann bereit.</li>
         <li>Nach dem Termin „Hat's gepasst?“ schicken, Bewertung eintragen, Status „Erledigt“.</li></ol>
-        <p style="color:var(--muted);margin:12px 0 0">Gebühren werden zur Info berechnet (9/29/59 €, Langzeit 199 €), in der Startphase aber nicht verlangt. Kalte WhatsApp-Nachrichten ohne Okay sind tabu: erst anrufen.</p></div>`;
+        <p style="color:var(--muted);margin:12px 0 0">Gebühren werden zur Info berechnet (9/29/59 €, Langzeit 199 €), in der Startphase aber nicht verlangt. Sobald Gebühren gelten: unter Abrechnung → Rechnungsdaten Steuernummer und „Gebühren ab“ eintragen. Dann einmal im Monat pro Betrieb „Rechnung erstellen“, per Mail senden und bei Zahlungseingang „Bezahlt“ drücken. Kalte WhatsApp-Nachrichten ohne Okay sind tabu: erst anrufen.</p></div>`;
     }
   }
   function tabZahl() { const n = P.filter((p) => p.partner === "interessiert").length; const b = document.querySelector('.tabs button[data-v="partner"]'); if (b) b.textContent = "Partner-Betriebe" + (n ? ` (${n} neu)` : ""); }
-  /* ---------- Abrechnung ---------- */
+  /* ---------- Abrechnung & Rechnungen ---------- */
   let monat = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ, year: "numeric", month: "2-digit" }).format(new Date()).slice(0, 7);
+  let abrModus = "monat", markiert = null;
   const eur = (n) => n == null || n === "" ? "–" : Number(n).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
   const tag = (d) => d ? new Intl.DateTimeFormat("de-DE", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(d)) : "";
+  const tagD = (d) => d ? new Intl.DateTimeFormat("de-DE", { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(String(d).slice(0, 10) + "T12:00:00Z")) : "";
   const monatName = (m) => new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(m + "-15T12:00:00Z"));
-  function rechnungsText(g) {
-    const zeilen = g.posten.map((p, i) => `${i + 1}. ${tag(p.abgemacht_am)} – Vermittlung #${p.id}: ${p.leistung || "Auftrag"}${p.ort ? ", " + p.ort : ""}${p.art === "langzeit" ? " (Langzeitauftrag" + (p.laufzeit ? ", " + p.laufzeit : "") + ")" : p.auftragswert ? " (Auftragswert " + eur(p.auftragswert) + ")" : ""} – ${eur(p.gebuehr)}`);
-    return `Rechnung an: ${g.firma}${g.ansprechpartner ? ", " + g.ansprechpartner : ""}${g.k_ort ? ", " + g.k_ort : ""}
-Leistungszeitraum: ${monatName(monat)}
+  const RS = { offen: ["Offen", "t-proj"], bezahlt: ["Bezahlt", "t-wa"], storniert: ["Storniert", "v-verloren"], storno: ["Storno", "v-verloren"] };
 
-Vermittlungsgebühren Abgemacht:
-${zeilen.join("\n")}
-
-Summe: ${eur(g.summe)}
-
-Gebührenstaffel: 9 € bis 500 € Auftragswert, 29 € bis 2.000 €, 59 € darüber, Langzeitauftrag einmalig 199 €.`;
-  }
   async function abrechnung(el) {
-    el.innerHTML = '<div class="leer">Lade Abrechnung …</div>';
-    let d; try { d = await api({ aktion: "abrechnung", monat }); } catch (e) { el.innerHTML = `<div class="leer">${esc(e.message)}</div>`; return; }
+    const kopf = `<div class="tabs" style="margin-bottom:12px">${[["monat", "Monat abrechnen"], ["rechnungen", "Rechnungen"], ["daten", "Rechnungsdaten"]]
+      .map(([k, l]) => `<button type="button" data-am="${k}" aria-pressed="${abrModus === k}">${l}</button>`).join("")}</div><div id="abrInhalt"><div class="leer">Lade …</div></div>`;
+    el.innerHTML = kopf;
+    el.querySelectorAll("[data-am]").forEach((b) => b.onclick = () => { abrModus = b.dataset.am; abrechnung(el); });
+    const ziel = $("abrInhalt");
+    try {
+      if (abrModus === "monat") await abrMonat(ziel, el);
+      else if (abrModus === "rechnungen") await abrRechnungen(ziel, el);
+      else await abrDaten(ziel, el);
+    } catch (e) { ziel.innerHTML = `<div class="leer">${esc(e.message)}</div>`; }
+  }
+
+  async function abrMonat(ziel, el) {
+    const d = await api({ aktion: "abrechnung", monat });
+    const ab = d.gebuehren_ab ? new Date(d.gebuehren_ab + "T00:00:00") : null;
     const gruppen = [];
     for (const p of d.posten) {
       let g = gruppen.find((x) => x.kontakt_id === p.kontakt_id);
-      if (!g) { g = { ...p, posten: [], summe: 0, offen: 0 }; gruppen.push(g); }
-      g.posten.push(p); g.summe += Number(p.gebuehr || 0); if (!p.abgerechnet_am) g.offen++;
+      if (!g) { g = { ...p, posten: [], offen: [], rechnungen: new Set() }; gruppen.push(g); }
+      g.posten.push(p);
+      if (p.rechnung_id) g.rechnungen.add(p.rechnung_nummer);
+      else if (p.gebuehr > 0 && ab && new Date(p.abgemacht_am) >= ab) g.offen.push(p);
     }
-    const gesamt = gruppen.reduce((a, g) => a + g.summe, 0);
-    const offenSumme = gruppen.filter((g) => g.offen).reduce((a, g) => a + g.summe, 0);
+    const summe = (l) => l.reduce((a, p) => a + Number(p.gebuehr || 0), 0);
+    const offenSumme = gruppen.reduce((a, g) => a + summe(g.offen), 0);
     const ohneGebuehr = d.posten.filter((p) => p.gebuehr == null).length;
-    el.innerHTML = `<div class="box"><div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;justify-content:space-between">
+    const bereit = d.rechnungsdaten_ok;
+    ziel.innerHTML = `<div class="box"><div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;justify-content:space-between">
         <div><label for="aMonat" style="margin-top:0">Monat</label><input id="aMonat" type="month" value="${monat}" style="max-width:200px"></div>
-        <div style="text-align:right"><div style="font-size:26px;font-weight:800">${eur(gesamt)}</div><small style="color:var(--muted)">${d.posten.length} Vermittlungen · ${gruppen.length} Betriebe · offen ${eur(offenSumme)}</small></div></div>
-        <p style="color:var(--muted);font-size:13.5px;margin:10px 0 0">Startphase: Diese Beträge sind nur zur Info und werden noch nicht verlangt. Abgerechnet wird pro Betrieb einmal im Monat als Sammelrechnung.${ohneGebuehr ? ` <b style="color:#A3480A">${ohneGebuehr} Vermittlung(en) ohne Auftragswert – Gebühr fehlt, bitte in der Anfrage nachtragen.</b>` : ""}</p></div>
-      ${gruppen.length ? gruppen.map((g) => `<div class="box" data-g="${g.kontakt_id}">
-        <div class="zeile" style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
-          <div><b style="font-size:17px">${esc(g.firma)}</b>${g.offen ? '<span class="tag2 t-proj">offen</span>' : '<span class="tag2 t-wa">abgerechnet</span>'}<br><small style="color:var(--muted)">${esc([g.ansprechpartner, g.email, g.telefon].filter(Boolean).join(" · "))}</small></div>
-          <div style="font-size:20px;font-weight:800">${eur(g.summe)}</div></div>
-        <div class="tabelle" style="margin-top:10px"><table><thead><tr><th>Datum</th><th>#</th><th>Leistung</th><th>Art</th><th>Auftragswert</th><th>Gebühr</th></tr></thead><tbody>
-          ${g.posten.map((p) => `<tr data-v="${p.id}"><td>${tag(p.abgemacht_am)}</td><td>${p.id}</td><td>${esc(p.leistung || "")}${p.ort ? " · " + esc(p.ort) : ""}</td><td>${esc(ARTL[p.art] || p.art || "")}</td><td>${eur(p.auftragswert)}</td><td><b>${eur(p.gebuehr)}</b></td></tr>`).join("")}
-        </tbody></table></div>
-        <div class="knopfreihe"><button class="btn ghost klein" type="button" data-kopie="${esc(rechnungsText(g))}">Rechnungstext kopieren</button>
-          <button class="btn klein" type="button" data-abg="${g.kontakt_id}" data-an="${g.offen ? 1 : 0}">${g.offen ? "Als abgerechnet markieren" : "Abrechnung zurücknehmen"}</button></div></div>`).join("")
-        : `<div class="leer">Keine abgemachten Vermittlungen im ${esc(monatName(monat))}.</div>`}`;
+        <div style="text-align:right"><div style="font-size:26px;font-weight:800">${eur(offenSumme)}</div><small style="color:var(--muted)">noch abzurechnen · ${d.posten.length} Vermittlungen · ${gruppen.length} Betriebe</small></div></div>
+        <p style="color:var(--muted);font-size:13.5px;margin:10px 0 0">${bereit ? `Gebühren gelten für Vermittlungen ab ${tagD(d.gebuehren_ab)}. Pro Betrieb und Monat gibt es eine Sammelrechnung.`
+          : `<b style="color:#A3480A">Startphase: Es werden noch keine Rechnungen erstellt.</b> Sobald Gebühren gelten, unter <a href="#" id="zuDaten">Rechnungsdaten</a> Steuernummer und „Gebühren ab“ eintragen.`}
+        ${ohneGebuehr ? ` <b style="color:#A3480A">${ohneGebuehr} Vermittlung(en) ohne Auftragswert – Gebühr fehlt, bitte in der Anfrage nachtragen.</b>` : ""}</p></div>
+      ${gruppen.length ? gruppen.map((g) => {
+        const rn = [...g.rechnungen];
+        const status = g.offen.length ? '<span class="tag2 t-proj">offen</span>' : rn.length ? '<span class="tag2 t-wa">abgerechnet</span>' : '<span class="tag2 v-verloren">keine Gebühr</span>';
+        const erstellen = g.offen.length && bereit ? `<div class="unter" style="margin-top:10px">
+            <b style="font-size:14px">Rechnung über ${eur(summe(g.offen))} erstellen (${g.offen.length} ${g.offen.length === 1 ? "Vermittlung" : "Vermittlungen"})</b>
+            <label for="adr${g.kontakt_id}" style="margin-top:8px">Rechnungsadresse</label>
+            <textarea id="adr${g.kontakt_id}" rows="2" placeholder="Straße Nr.&#10;PLZ Ort">${esc(g.rechnungsadresse || "")}</textarea>
+            ${g.gebuehren_ok_am ? `<small style="color:var(--muted)">Gebühren zugestimmt am ${tag(g.gebuehren_ok_am)}</small>`
+              : `<label class="check" style="font-weight:500;font-size:14px"><input type="checkbox" id="ok${g.kontakt_id}"> <span>Der Betrieb hat den Bedingungen mit Gebühren zugestimmt.</span></label>`}
+            <div class="knopfreihe"><button class="btn klein" type="button" data-re="${g.kontakt_id}" data-summe="${summe(g.offen)}">Rechnung erstellen</button></div></div>` : "";
+        return `<div class="box" data-g="${g.kontakt_id}">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+          <div><b style="font-size:17px">${esc(g.firma)}</b>${status}${rn.map((n) => `<span class="tag2 t-p">${esc(n)}</span>`).join("")}<br><small style="color:var(--muted)">${esc([g.ansprechpartner, g.email, g.telefon].filter(Boolean).join(" · "))}</small></div>
+          <div style="font-size:20px;font-weight:800">${eur(summe(g.posten))}</div></div>
+        <div class="tabelle" style="margin-top:10px"><table><thead><tr><th>Datum</th><th>#</th><th>Leistung</th><th>Art</th><th>Auftragswert</th><th>Gebühr</th><th>Rechnung</th></tr></thead><tbody>
+          ${g.posten.map((p) => `<tr data-v="${p.id}"><td>${tag(p.abgemacht_am)}</td><td>${p.id}</td><td>${esc(p.leistung || "")}${p.ort ? " · " + esc(p.ort) : ""}</td><td>${esc(ARTL[p.art] || p.art || "")}</td><td>${eur(p.auftragswert)}</td><td><b>${eur(p.gebuehr)}</b></td><td>${esc(p.rechnung_nummer || (ab && new Date(p.abgemacht_am) < ab ? "Startphase" : "–"))}</td></tr>`).join("")}
+        </tbody></table></div>${erstellen}</div>`;
+      }).join("") : `<div class="leer">Keine abgemachten Vermittlungen im ${esc(monatName(monat))}.</div>`}`;
     $("aMonat").onchange = (e) => { if (e.target.value) { monat = e.target.value; abrechnung(el); } };
-    el.querySelectorAll("tr[data-v]").forEach((r) => r.onclick = () => oeffneV(+r.dataset.v));
-    el.querySelectorAll("[data-abg]").forEach((b) => b.onclick = async () => {
-      try { await api({ aktion: "abgerechnet", kontakt: +b.dataset.abg, monat, wert: b.dataset.an === "1" }); toast(b.dataset.an === "1" ? "Als abgerechnet markiert" : "Zurückgenommen"); abrechnung(el); } catch (e) { toast(e.message); }
+    const zd = $("zuDaten"); if (zd) zd.onclick = (e) => { e.preventDefault(); abrModus = "daten"; abrechnung(el); };
+    ziel.querySelectorAll("tr[data-v]").forEach((r) => r.onclick = () => oeffneV(+r.dataset.v));
+    ziel.querySelectorAll("[data-re]").forEach((b) => b.onclick = async () => {
+      const k = +b.dataset.re, adresse = $("adr" + k).value.trim(), ok = $("ok" + k);
+      if (!/\d{5}/.test(adresse)) { toast("Bitte Rechnungsadresse mit Straße, PLZ und Ort eintragen."); $("adr" + k).focus(); return; }
+      if (ok && !ok.checked) { toast("Bitte bestätigen, dass der Betrieb den Gebühren zugestimmt hat."); return; }
+      if (!confirm(`Rechnung über ${eur(b.dataset.summe)} erstellen?\n\nDanach ist sie fest gespeichert und kann nur noch storniert werden.`)) return;
+      b.disabled = true;
+      try { const r = await api({ aktion: "rechnung_erstellen", kontakt: k, monat, adresse, zugestimmt: ok ? ok.checked : undefined }); toast(`Rechnung ${r.nummer} erstellt`); markiert = r.id; abrModus = "rechnungen"; abrechnung(el); }
+      catch (e) { toast(e.message); b.disabled = false; }
     });
+  }
+
+  async function pdfLaden(id) {
+    const d = await api({ aktion: "rechnung_pdf", id });
+    const bin = atob(d.b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u], { type: "application/pdf" }));
+    const a = document.createElement("a"); a.href = url; a.download = `${d.art === "storno" ? "Stornorechnung" : "Rechnung"}-${d.nummer}.pdf`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  async function abrRechnungen(ziel, el) {
+    const d = await api({ aktion: "rechnungen" });
+    const R = d.rechnungen;
+    const jahre = [...new Set(R.map((r) => String(r.datum).slice(0, 4)))].sort().reverse();
+    const offen = R.filter((r) => r.status === "offen");
+    const jahr = jahre[0] || String(new Date().getFullYear());
+    const bezahltJahr = R.filter((r) => r.status === "bezahlt" && String(r.datum).startsWith(jahr)).reduce((a, r) => a + Number(r.summe), 0);
+    ziel.innerHTML = `<div class="kpis klein-z" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi ${offen.length ? "rot" : ""}"><div class="z">${eur(offen.reduce((a, r) => a + Number(r.summe), 0))}</div><div class="t">offen (${offen.length} Rechnungen)</div></div>
+        <div class="kpi gruen"><div class="z">${eur(bezahltJahr)}</div><div class="t">bezahlt ${esc(jahr)}</div></div>
+        <div class="kpi"><div class="z">${R.filter((r) => r.art === "rechnung").length}</div><div class="t">Rechnungen gesamt</div></div></div>
+      <div class="box" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;justify-content:space-between">
+        <span style="color:var(--muted);font-size:13.5px">Rechnungen sind unveränderbar gespeichert (GoBD, 8 Jahre). Korrigieren geht nur per Storno und neuer Rechnung.</span>
+        <span class="knopfreihe" style="margin:0"><select id="exJahr" style="width:auto;padding:8px 10px">${(jahre.length ? jahre : [jahr]).map((j) => `<option>${j}</option>`).join("")}</select>
+        <button class="btn ghost klein" type="button" id="export">Export für Steuerberater (CSV)</button></span></div>
+      ${R.length ? `<div class="tabelle"><table><thead><tr><th>Nr.</th><th>Datum</th><th>Betrieb</th><th>Zeitraum</th><th>Betrag</th><th>Status</th><th>Versand</th><th></th></tr></thead><tbody>
+        ${R.map((r) => `<tr style="cursor:default${markiert === r.id ? ";background:var(--gruen-l)" : ""}"><td><b>${esc(r.nummer)}</b>${r.art === "storno" ? `<br><small style="color:var(--muted)">zu ${esc(r.storno_zu_nummer)}</small>` : r.storniert_durch_nummer ? `<br><small style="color:var(--muted)">durch ${esc(r.storniert_durch_nummer)}</small>` : ""}</td>
+          <td>${tagD(r.datum)}</td><td>${esc(r.empfaenger?.firma || "")}</td><td>${esc(r.leistungszeitraum || "")}</td><td><b>${eur(r.summe)}</b></td>
+          <td><span class="tag2 ${RS[r.status][1]}" style="margin:0">${RS[r.status][0]}</span>${r.bezahlt_am ? `<br><small style="color:var(--muted)">${tagD(r.bezahlt_am)}</small>` : ""}</td>
+          <td>${r.versendet_am ? `<small>${tag(r.versendet_am)}<br>${esc(r.versendet_an)}</small>` : "–"}</td>
+          <td><span class="knopfreihe" style="margin:0;flex-wrap:nowrap">
+            <button class="btn ghost klein" type="button" data-pdf="${r.id}">PDF</button>
+            <button class="btn ghost klein" type="button" data-send="${r.id}" data-mail="${esc(r.empfaenger?.email || "")}">${r.versendet_am ? "Erneut senden" : "Per Mail senden"}</button>
+            ${r.art === "rechnung" && r.status !== "storniert" ? `<button class="btn ${r.status === "bezahlt" ? "ghost " : ""}klein" type="button" data-bez="${r.id}" data-an="${r.status === "bezahlt" ? 0 : 1}">${r.status === "bezahlt" ? "Doch offen" : "Bezahlt"}</button>
+            <button class="btn ghost klein" type="button" data-sto="${r.id}" data-nr="${esc(r.nummer)}" style="color:#A12B36">Stornieren</button>` : ""}</span></td></tr>`).join("")}
+        </tbody></table></div>` : `<div class="leer">Noch keine Rechnungen. Erstellt werden sie unter „Monat abrechnen“.</div>`}`;
+    markiert = null;
+    ziel.querySelectorAll("[data-pdf]").forEach((b) => b.onclick = async () => { try { await pdfLaden(+b.dataset.pdf); } catch (e) { toast(e.message); } });
+    ziel.querySelectorAll("[data-send]").forEach((b) => b.onclick = async () => {
+      const an = prompt("Rechnung per Mail senden an:", b.dataset.mail || ""); if (!an) return;
+      b.disabled = true; try { const r = await api({ aktion: "rechnung_senden", id: +b.dataset.send, an }); toast("Gesendet an " + r.an); abrechnung(el); } catch (e) { toast(e.message); b.disabled = false; }
+    });
+    ziel.querySelectorAll("[data-bez]").forEach((b) => b.onclick = async () => {
+      try { await api({ aktion: "rechnung_bezahlt", id: +b.dataset.bez, wert: b.dataset.an === "1" }); toast(b.dataset.an === "1" ? "Als bezahlt markiert" : "Wieder offen"); abrechnung(el); } catch (e) { toast(e.message); }
+    });
+    ziel.querySelectorAll("[data-sto]").forEach((b) => b.onclick = async () => {
+      if (!confirm(`Rechnung ${b.dataset.nr} stornieren?\n\nEs wird eine Stornorechnung mit neuer Nummer erstellt. Die Vermittlungen werden wieder frei und können neu abgerechnet werden.`)) return;
+      try { const r = await api({ aktion: "rechnung_storno", id: +b.dataset.sto }); toast("Stornorechnung " + r.nummer + " erstellt – bitte auch an den Betrieb senden"); markiert = r.id; abrechnung(el); } catch (e) { toast(e.message); }
+    });
+    $("export").onclick = () => {
+      const j = $("exJahr").value, zeilen = [["Rechnungsnummer", "Art", "Rechnungsdatum", "Leistungszeitraum", "Empfänger", "Adresse", "Betrag EUR", "Status", "Bezahlt am", "Storno zu"]];
+      R.filter((r) => String(r.datum).startsWith(j)).slice().reverse().forEach((r) => zeilen.push([r.nummer, r.art === "storno" ? "Stornorechnung" : "Rechnung", tagD(r.datum), r.leistungszeitraum || "",
+        r.empfaenger?.firma || "", String(r.empfaenger?.adresse || "").replace(/\n/g, ", "), Number(r.summe).toFixed(2).replace(".", ","), RS[r.status][0], tagD(r.bezahlt_am), r.storno_zu_nummer || ""]));
+      const csv = "﻿" + zeilen.map((z) => z.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = `Abgemacht-Rechnungen-${j}.csv`; a.click();
+    };
+  }
+
+  async function abrDaten(ziel, el) {
+    const d = await api({ aktion: "einstellungen" });
+    const e = d.einstellungen;
+    const f = (k, l, typ = "text", ph = "") => `<div><label for="e_${k}">${l}</label><input id="e_${k}" data-e="${k}" type="${typ}" value="${esc(e[k] || "")}" placeholder="${esc(ph)}"></div>`;
+    ziel.innerHTML = `<div class="box">
+      <p style="margin:0 0 6px;color:var(--muted);font-size:14px">Diese Angaben erscheinen auf jeder Rechnung. Änderungen gelten nur für neue Rechnungen, bestehende bleiben unverändert.</p>
+      ${d.fehlt.length ? `<p style="margin:0;color:#A3480A;font-size:14px"><b>Noch offen: ${esc(d.fehlt.join(", "))}</b></p>` : ""}
+      <div class="formgrid">
+        ${f("name", "Name (Inhaber)")}${f("firma", "Geschäftsname", "text", "Abgemacht")}
+        ${f("strasse", "Straße und Nr.")}${f("plz_ort", "PLZ und Ort")}
+        ${f("email", "E-Mail", "email")}${f("telefon", "Telefon", "tel")}
+        ${f("steuernummer", "Steuernummer", "text", "z. B. 151/123/45678")}
+        <div><label for="e_kleinunternehmer">Kleinunternehmer (§ 19 UStG)</label><select id="e_kleinunternehmer" data-e="kleinunternehmer"><option value="ja" ${e.kleinunternehmer !== "nein" ? "selected" : ""}>Ja, ohne Umsatzsteuer</option><option value="nein" ${e.kleinunternehmer === "nein" ? "selected" : ""}>Nein</option></select></div>
+        ${f("bank", "Bank")}${f("iban", "IBAN", "text", "DE00 0000 0000 0000 0000 00")}
+        ${f("bic", "BIC")}${f("zahlungsziel", "Zahlungsziel in Tagen", "number")}
+        <div class="ganz"><label for="e_gebuehren_ab">Gebühren gelten für Vermittlungen ab</label><input id="e_gebuehren_ab" data-e="gebuehren_ab" type="date" value="${esc(e.gebuehren_ab || "")}" style="max-width:220px">
+          <small style="color:var(--muted);display:block;margin-top:4px">Erst eintragen, wenn die Gebühren mindestens 4 Wochen vorher angekündigt wurden und die Betriebe zugestimmt haben (Bedingungen, Abschnitt 3). Vermittlungen davor bleiben kostenlos.</small></div>
+      </div>
+      ${e.kleinunternehmer === "nein" ? `<p style="color:#A3480A;font-size:13.5px">Hinweis: Ohne Kleinunternehmerregelung müssen Rechnungen Umsatzsteuer ausweisen. Das unterstützt das System noch nicht – bitte vorher Bescheid geben.</p>` : ""}
+      <div class="knopfreihe"><button class="btn klein" type="button" id="eSpeichern">Speichern</button></div></div>`;
+    $("eSpeichern").onclick = async () => {
+      const werte = {}; ziel.querySelectorAll("[data-e]").forEach((i) => werte[i.dataset.e] = i.value.trim());
+      if (werte.kleinunternehmer === "nein") { toast("Rechnungen mit Umsatzsteuer sind noch nicht eingebaut – bitte vorher Bescheid geben."); return; }
+      try { await api({ aktion: "einstellungen_speichern", werte }); toast("Rechnungsdaten gespeichert"); abrechnung(el); } catch (err) { toast(err.message); }
+    };
   }
 
   function setze(v) { ansicht = v; document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === v)); zeichne(); }
