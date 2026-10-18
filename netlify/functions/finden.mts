@@ -1,7 +1,7 @@
 import type { Config } from "@netlify/functions";
 
 // Seiten für Google: /finden (Übersicht), /finden/<branche>-<ort> und /sitemap.xml.
-// Jede Seite ist echte Information zu Branche und Ort plus Weg auf die Warteliste.
+// Jede Seite ist echte Information zu Branche und Ort plus direkter Weg zur Anfrage (bzw. Partner-Formular für Betriebe).
 
 type Branche = {
   slug: string; wer: string; name: string; plural: string; kat: string; meister?: boolean; privat: boolean;
@@ -134,12 +134,12 @@ ${ld}
 <div class="wrap">
   <header>
     <a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a>
-    <a class="btn" href="/?quelle=seo#warteliste">Auf die Warteliste</a>
+    <a class="btn" href="/?quelle=seo#anfrage">Anfrage stellen</a>
   </header>
   <main class="seo">${o.inhalt}</main>
   <footer>
     <span>© 2026 Abgemacht · <a href="/finden">Branchen und Orte</a></span>
-    <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span>
+    <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/bedingungen">Bedingungen</a></span>
   </footer>
 </div>
 </body>
@@ -148,33 +148,34 @@ ${ld}
 
 function anmeldeLink(b?: Branche, o?: Ort) {
   const p = new URLSearchParams({ quelle: "seo" });
-  if (b) p.set("branche", b.kat);
+  if (b) p.set("leistung", b.name);
   if (o) p.set("ort", o.name);
-  return `/?${p.toString()}#warteliste`;
+  return `/?${p.toString()}#anfrage`;
 }
+const partnerLink = () => "/?quelle=seo#partner";
 
 function seiteFuer(b: Branche, o: Ort) {
   const titel = `${b.name} in ${o.name} finden | Abgemacht`;
-  const beschreibung = `${b.plural} in ${o.name} und Umgebung finden oder als ${b.name} Aufträge aus ${o.name} bekommen. Direkt, ohne Vermittlungsgebühr. Abgemacht startet ${o.start ? "bald" : "nach Ulm und Neu-Ulm"} in ${o.name}.`;
+  const beschreibung = `${b.plural} in ${o.name} und Umgebung finden oder als ${b.name} Aufträge aus ${o.name} bekommen. Einmal Anfrage schicken, passende Angebote bekommen. Für Auftraggeber kostenlos.`;
   const status = o.start
-    ? `Abgemacht startet in Kürze in Ulm und Neu-Ulm. Wer jetzt auf der Warteliste steht, ist vom ersten Tag an dabei.`
-    : `Abgemacht startet zuerst in Ulm und Neu-Ulm, danach folgt ${o.name}. Mit deiner Anmeldung zeigst du, dass ${o.name} als Nächstes drankommen soll.`;
+    ? `Abgemacht vermittelt in ${o.name} und Umgebung. Schick uns deine Anfrage, wir melden uns innerhalb eines Werktags und fragen passende Betriebe an.`
+    : `Unser Schwerpunkt liegt aktuell in Ulm und Neu-Ulm, das Netz in ${o.name} bauen wir gerade auf. Schick uns deine Anfrage trotzdem, wir schauen, ob wir passende Betriebe finden.`;
   const andereOrte = ORTE.filter((x) => x.slug !== o.slug).map((x) => `<a href="/finden/${b.slug}-${x.slug}">${esc(b.name)} in ${esc(x.name)}</a>`).join("");
   const andereBranchen = BRANCHEN.filter((x) => x.slug !== b.slug).map((x) => `<a href="/finden/${x.slug}-${o.slug}">${esc(x.name)} in ${esc(o.name)}</a>`).join("");
   const faq: [string, string][] = [
-    [`Wie finde ich ${b.wer === "Reinigungskraft" ? "eine" : "einen"} ${b.wer} in ${o.name}?`, `Auf Abgemacht stellst du deinen Auftrag kurz ein, zum Beispiel „${b.auftraege[0]}“. ${b.plural} aus ${o.name}, ${liste(o.nachbarn.slice(0, 2))} sehen ihn und melden sich direkt bei dir per Chat oder Anruf.`],
-    ["Was kostet Abgemacht?", "Zum Start ist Abgemacht kostenlos. Es gibt keine Gebühr pro Kontakt und keine Provision auf den Auftrag."],
+    [`Wie finde ich ${b.wer === "Reinigungskraft" ? "eine" : "einen"} ${b.wer} in ${o.name}?`, `Schick uns über das Anfrage-Formular kurz, was zu tun ist, zum Beispiel „${b.auftraege[0]}“. Wir fragen passende ${b.plural} aus ${o.name}, ${liste(o.nachbarn.slice(0, 2))} an und schicken dir die Angebote.`],
+    ["Was kostet Abgemacht?", "Für Auftraggeber nichts. Betriebe zahlen in der Startphase ebenfalls nichts, später nur eine kleine Gebühr, wenn ein Auftrag zustande kommt."],
     ["Mit wem schließe ich den Vertrag?", `Direkt mit ${b.wer === "Reinigungskraft" ? "der Reinigungskraft" : "dem " + b.wer}. Abgemacht stellt nur den Kontakt her, Preis und Termin vereinbart ihr untereinander.`],
-    [`Ich bin ${b.wer}. Wie bekomme ich Aufträge aus ${o.name}?`, `${b.anbieter} Leg dein Profil an, wähle deine Branche und dein Gebiet, und du siehst passende Aufträge.`],
+    [`Ich bin ${b.wer}. Wie bekomme ich Aufträge aus ${o.name}?`, `${b.anbieter} Trag dich als Partner-Betrieb ein, wir rufen kurz an und schicken dir danach passende Anfragen aus deinem Gebiet.`],
   ];
-  if (b.meister) faq.push([`Muss ein ${b.name} einen Meisterbrief haben?`, `${b.name}-Betriebe gehören zu den zulassungspflichtigen Handwerken. Wer den Betrieb führt, muss in die Handwerksrolle eingetragen sein, meist mit Meisterbrief oder einer gleichwertigen Qualifikation. Auf Abgemacht kannst du nach geprüften Profilen filtern.`]);
+  if (b.meister) faq.push([`Muss ein ${b.name} einen Meisterbrief haben?`, `${b.name}-Betriebe gehören zu den zulassungspflichtigen Handwerken. Wer den Betrieb führt, muss in die Handwerksrolle eingetragen sein, meist mit Meisterbrief oder einer gleichwertigen Qualifikation. Wir fragen bei der Aufnahme als Partner-Betrieb danach.`]);
 
   const inhalt = `
 <p class="krumen"><a href="/">Abgemacht</a> › <a href="/finden">Branchen und Orte</a> › ${esc(b.name)} in ${esc(o.name)}</p>
-<span class="pill">${o.start ? "Startet bald in " + esc(o.name) : "Bald auch in " + esc(o.name)}</span>
+<span class="pill">${o.start ? "Aktiv in " + esc(o.name) : "Im Aufbau: " + esc(o.name)}</span>
 <h1>${esc(b.name)} in ${esc(o.name)} finden</h1>
-<p class="lead">Ob privat oder für die Firma: Auf Abgemacht stellst du einen Auftrag ein und ${esc(b.plural)} aus ${esc(o.name)} und Umgebung melden sich direkt bei dir. Kein Rumtelefonieren, kein Warten auf die Empfehlung vom Nachbarn.</p>
-<p><a class="btn" href="${anmeldeLink(b, o)}">Platz auf der Warteliste sichern</a></p>
+<p class="lead">Ob privat oder für die Firma: Du schickst uns einmal deine Anfrage, wir fragen passende ${esc(b.plural)} aus ${esc(o.name)} und Umgebung an und schicken dir die Angebote. Kein Rumtelefonieren, kein Warten auf Rückrufe.</p>
+<p><a class="btn" href="${anmeldeLink(b, o)}">Kostenlos anfragen</a></p>
 
 <h2>Typische Aufträge für ${esc(b.plural)} in ${esc(o.name)}</h2>
 <ul>${b.auftraege.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
@@ -184,18 +185,18 @@ function seiteFuer(b: Branche, o: Ort) {
 
 <h2>So funktioniert Abgemacht</h2>
 <div class="schritte">
-  <div><b>1. Auftrag einstellen</b>Kurz beschreiben, was zu tun ist und bis wann. Dauert eine Minute.</div>
-  <div><b>2. Angebote bekommen</b>${esc(b.plural)} aus der Nähe sehen den Auftrag und melden sich per Chat oder Anruf.</div>
-  <div><b>3. Abgemacht</b>Ihr klärt Preis und Termin direkt miteinander. Ohne Vermittlungsgebühr.</div>
+  <div><b>1. Anfrage schicken</b>Kurz beschreiben, was zu tun ist und bis wann. Dauert eine Minute.</div>
+  <div><b>2. Wir fragen Betriebe an</b>Passende ${esc(b.plural)} aus der Nähe bekommen deine Anfrage, zunächst ohne deinen Namen und deine Kontaktdaten.</div>
+  <div><b>3. Abgemacht</b>Du vergleichst die Angebote und entscheidest. Den Vertrag schließt du direkt mit dem Betrieb.</div>
 </div>
 
 <h2>Für ${esc(b.plural)} aus ${esc(o.name)}</h2>
-<p>${esc(b.anbieter)} Abgemacht ist für Firmen, Selbstständige, Freelancer und Privatleute gemacht. Aufträge gehen in alle Richtungen: von privat an privat, von Firma an Selbstständige und umgekehrt.</p>
+<p>${esc(b.anbieter)} Als Partner-Betrieb bekommst du passende Anfragen mit Ort, Zeitraum und Budget und entscheidest selbst, ob du ein Angebot machst. <a href="${partnerLink()}">Partner-Betrieb werden</a></p>
 
 <div class="box gruen">
-  <b>${o.start ? "Bald in " + esc(o.name) : esc(o.name) + " ist als Nächstes dran"}</b>
+  <b>${esc(b.name)} in ${esc(o.name)} gesucht?</b>
   <p style="margin:6px 0 14px">${esc(status)}</p>
-  <a class="btn" href="${anmeldeLink(b, o)}">Kostenlos vormerken</a>
+  <a class="btn" href="${anmeldeLink(b, o)}">Anfrage stellen</a>
 </div>
 
 <h2>Häufige Fragen</h2>
@@ -224,7 +225,7 @@ function uebersicht() {
 <h1>Aufträge und Betriebe aus deiner Region</h1>
 <p class="lead">Abgemacht verbindet Firmen, Selbstständige, Freelancer und Privatleute. Wähle deine Stadt und die Branche, die du suchst oder anbietest.</p>
 ${zeilen}
-<div class="box gruen"><b>Deine Branche fehlt?</b><p style="margin:6px 0 14px">Auf Abgemacht ist jede Branche willkommen. Trag dich ein und sag uns, was du suchst oder anbietest.</p><a class="btn" href="${anmeldeLink()}">Auf die Warteliste</a></div>`;
+<div class="box gruen"><b>Deine Branche fehlt?</b><p style="margin:6px 0 14px">Schick uns einfach deine Anfrage, wir schauen, wer passt. Du bietest selbst etwas an? Dann werde Partner-Betrieb.</p><a class="btn" href="${anmeldeLink()}">Anfrage stellen</a> <a class="btn ghost" href="${partnerLink()}">Partner-Betrieb werden</a></div>`;
   return rahmen({ titel: "Branchen und Orte | Abgemacht", beschreibung: "Handwerker, Dienstleister und Freelancer in Ulm, Neu-Ulm, Augsburg, Memmingen und Kempten finden. Oder selbst Aufträge aus der Region bekommen.", pfad: "/finden", inhalt });
 }
 
