@@ -5,44 +5,69 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Umfrage – Abgemacht</title>
 <meta name="description" content="2 Minuten, die Abgemacht besser machen: Wie findest du heute Aufträge oder gute Betriebe in der Region?">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600..800&family=Instrument+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/marke.css">
 <style>
-.frage{margin-top:26px}
-.frage > b{display:block;font-size:16px;margin-bottom:4px}
-.frage .hint{color:var(--muted);font-size:13px;margin:0 0 10px}
-.wahl{display:flex;flex-wrap:wrap;gap:8px}
-.wahl input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-.wahl label{margin:0;font-weight:600;font-size:14px;padding:10px 14px;border:1px solid var(--line);border-radius:999px;cursor:pointer;background:#FBFCFC}
-.wahl input:checked+label{border-color:var(--gruen);background:var(--gruen-l);color:var(--gruen-d)}
-.wahl input:focus-visible+label{outline:2px solid var(--gruen)}
-textarea{width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#FBFCFC;color:var(--ink);min-height:84px;resize:vertical}
-textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:transparent}
+.kopfband{background:var(--tanne);color:#fff;border-radius:30px;padding:40px 36px 96px;margin:6px 0 -60px;position:relative}
+.kopfband .pill{background:rgba(255,255,255,.12);color:#CFEFE3}
+.kopfband h1{font-size:clamp(32px,5vw,54px);line-height:1.02;margin:14px 0 12px;max-width:14em}
+.kopfband p{color:#BFE5D7;font-size:16.5px;max-width:36em;margin:0}
+.kopfband .von{display:flex;align-items:center;gap:10px;margin-top:18px;font-size:14px;color:#E5F5EE}
+.kopfband .von i{width:34px;height:34px;border-radius:50%;background:var(--sonne);color:var(--tanne-2);display:grid;place-items:center;font-style:normal;font-weight:800;font-family:var(--disp)}
+#box{position:relative;max-width:760px;margin:0 auto;border:0;border-radius:26px;box-shadow:0 40px 80px -50px rgba(13,79,62,.7);padding:30px 32px}
+.weg{position:sticky;top:0;z-index:5;background:#fff;margin:-30px -32px 6px;padding:18px 32px 14px;border-radius:26px 26px 0 0;border-bottom:1px solid var(--line)}
+.weg .zeile{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px}
+.weg .zeile b{color:var(--tanne)}
+.fortschritt{height:10px;background:var(--nebel);border-radius:99px;overflow:visible;margin:0;position:relative}
+.fortschritt i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gruen),#3FB08E);border-radius:99px;transition:width .5s cubic-bezier(.3,1.3,.5,1);position:relative}
+.fortschritt i::after{content:"🤝";position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--gruen);display:grid;place-items:center;font-size:14px;box-shadow:0 4px 10px -4px rgba(0,0,0,.3)}
+.fortschritt .ziel{position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;border:2px dashed var(--sonne);background:#fff}
+.frage{margin-top:30px}
+.frage > b{display:block;font-family:var(--disp);font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.3;margin-bottom:6px}
+.frage .hint{color:var(--muted);font-size:13.5px;margin:0 0 12px}
+textarea{width:100%;font:inherit;padding:12px 14px;min-height:96px;resize:vertical;color:var(--ink)}
+.teil{animation:auf .45s ease both}
+@keyframes auf{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.teil > h3{display:flex;align-items:center;gap:10px;margin:36px 0 0;font-size:15px;font-weight:700;color:var(--tanne);padding:10px 14px;background:var(--minze);border-radius:12px}
 .skala{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.skala label{text-align:center;padding:10px 0}
-.skala-legende{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px}
-.fortschritt{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0 4px}
-.fortschritt i{display:block;height:100%;width:0;background:var(--gruen);transition:width .2s}
-.box2{margin-top:28px;padding:18px;border-radius:16px;background:var(--gruen-l)}
+.skala label{text-align:center;padding:14px 0;border-radius:14px!important;font-family:var(--disp);font-size:20px;font-weight:800}
+.skala label::before{content:none!important}
+.skala input:nth-of-type(1):checked+label{background:#FBE0D8;border-color:#D9694A;color:#8E2F17}
+.skala input:nth-of-type(2):checked+label{background:#FCEBD5;border-color:#E09343;color:#87500F}
+.skala input:nth-of-type(3):checked+label{background:var(--sonne-l);border-color:var(--sonne);color:#7A4A04}
+.skala input:nth-of-type(4):checked+label{background:#E1F2E9;border-color:#5FB48F;color:var(--tanne)}
+.skala input:nth-of-type(5):checked+label{background:var(--minze);border-color:var(--gruen);color:var(--tanne)}
+.skala-legende{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:6px}
+.box2{margin-top:28px;padding:20px;border-radius:18px;background:var(--sonne-l)}
+.danke .stempel{font-size:32px;margin:6px 0 18px}
+#senden{padding:16px 22px;font-size:17px}
+@media (max-width:560px){.kopfband{padding:28px 20px 80px;border-radius:22px}#box{padding:22px 18px}.weg{margin:-22px -18px 6px;padding:14px 18px 12px}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a></header>
 
-  <section style="padding-top:10px">
+  <div class="kopfband muster">
+    <span class="pill">2 Minuten · anonym, wenn du willst</span>
+    <h1>Wie findest du heute Aufträge oder gute Betriebe?</h1>
+    <p>Ich baue Abgemacht: Du schreibst in einem Satz, was du brauchst, und passende Betriebe aus der Region machen dir Angebote. Deine Antworten entscheiden, wie es startet.</p>
+    <div class="von"><i>S</i>Danke dir! Samuel, Gründer von Abgemacht</div>
+  </div>
+
+  <section style="padding-top:0">
     <div class="formbox" id="box">
-      <span class="pill">2 Minuten · anonym, wenn du willst</span>
-      <h2 style="margin-top:12px">Wie findest du heute Aufträge oder gute Betriebe?</h2>
-      <p class="sub" style="margin-bottom:6px">Ich baue Abgemacht: Du schreibst in einem Satz, was du brauchst, und passende Betriebe aus der Region machen dir Angebote. Deine Antworten entscheiden, wie es startet. Danke dir! – Samuel</p>
-      <div class="fortschritt" aria-hidden="true"><i id="balken"></i></div>
+      <div class="weg" aria-hidden="true"><div class="zeile"><span>Dein Fortschritt</span><b id="prozent">0 %</b></div><div class="fortschritt"><span class="ziel"></span><i id="balken"></i></div></div>
 
       <form id="form" novalidate>
         <div class="frage">
           <b>Was trifft auf dich zu?</b>
-          <div class="wahl">
-            <input type="radio" name="typ" id="ty1" value="anbieter"><label for="ty1">Ich biete Leistungen an (Betrieb, Selbstständig)</label>
-            <input type="radio" name="typ" id="ty2" value="auftraggeber"><label for="ty2">Ich vergebe Aufträge (Firma, Verwaltung, privat)</label>
-            <input type="radio" name="typ" id="ty3" value="beides"><label for="ty3">Beides</label>
+          <div class="kacheln">
+            <input type="radio" name="typ" id="ty1" value="anbieter"><label for="ty1"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>Ich biete Leistungen an<small>Betrieb, Selbstständig</small></label>
+            <input type="radio" name="typ" id="ty2" value="auftraggeber"><label for="ty2"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg>Ich vergebe Aufträge<small>Firma, Verwaltung, privat</small></label>
+            <input type="radio" name="typ" id="ty3" value="beides"><label for="ty3"><svg viewBox="0 0 24 24" fill="none" stroke="#138A6B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>Beides<small>Mal so, mal so</small></label>
           </div>
         </div>
 
@@ -62,7 +87,7 @@ textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:tr
         </div>
 
         <div class="teil" data-fuer="anbieter" hidden>
-          <h3 style="margin:30px 0 0;font-size:18px;color:var(--gruen-d)">Du bietest Leistungen an</h3>
+          <h3>Für dich als Betrieb</h3>
           <div class="frage">
             <b>Wie kommst du heute an neue Aufträge?</b>
             <p class="hint">Mehrere Antworten möglich</p>
@@ -115,7 +140,7 @@ textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:tr
         </div>
 
         <div class="teil" data-fuer="auftraggeber" hidden>
-          <h3 style="margin:30px 0 0;font-size:18px;color:var(--gruen-d)">Du vergibst Aufträge</h3>
+          <h3>Für dich als Auftraggeber</h3>
           <div class="frage">
             <b>Wie findest du heute Betriebe oder Dienstleister?</b>
             <p class="hint">Mehrere Antworten möglich</p>
@@ -219,7 +244,7 @@ textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:tr
     if (istA()) f = f.concat([werte('kanaele').length, wert('auslastung'), wert('zahlen'), wert('langzeit'), werte('kanal').length]);
     if (istK()) f = f.concat([werte('suche').length, wert('zufriedenheit'), wert('nutzung'), werte('arten').length]);
     if (rolle()) f = f.concat([form.nervt.value.trim(), werte('funktionen').length]);
-    balken.style.width = Math.round(f.filter(Boolean).length / f.length * 100) + '%';
+    var pz = Math.round(f.filter(Boolean).length / f.length * 100); balken.style.width = pz + '%'; document.getElementById('prozent').textContent = pz + ' %';
   }
   form.addEventListener('input', fortschritt);
   form.addEventListener('change', function(e){
@@ -254,8 +279,8 @@ textarea:focus{outline:2px solid var(--gruen);outline-offset:1px;border-color:tr
     .then(function(d){
       if (!d.ok) throw new Error(d.error || 'Fehler');
       var schonDrauf = false; try { schonDrauf = sessionStorage.getItem('hs_wl') === '1'; } catch(e) {}
-      if (schonDrauf) { box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten fließen direkt in Abgemacht ein. Du stehst schon auf der Warteliste, wir melden uns zum Start.</p><a class="btn ghost" href="/">Zur Startseite</a></div>'; window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-      box.innerHTML = '<div class="danke"><div class="big">🤝</div><h2>Danke dir!</h2><p class="sub">Deine Antworten helfen mir enorm.</p></div>' +
+      if (schonDrauf) { box.innerHTML = '<div class="danke"><span class="stempel drauf">✓ Abgemacht</span><h2>Danke dir!</h2><p class="sub">Deine Antworten fließen direkt in Abgemacht ein. Du stehst schon auf der Warteliste, wir melden uns zum Start.</p><a class="btn ghost" href="/">Zur Startseite</a></div>'; window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      box.innerHTML = '<div class="danke"><span class="stempel drauf">✓ Abgemacht</span><h2>Danke dir!</h2><p class="sub">Deine Antworten helfen mir enorm.</p></div>' +
         '<div class="box2"><b>Willst du als Erster Bescheid bekommen, wenn Abgemacht startet?</b>' +
         '<form id="wl" novalidate style="margin-top:10px"><input id="wlmail" type="email" autocomplete="email" placeholder="du@firma.de">' +
         '<label class="check"><input type="checkbox" id="wlok"> <span>Ich möchte per E-Mail informiert werden und habe die <a href="/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen.</span></label>' +
