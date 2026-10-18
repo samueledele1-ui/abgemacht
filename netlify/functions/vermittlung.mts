@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
+import { rechnungPdf, datumDE, euro, type Absender } from "../lib/rechnung.ts";
 
 // Vermittlung von Hand (Startphase): Anfragen von Auftraggebern, Partner-Betriebe, Angebote, „Abgemacht“.
 // Geschützt mit demselben ADMIN_PASSWORT wie /crm. Alles über POST /api/vermittlung mit {pw, aktion, ...}.
@@ -21,6 +22,50 @@ const zahl = (v: unknown) => {
   const n = Number(String(v ?? "").replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3})/g, "").replace(",", "."));
   return Number.isFinite(n) && n > 0 ? n : null;
 };
+
+
+/* ---------- Rechnungen ---------- */
+const EIN_FELDER = ["name", "firma", "strasse", "plz_ort", "email", "telefon", "steuernummer", "iban", "bic", "bank", "kleinunternehmer", "zahlungsziel", "gebuehren_ab"];
+async function einstellungen(sql: any): Promise<Record<string, string>> {
+  const rows = await sql`SELECT schluessel, wert FROM einstellungen`;
+  return Object.fromEntries(rows.map((r: any) => [r.schluessel, r.wert ?? ""]));
+}
+function fehlendeDaten(e: Record<string, string>) {
+  const namen: Record<string, string> = { name: "Name", strasse: "Straße", plz_ort: "PLZ und Ort", steuernummer: "Steuernummer", gebuehren_ab: "Gebühren ab" };
+  return Object.keys(namen).filter((k) => !String(e[k] || "").trim()).map((k) => namen[k]);
+}
+function absenderAus(e: Record<string, string>): Absender {
+  return { name: e.name, firma: e.firma || undefined, strasse: e.strasse, plz_ort: e.plz_ort, email: e.email || undefined, telefon: e.telefon || undefined,
+    steuernummer: e.steuernummer, iban: e.iban || undefined, bic: e.bic || undefined, bank: e.bank || undefined,
+    kleinunternehmer: e.kleinunternehmer !== "nein", zahlungsziel: Math.max(0, Math.min(60, Number(e.zahlungsziel) || 14)) };
+}
+const berlinHeute = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
+const monatsName = (m: string) => new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(m + "-15T12:00:00Z"));
+function monatsGrenzen(monat: string) {
+  const [jj, mm] = monat.split("-").map(Number);
+  return { von: `${monat}-01 00:00 Europe/Berlin`, bis: `${mm === 12 ? jj + 1 : jj}-${String(mm === 12 ? 1 : mm + 1).padStart(2, "0")}-01 00:00 Europe/Berlin` };
+}
+const hex = (u: Uint8Array) => Array.from(u, (b) => b.toString(16).padStart(2, "0")).join("");
+async function sha256(u: Uint8Array) { return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", u))); }
+async function neueNummer(sql: any, jahr: number) {
+  const r = await sql`INSERT INTO rechnung_zaehler (jahr, lfd) VALUES (${jahr}, 1) ON CONFLICT (jahr) DO UPDATE SET lfd = rechnung_zaehler.lfd + 1 RETURNING lfd`;
+  return `AB-${jahr}-${String(r[0].lfd).padStart(4, "0")}`;
+}
+async function rechnungsMail(an: string, name: string | null, betreff: string, html: string, anhang: { name: string; b64: string }) {
+  const key = Netlify.env.get("BREVO_API_KEY");
+  if (!key) throw new Error("E-Mail-Versand ist nicht eingerichtet (BREVO_API_KEY fehlt).");
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST", headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      sender: { name: "Abgemacht", email: Netlify.env.get("MAIL_FROM") || "hallo@ab-gemacht.info" },
+      replyTo: { email: Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com", name: "Abgemacht" },
+      to: [name ? { email: an, name } : { email: an }], subject: betreff, htmlContent: html,
+      attachment: [{ name: anhang.name, content: anhang.b64 }],
+    }),
+  });
+  if (!res.ok) throw new Error("Mail konnte nicht gesendet werden (" + res.status + ").");
+}
+const escH = (s: string) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 async function gleich(a: string, b: string) {
   const enc = new TextEncoder();
@@ -153,12 +198,14 @@ export default async (req: Request, _context: Context) => {
       return Response.json({ ok: true });
     }
     const posten = await sql`SELECT v.id, v.leistung, v.ort, v.art, v.laufzeit, v.auftragswert, v.gebuehr, v.abgemacht_am, v.abgerechnet_am, v.status, v.auftraggeber,
-        k.id AS kontakt_id, k.firma, k.ansprechpartner, k.email, k.telefon, k.ort AS k_ort, k.website
-      FROM vermittlungen v JOIN crm_kontakte k ON k.id = v.gewaehlt_id
+        v.rechnung_id, r.nummer AS rechnung_nummer, r.status AS rechnung_status,
+        k.id AS kontakt_id, k.firma, k.ansprechpartner, k.email, k.telefon, k.ort AS k_ort, k.website, k.rechnungsadresse, k.gebuehren_ok_am
+      FROM vermittlungen v JOIN crm_kontakte k ON k.id = v.gewaehlt_id LEFT JOIN rechnungen r ON r.id = v.rechnung_id
       WHERE v.status IN ('abgemacht', 'erledigt')
         AND v.abgemacht_am >= ${von}::timestamptz AND v.abgemacht_am < ${bis}::timestamptz
       ORDER BY k.firma, v.abgemacht_am`;
-    return Response.json({ ok: true, monat, posten }, { headers: { "Cache-Control": "no-store" } });
+    const ein = await einstellungen(sql);
+    return Response.json({ ok: true, monat, posten, gebuehren_ab: ein.gebuehren_ab || null, rechnungsdaten_ok: !fehlendeDaten(ein).length }, { headers: { "Cache-Control": "no-store" } });
   }
 
   if (aktion === "waehlen") {
@@ -199,7 +246,145 @@ export default async (req: Request, _context: Context) => {
     return Response.json({ ok: true, id: r[0].id });
   }
 
+
+  /* ---------- Rechnungsdaten (Absender, Steuernummer, Bank) ---------- */
+  if (aktion === "einstellungen") {
+    const e = await einstellungen(sql);
+    return Response.json({ ok: true, einstellungen: e, fehlt: fehlendeDaten(e) }, { headers: { "Cache-Control": "no-store" } });
+  }
+  if (aktion === "einstellungen_speichern") {
+    const w = (body.werte || {}) as Record<string, unknown>;
+    for (const k of EIN_FELDER) {
+      if (!(k in w)) continue;
+      let v = clip(w[k], 200) ?? "";
+      if (k === "kleinunternehmer") v = v === "nein" ? "nein" : "ja";
+      if (k === "zahlungsziel") v = String(Math.max(0, Math.min(60, Number(v) || 14)));
+      if (k === "gebuehren_ab" && v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return fehler("Bitte ein gültiges Datum für „Gebühren ab“ wählen.");
+      if (k === "iban") v = v.replace(/\s+/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim();
+      await sql`INSERT INTO einstellungen (schluessel, wert) VALUES (${k}, ${v}) ON CONFLICT (schluessel) DO UPDATE SET wert = EXCLUDED.wert, updated_at = now()`;
+    }
+    return Response.json({ ok: true });
+  }
+
+  /* ---------- Rechnung erstellen (Sammelrechnung pro Betrieb und Monat) ---------- */
+  if (aktion === "rechnung_erstellen") {
+    const kid = Number(body.kontakt) || 0;
+    const monat = /^\d{4}-\d{2}$/.test(String(body.monat)) ? String(body.monat) : "";
+    if (!kid || !monat) return fehler("Betrieb oder Monat fehlt.");
+    const ein = await einstellungen(sql);
+    const fehlt = fehlendeDaten(ein);
+    if (fehlt.length) return fehler("Bitte zuerst die Rechnungsdaten ergänzen: " + fehlt.join(", ") + ".");
+    const k = (await sql`SELECT id, firma, ansprechpartner, email, rechnungsadresse, gebuehren_ok_am FROM crm_kontakte WHERE id = ${kid}`)[0];
+    if (!k) return fehler("Betrieb nicht gefunden.", 404);
+    const adresse = clip(body.adresse, 300) || k.rechnungsadresse;
+    if (!adresse || !/\d{5}/.test(adresse)) return fehler("Bitte die Rechnungsadresse des Betriebs mit Straße, PLZ und Ort eintragen.");
+    if (!k.gebuehren_ok_am && body.zugestimmt !== true) return fehler("Der Betrieb muss den Gebühren vorher zugestimmt haben (Bedingungen, Abschnitt 3). Bitte bestätigen.");
+    const { von, bis } = monatsGrenzen(monat);
+    const ab = `${ein.gebuehren_ab} 00:00 Europe/Berlin`;
+    const vs = await sql`SELECT id, leistung, ort, art, laufzeit, auftragswert, gebuehr, abgemacht_am FROM vermittlungen
+      WHERE gewaehlt_id = ${kid} AND status IN ('abgemacht', 'erledigt') AND rechnung_id IS NULL AND gebuehr > 0
+        AND abgemacht_am >= ${von}::timestamptz AND abgemacht_am < ${bis}::timestamptz AND abgemacht_am >= ${ab}::timestamptz
+      ORDER BY abgemacht_am, id`;
+    if (!vs.length) return fehler("Für diesen Betrieb gibt es in diesem Monat keine offenen, gebührenpflichtigen Vermittlungen (Gebühren gelten ab " + datumDE(new Date(ein.gebuehren_ab + "T12:00:00Z")) + ").");
+    const positionen = vs.map((v: any) => ({
+      vermittlung_id: v.id, datum: v.abgemacht_am,
+      text: `Vermittlungsgebühr – Auftrag #${v.id} vom ${datumDE(new Date(v.abgemacht_am))}: ${v.leistung || "Auftrag"}${v.ort ? ", " + v.ort : ""}` +
+        (v.art === "langzeit" ? ` (Langzeitauftrag${v.laufzeit ? ", " + v.laufzeit : ""})` : v.auftragswert ? ` (Auftragswert ${euro(Number(v.auftragswert))})` : ""),
+      betrag: Number(v.gebuehr),
+    }));
+    const summe = Math.round(positionen.reduce((a: number, p: any) => a + p.betrag, 0) * 100) / 100;
+    const absender = absenderAus(ein);
+    const empfaenger = { firma: k.firma, ansprechpartner: k.ansprechpartner || null, adresse, email: k.email || null };
+    if (adresse !== k.rechnungsadresse || (!k.gebuehren_ok_am && body.zugestimmt === true))
+      await sql`UPDATE crm_kontakte SET rechnungsadresse = ${adresse}, gebuehren_ok_am = COALESCE(gebuehren_ok_am, ${body.zugestimmt === true ? new Date().toISOString() : null}::timestamptz), updated_at = now() WHERE id = ${kid}`;
+    const heute = berlinHeute();
+    const nummer = await neueNummer(sql, Number(heute.slice(0, 4)));
+    const pdf = await rechnungPdf({ art: "rechnung", nummer, datum: new Date(heute + "T12:00:00Z"), leistungszeitraum: monatsName(monat), absender, empfaenger, positionen, summe });
+    const rid = (await sql`SELECT nextval('rechnungen_id_seq')::int AS id`)[0].id;
+    const ids = vs.map((v: any) => v.id);
+    await sql.transaction([
+      sql`INSERT INTO rechnungen (id, nummer, art, datum, leistungszeitraum, kontakt_id, empfaenger, absender, positionen, summe, pdf, pdf_sha256, status)
+        VALUES (${rid}, ${nummer}, 'rechnung', ${heute}::date, ${monatsName(monat)}, ${kid}, ${JSON.stringify(empfaenger)}::jsonb, ${JSON.stringify(absender)}::jsonb,
+                ${JSON.stringify(positionen)}::jsonb, ${summe}, decode(${hex(pdf)}, 'hex'), ${await sha256(pdf)}, 'offen')`,
+      sql`UPDATE vermittlungen SET rechnung_id = ${rid}, abgerechnet_am = now(), updated_at = now() WHERE id = ANY(${ids}::int[])`,
+      sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'abrechnung', ${"Rechnung " + nummer + " über " + euro(summe) + " erstellt"})`,
+    ]);
+    return Response.json({ ok: true, id: rid, nummer, summe });
+  }
+
+  if (aktion === "rechnungen") {
+    const rows = await sql`SELECT r.id, r.nummer, r.art, r.datum, r.leistungszeitraum, r.kontakt_id, r.empfaenger, r.summe, r.status, r.bezahlt_am,
+        r.storno_zu, r.storniert_durch, r.versendet_an, r.versendet_am, r.created_at, s.nummer AS storno_zu_nummer, d.nummer AS storniert_durch_nummer
+      FROM rechnungen r LEFT JOIN rechnungen s ON s.id = r.storno_zu LEFT JOIN rechnungen d ON d.id = r.storniert_durch ORDER BY r.id DESC`;
+    return Response.json({ ok: true, rechnungen: rows }, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (aktion === "rechnung_pdf") {
+    const r = (await sql`SELECT nummer, art, encode(pdf, 'base64') AS b64 FROM rechnungen WHERE id = ${id}`)[0];
+    if (!r) return fehler("Rechnung nicht gefunden.", 404);
+    return Response.json({ ok: true, nummer: r.nummer, art: r.art, b64: r.b64.replace(/\s+/g, "") }, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (aktion === "rechnung_senden") {
+    const r = (await sql`SELECT r.id, r.nummer, r.art, r.summe, r.datum, r.leistungszeitraum, r.empfaenger, r.kontakt_id, r.absender, encode(r.pdf, 'base64') AS b64,
+        s.nummer AS storno_zu_nummer FROM rechnungen r LEFT JOIN rechnungen s ON s.id = r.storno_zu WHERE r.id = ${id}`)[0];
+    if (!r) return fehler("Rechnung nicht gefunden.", 404);
+    const an = (clip(body.an, 254) || r.empfaenger?.email || "").toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(an)) return fehler("Für diesen Betrieb ist keine gültige E-Mail-Adresse hinterlegt.");
+    const ziel = Number(r.absender?.zahlungsziel) || 14;
+    const faellig = datumDE(new Date(new Date(r.datum).getTime() + ziel * 864e5));
+    const istStorno = r.art === "storno";
+    const html = `<!doctype html><html lang="de"><body style="font-family:Arial,Helvetica,sans-serif;color:#14231E;font-size:15px;line-height:1.55">
+<p>Guten Tag${r.empfaenger?.ansprechpartner ? " " + escH(r.empfaenger.ansprechpartner) : ""},</p>
+<p>${istStorno ? `anbei erhalten Sie die Stornorechnung ${escH(r.nummer)} zu unserer Rechnung ${escH(r.storno_zu_nummer || "")}.` :
+      `anbei erhalten Sie unsere Rechnung ${escH(r.nummer)} über die Vermittlungsgebühren für ${escH(r.leistungszeitraum || "")} in Höhe von <b>${euro(Number(r.summe))}</b>. Bitte überweisen Sie den Betrag bis zum ${faellig}${r.absender?.iban ? " auf das Konto " + escH(r.absender.iban) : ""} mit dem Verwendungszweck ${escH(r.nummer)}.`}</p>
+<p>Bei Fragen antworten Sie einfach auf diese E-Mail.</p>
+<p>Viele Grüße<br>${escH(r.absender?.firma || "Abgemacht")}${r.absender?.name ? " · " + escH(r.absender.name) : ""}</p></body></html>`;
+    try {
+      await rechnungsMail(an, r.empfaenger?.ansprechpartner || r.empfaenger?.firma || null, `${istStorno ? "Stornorechnung" : "Rechnung"} ${r.nummer} – Abgemacht`, html,
+        { name: `${istStorno ? "Stornorechnung" : "Rechnung"}-${r.nummer}.pdf`, b64: String(r.b64).replace(/\s+/g, "") });
+    } catch (e) { return fehler((e as Error).message, 502); }
+    await sql`UPDATE rechnungen SET versendet_an = ${an}, versendet_am = now() WHERE id = ${id}`;
+    if (r.kontakt_id) await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r.kontakt_id}, 'abrechnung', ${(istStorno ? "Stornorechnung " : "Rechnung ") + r.nummer + " per Mail an " + an})`;
+    return Response.json({ ok: true, an });
+  }
+
+  if (aktion === "rechnung_bezahlt") {
+    const an = body.wert !== false;
+    const datum = /^\d{4}-\d{2}-\d{2}$/.test(String(body.datum)) ? String(body.datum) : berlinHeute();
+    const r = await sql`UPDATE rechnungen SET status = CASE WHEN ${an} THEN 'bezahlt' ELSE 'offen' END, bezahlt_am = CASE WHEN ${an} THEN ${datum}::date ELSE NULL END
+      WHERE id = ${id} AND art = 'rechnung' AND status IN ('offen', 'bezahlt') RETURNING id`;
+    if (!r.length) return fehler("Diese Rechnung kann nicht geändert werden (storniert?).");
+    return Response.json({ ok: true });
+  }
+
+  if (aktion === "rechnung_storno") {
+    const o = (await sql`SELECT * FROM rechnungen WHERE id = ${id}`)[0];
+    if (!o) return fehler("Rechnung nicht gefunden.", 404);
+    if (o.art !== "rechnung" || o.status === "storniert") return fehler("Diese Rechnung ist bereits storniert.");
+    const ein = await einstellungen(sql);
+    const absender = { ...o.absender, ...(ein.steuernummer ? { steuernummer: ein.steuernummer } : {}) };
+    const positionen = (o.positionen as any[]).map((p) => ({ ...p, betrag: -Number(p.betrag) }));
+    const summe = -Number(o.summe);
+    const heute = berlinHeute();
+    const nummer = await neueNummer(sql, Number(heute.slice(0, 4)));
+    const pdf = await rechnungPdf({ art: "storno", nummer, datum: new Date(heute + "T12:00:00Z"), leistungszeitraum: o.leistungszeitraum || "", absender, empfaenger: o.empfaenger,
+      positionen, summe, storno_zu_nummer: o.nummer });
+    const sid = (await sql`SELECT nextval('rechnungen_id_seq')::int AS id`)[0].id;
+    await sql.transaction([
+      sql`INSERT INTO rechnungen (id, nummer, art, datum, leistungszeitraum, kontakt_id, empfaenger, absender, positionen, summe, storno_zu, pdf, pdf_sha256, status)
+        VALUES (${sid}, ${nummer}, 'storno', ${heute}::date, ${o.leistungszeitraum}, ${o.kontakt_id}, ${JSON.stringify(o.empfaenger)}::jsonb, ${JSON.stringify(absender)}::jsonb,
+                ${JSON.stringify(positionen)}::jsonb, ${summe}, ${o.id}, decode(${hex(pdf)}, 'hex'), ${await sha256(pdf)}, 'storno')`,
+      sql`UPDATE rechnungen SET status = 'storniert', storniert_durch = ${sid} WHERE id = ${o.id}`,
+      sql`UPDATE vermittlungen SET rechnung_id = NULL, abgerechnet_am = NULL, updated_at = now() WHERE rechnung_id = ${o.id}`,
+      sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${o.kontakt_id}, 'abrechnung', ${"Rechnung " + o.nummer + " storniert (" + nummer + ")"})`,
+    ]);
+    return Response.json({ ok: true, id: sid, nummer });
+  }
+
   if (aktion === "loeschen") {
+    const v = (await sql`SELECT rechnung_id FROM vermittlungen WHERE id = ${id}`)[0];
+    if (v?.rechnung_id) return fehler("Diese Vermittlung steht auf einer Rechnung und kann nicht gelöscht werden. Bitte zuerst die Rechnung stornieren.");
     await sql`DELETE FROM vermittlungen WHERE id = ${id}`;
     return Response.json({ ok: true });
   }
