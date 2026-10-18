@@ -128,6 +128,7 @@
     <div class="tabs" role="tablist">
       <button data-v="anfragen" aria-pressed="true">Anfragen</button>
       <button data-v="partner" aria-pressed="false">Partner-Betriebe</button>
+      <button data-v="abrechnung" aria-pressed="false">Abrechnung</button>
       <button data-v="hilfe" aria-pressed="false">So geht's</button>
     </div>
     <div id="ansicht"></div>
@@ -231,6 +232,8 @@
         $("pTreffer").querySelectorAll("[data-neu]").forEach((b) => b.onclick = async () => { await api({ aktion: "partner", kontakt: +b.dataset.neu, partner: "aktiv" }); toast("Als Partner aufgenommen"); await laden(); });
       };
       $("pSuchen").onclick = suchen; $("pSuch").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } };
+    } else if (ansicht === "abrechnung") {
+      abrechnung(el);
     } else {
       el.innerHTML = `<div class="box"><h3 style="margin-top:0">Ablauf einer Vermittlung</h3><ol style="line-height:1.7;margin:0;padding-left:20px">
         <li>Anfrage kommt rein (WhatsApp, Anruf, Mail): mit „+ Anfrage“ anlegen und dem Auftraggeber den Text „So habe ich dich verstanden“ schicken.</li>
@@ -243,6 +246,56 @@
     }
   }
   function tabZahl() { const n = P.filter((p) => p.partner === "interessiert").length; const b = document.querySelector('.tabs button[data-v="partner"]'); if (b) b.textContent = "Partner-Betriebe" + (n ? ` (${n} neu)` : ""); }
+  /* ---------- Abrechnung ---------- */
+  let monat = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ, year: "numeric", month: "2-digit" }).format(new Date()).slice(0, 7);
+  const eur = (n) => n == null || n === "" ? "–" : Number(n).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  const tag = (d) => d ? new Intl.DateTimeFormat("de-DE", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(d)) : "";
+  const monatName = (m) => new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(m + "-15T12:00:00Z"));
+  function rechnungsText(g) {
+    const zeilen = g.posten.map((p, i) => `${i + 1}. ${tag(p.abgemacht_am)} – Vermittlung #${p.id}: ${p.leistung || "Auftrag"}${p.ort ? ", " + p.ort : ""}${p.art === "langzeit" ? " (Langzeitauftrag" + (p.laufzeit ? ", " + p.laufzeit : "") + ")" : p.auftragswert ? " (Auftragswert " + eur(p.auftragswert) + ")" : ""} – ${eur(p.gebuehr)}`);
+    return `Rechnung an: ${g.firma}${g.ansprechpartner ? ", " + g.ansprechpartner : ""}${g.k_ort ? ", " + g.k_ort : ""}
+Leistungszeitraum: ${monatName(monat)}
+
+Vermittlungsgebühren Abgemacht:
+${zeilen.join("\n")}
+
+Summe: ${eur(g.summe)}
+
+Gebührenstaffel: 9 € bis 500 € Auftragswert, 29 € bis 2.000 €, 59 € darüber, Langzeitauftrag einmalig 199 €.`;
+  }
+  async function abrechnung(el) {
+    el.innerHTML = '<div class="leer">Lade Abrechnung …</div>';
+    let d; try { d = await api({ aktion: "abrechnung", monat }); } catch (e) { el.innerHTML = `<div class="leer">${esc(e.message)}</div>`; return; }
+    const gruppen = [];
+    for (const p of d.posten) {
+      let g = gruppen.find((x) => x.kontakt_id === p.kontakt_id);
+      if (!g) { g = { ...p, posten: [], summe: 0, offen: 0 }; gruppen.push(g); }
+      g.posten.push(p); g.summe += Number(p.gebuehr || 0); if (!p.abgerechnet_am) g.offen++;
+    }
+    const gesamt = gruppen.reduce((a, g) => a + g.summe, 0);
+    const offenSumme = gruppen.filter((g) => g.offen).reduce((a, g) => a + g.summe, 0);
+    const ohneGebuehr = d.posten.filter((p) => p.gebuehr == null).length;
+    el.innerHTML = `<div class="box"><div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;justify-content:space-between">
+        <div><label for="aMonat" style="margin-top:0">Monat</label><input id="aMonat" type="month" value="${monat}" style="max-width:200px"></div>
+        <div style="text-align:right"><div style="font-size:26px;font-weight:800">${eur(gesamt)}</div><small style="color:var(--muted)">${d.posten.length} Vermittlungen · ${gruppen.length} Betriebe · offen ${eur(offenSumme)}</small></div></div>
+        <p style="color:var(--muted);font-size:13.5px;margin:10px 0 0">Startphase: Diese Beträge sind nur zur Info und werden noch nicht verlangt. Abgerechnet wird pro Betrieb einmal im Monat als Sammelrechnung.${ohneGebuehr ? ` <b style="color:#A3480A">${ohneGebuehr} Vermittlung(en) ohne Auftragswert – Gebühr fehlt, bitte in der Anfrage nachtragen.</b>` : ""}</p></div>
+      ${gruppen.length ? gruppen.map((g) => `<div class="box" data-g="${g.kontakt_id}">
+        <div class="zeile" style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+          <div><b style="font-size:17px">${esc(g.firma)}</b>${g.offen ? '<span class="tag2 t-proj">offen</span>' : '<span class="tag2 t-wa">abgerechnet</span>'}<br><small style="color:var(--muted)">${esc([g.ansprechpartner, g.email, g.telefon].filter(Boolean).join(" · "))}</small></div>
+          <div style="font-size:20px;font-weight:800">${eur(g.summe)}</div></div>
+        <div class="tabelle" style="margin-top:10px"><table><thead><tr><th>Datum</th><th>#</th><th>Leistung</th><th>Art</th><th>Auftragswert</th><th>Gebühr</th></tr></thead><tbody>
+          ${g.posten.map((p) => `<tr data-v="${p.id}"><td>${tag(p.abgemacht_am)}</td><td>${p.id}</td><td>${esc(p.leistung || "")}${p.ort ? " · " + esc(p.ort) : ""}</td><td>${esc(ARTL[p.art] || p.art || "")}</td><td>${eur(p.auftragswert)}</td><td><b>${eur(p.gebuehr)}</b></td></tr>`).join("")}
+        </tbody></table></div>
+        <div class="knopfreihe"><button class="btn ghost klein" type="button" data-kopie="${esc(rechnungsText(g))}">Rechnungstext kopieren</button>
+          <button class="btn klein" type="button" data-abg="${g.kontakt_id}" data-an="${g.offen ? 1 : 0}">${g.offen ? "Als abgerechnet markieren" : "Abrechnung zurücknehmen"}</button></div></div>`).join("")
+        : `<div class="leer">Keine abgemachten Vermittlungen im ${esc(monatName(monat))}.</div>`}`;
+    $("aMonat").onchange = (e) => { if (e.target.value) { monat = e.target.value; abrechnung(el); } };
+    el.querySelectorAll("tr[data-v]").forEach((r) => r.onclick = () => oeffneV(+r.dataset.v));
+    el.querySelectorAll("[data-abg]").forEach((b) => b.onclick = async () => {
+      try { await api({ aktion: "abgerechnet", kontakt: +b.dataset.abg, monat, wert: b.dataset.an === "1" }); toast(b.dataset.an === "1" ? "Als abgerechnet markiert" : "Zurückgenommen"); abrechnung(el); } catch (e) { toast(e.message); }
+    });
+  }
+
   function setze(v) { ansicht = v; document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === v)); zeichne(); }
 
   /* ---------- Panel ---------- */
