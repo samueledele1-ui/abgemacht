@@ -4,7 +4,8 @@
   "type": "module",
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
-    "node-ical": "^0.27.3"
+    "node-ical": "^0.27.3",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@netlify/functions": "^4.0.0"
