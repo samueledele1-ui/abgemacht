@@ -40,10 +40,17 @@
   #login{max-width:420px;margin:40px auto}
   @media (max-width:760px){.kpis{grid-template-columns:1fr 1fr}.zwei{grid-template-columns:1fr}}
 </style>
+<link rel="manifest" href="/buero.webmanifest">
+<meta name="theme-color" content="#0D4F3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Abgemacht">
+<link rel="apple-touch-icon" href="/buero-180.png">
+<script src="/buero.js" defer></script>
 </head>
 <body>
 <div class="wrap">
-  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a><span><a class="btn ghost" href="/crm" style="padding:9px 15px;font-size:14px">CRM</a> <button class="btn ghost" id="raus" hidden>Abmelden</button></span></header>
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a><span><button class="btn ghost" id="raus" hidden>Abmelden</button></span></header>
 
   <form id="login" class="formbox">
     <h2 style="font-size:24px">Übersicht</h2>
