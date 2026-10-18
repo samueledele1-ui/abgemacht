@@ -111,7 +111,7 @@
       <button data-v="heute" aria-pressed="true">Heute</button>
       <button data-v="pipeline" aria-pressed="false">Pipeline</button>
       <button data-v="liste" aria-pressed="false">Liste</button>
-      <button data-v="eintraege" aria-pressed="false">Start-Einträge</button>
+      <button data-v="eintraege" aria-pressed="false">Partner-Freigaben</button>
       <button data-v="fahrplan" aria-pressed="false">Fahrplan</button>
       <button data-v="statistik" aria-pressed="false">Statistik</button>
     </div>
@@ -190,11 +190,11 @@
     return `<div class="karte" data-id="${k.id}">
       ${t && aktiv(k) ? `<a class="anruf" href="tel:${esc(t)}" data-tel="${k.id}" title="Anrufen">📞</a>` : ""}
       <div class="m"><b>${esc(k.firma)}</b><small>${esc(k.ansprechpartner || k.kategorie || "")}${k.region ? " · " + esc(k.region) : ""}</small></div>
-      <div class="rechts"><span class="st s-${s}">${ST[s] || esc(s)}</span>${mitDatum && k.naechster_kontakt ? `<br><span class="${ueberfaellig(k) ? "faellig" : ""}">${dt(k.naechster_kontakt)}</span>` : ""}${k.versuche ? `<br><small>${k.versuche}× versucht</small>` : ""}${k.eintrag ? `<br><small>${k.eintrag === "angeboten" ? "📝 Eintrag offen" : "✓ Eintrag frei"}</small>` : ""}</div>
+      <div class="rechts"><span class="st s-${s}">${ST[s] || esc(s)}</span>${mitDatum && k.naechster_kontakt ? `<br><span class="${ueberfaellig(k) ? "faellig" : ""}">${dt(k.naechster_kontakt)}</span>` : ""}${k.versuche ? `<br><small>${k.versuche}× versucht</small>` : ""}${k.eintrag ? `<br><small>${k.eintrag === "angeboten" ? "📝 Freigabe offen" : "✓ Partner frei"}</small>` : ""}</div>
     </div>`;
   }
 
-  /* ---------- Start-Einträge ---------- */
+  /* ---------- Partner-Freigaben (früher Start-Einträge) ---------- */
   const ES = { angeboten: "Freigabe offen", freigegeben: "Freigegeben ✓", veroeffentlicht: "Online", zurueckgezogen: "Zurückgezogen" };
   const ESF = { angeboten: "wiedervorlage", freigegeben: "bestaetigt", veroeffentlicht: "bestaetigt", zurueckgezogen: "kein_interesse" };
   function eintragHtml(x, mitFirma) {
@@ -210,7 +210,7 @@
       e.stopPropagation();
       const x = liste.find((y) => y.id === +b.dataset.ed), box = root.querySelector(`[data-eid="${x.id}"]`);
       box.style.display = "block";
-      box.innerHTML = `<label>Art</label><select data-f="art">${["Stelle", "Auftrag", "Angebot"].map((o) => `<option ${o === x.art ? "selected" : ""}>${o}</option>`).join("")}</select>
+      box.innerHTML = `<label>Art</label><select data-f="art">${["Partner", "Stelle", "Auftrag", "Angebot"].map((o) => `<option ${o === x.art ? "selected" : ""}>${o}</option>`).join("")}</select>
         <label style="margin-top:8px">Titel</label><input data-f="titel" value="${esc(x.titel)}">
         <label style="margin-top:8px">Kurzbeschreibung</label><textarea data-f="text">${esc(x.text || "")}</textarea>
         <label style="margin-top:8px">Kontakt bei Anfragen</label><input data-f="kontakt" value="${esc(x.kontakt || "")}">
@@ -221,7 +221,7 @@
       box.querySelector("[data-s]").onclick = async (ev) => {
         if (!v("titel").trim()) return toast("Bitte einen Titel eintragen.");
         ev.target.disabled = true;
-        try { await api({ aktion: "eintrag_aendern", eid: x.id, art: v("art"), titel: v("titel"), text: v("text"), kontakt: v("kontakt"), status: v("status") }); toast("Start-Eintrag gespeichert"); nachher(true); }
+        try { await api({ aktion: "eintrag_aendern", eid: x.id, art: v("art"), titel: v("titel"), text: v("text"), kontakt: v("kontakt"), status: v("status") }); toast("Freigabe gespeichert"); nachher(true); }
         catch (err) { toast(err.message); ev.target.disabled = false; }
       };
     });
@@ -264,10 +264,10 @@
       const es = alleE.filter((x) => (!reg || x.region === reg) && (!q || [x.firma, x.titel, x.text, x.art].join(" ").toLowerCase().includes(q)));
       const frei = alleE.filter((x) => x.status === "freigegeben").length, offen = alleE.filter((x) => x.status === "angeboten").length;
       const gr = (st, t) => { const l = es.filter((x) => x.status === st); return l.length ? `<h3 class="ab">${t} (${l.length})</h3>${l.map((x) => eintragHtml(x, true)).join("")}` : ""; };
-      el.innerHTML = `<div class="box"><div class="info"><span>Freigegeben</span><b>${frei} von 50</b><span>Freigabe offen</span><b>${offen}</b></div>
-          <div style="height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:10px"><div style="height:100%;width:${Math.min(100, frei * 2)}%;background:#138A6B"></div></div></div>
-        ${gr("angeboten", "Freigabe offen")}${gr("freigegeben", "Freigegeben ✓ · gehen zum Start online")}${gr("zurueckgezogen", "Zurückgezogen")}
-        ${es.length ? "" : '<div class="leer">Noch keine Start-Einträge. Im Kontakt „Start-Eintrag angeboten“ wählen.</div>'}`;
+      el.innerHTML = `<div class="box"><div class="info"><span>Freigegeben</span><b>${frei} von 30</b><span>Freigabe offen</span><b>${offen}</b></div>
+          <div style="height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:10px"><div style="height:100%;width:${Math.min(100, frei * 100 / 30)}%;background:#138A6B"></div></div></div>
+        ${gr("angeboten", "Freigabe offen · auf „Passt“ warten")}${gr("freigegeben", "Freigegeben ✓ · aktive Partner in /vermittlung")}${gr("zurueckgezogen", "Zurückgezogen")}
+        ${es.length ? "" : '<div class="leer">Noch keine Partner-Freigaben. Im Kontakt „Partner angeboten“ wählen.</div>'}`;
       verdrahteEintraege(el, es, () => laden());
     } else {
       const regionen = [...new Set(liste.map((k) => k.region || "Ohne Region"))].sort();
@@ -281,7 +281,7 @@
           <span>Ja zur Warteliste</span><b>${liste.filter((k) => k.status === "warteliste").length}</b>
           <span>Davon bestätigt</span><b>${liste.filter((k) => status(k) === "bestaetigt").length}</b>
           <span>Kein Interesse</span><b>${liste.filter((k) => k.status === "kein_interesse").length}</b>
-          <span>Start-Einträge angeboten</span><b>${liste.filter((k) => k.eintrag).length}</b>
+          <span>Partner angeboten</span><b>${liste.filter((k) => k.eintrag).length}</b>
           <span>Davon freigegeben</span><b>${liste.filter((k) => k.eintrag === "freigegeben").length}</b></div></div>`;
     }
     el.querySelectorAll("[data-id]").forEach((n) => n.onclick = (e) => { if (e.target.closest("[data-tel]")) return; oeffne(+n.dataset.id); });
@@ -296,9 +296,9 @@
     ["rueckruf", "Rückruf vereinbart", "Datum und Uhrzeit wählen", "zeit"], ["mail_gewuenscht", "Will Infos per Mail", "Mail öffnen + nachfassen"],
     ["warteliste", "Ja zur Warteliste ✓", "E-Mail eintragen", "mail", "gut"], ["kein_interesse", "Kein Interesse", "nicht mehr anrufen"],
     ["keine_anrufe", "Will keine Anrufe", "sofort sperren"], ["gespraech", "Gespräch geführt", "nur notieren"],
-    ["eintrag", "Start-Eintrag angeboten 📝", "Text mailen, in 2 Tagen nachfassen"], ["eintrag_frei", "Start-Eintrag freigegeben ✓", "„Passt“ bekommen", "", "gut"],
+    ["eintrag", "Partner angeboten 📝", "Freigabe-Mail, in 2 Tagen nachfassen"], ["eintrag_frei", "Partner freigegeben ✓", "„Passt“ bekommen", "", "gut"],
   ];
-  const EINTRAG = { angeboten: "📝 Start-Eintrag: Freigabe offen", freigegeben: "✓ Start-Eintrag freigegeben" };
+  const EINTRAG = { angeboten: "📝 Partner-Freigabe offen", freigegeben: "✓ Als Partner freigegeben" };
   function oeffne(id, still) {
     const k = alle.find((x) => x.id === id); if (!k) return schliessen();
     offenId = id;
@@ -315,7 +315,7 @@
         ${k.website ? `<span>Website</span><a href="${esc(k.website)}" target="_blank" rel="noopener">${esc(k.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>` : ""}
         ${k.email ? `<span>E-Mail</span><a href="mailto:${esc(k.email)}">${esc(k.email)}</a>` : ""}
         ${k.warteliste_email ? `<span>Warteliste</span><span>${esc(k.warteliste_email)} · ${k.wl_status === "bestaetigt" ? "<b style='color:var(--gruen)'>bestätigt</b>" : k.wl_status === "offen" ? "Bestätigung offen" : esc(k.wl_status || "nicht gefunden")}</span>` : ""}
-        ${k.eintrag ? `<span>Start-Eintrag</span><span>${EINTRAG[k.eintrag] || esc(k.eintrag)}</span>` : ""}
+        ${k.eintrag ? `<span>Partner</span><span>${EINTRAG[k.eintrag] || esc(k.eintrag)}</span>` : ""}
         <span>Nächster Kontakt</span><span class="${istFaellig(k) ? "faellig" : ""}">${k.naechster_kontakt ? dt(k.naechster_kontakt) : "–"}</span>
       </div>
       <h3 class="ab">Ergebnis des Anrufs</h3>
@@ -349,7 +349,7 @@
         u.querySelector("#ok").onclick = () => { const w = u.querySelector("#wann").value; sende(e, { wann: w ? new Date(w).toISOString() : null }); };
       } else if (e === "warteliste") {
         u.innerHTML = `<div class="unter"><label for="wlmail">E-Mail für die Warteliste</label><input id="wlmail" type="email" value="${esc(k.email || "")}" placeholder="name@firma.de">
-          <label for="wltyp" style="margin-top:8px">Typ</label><select id="wltyp"><option value="firma">Firma</option><option value="selbststaendig">Selbstständig</option><option value="mitarbeiter">Mitarbeiter</option><option value="privat">Privat</option></select>
+          <label for="wltyp" style="margin-top:8px">Typ</label><select id="wltyp"><option value="anbieter">Bietet Leistungen an</option><option value="auftraggeber">Vergibt Aufträge</option><option value="beides">Beides</option></select>
           <p style="font-size:13px;color:var(--muted);margin:8px 0 0">Die Person bekommt die Bestätigungs-Mail und muss selbst klicken (Double-Opt-in).</p>
           <div class="reihe"><button class="btn klein" id="ok">Eintragen + Mail senden</button></div></div>`;
         u.querySelector("#ok").onclick = async (ev) => {
@@ -364,41 +364,48 @@
       } else if (e === "mail_gewuenscht") {
         const betreff = "Abgemacht – wie eben besprochen";
         const anrede = k.ansprechpartner ? `Hallo ${k.ansprechpartner.split(/[,/(]/)[0].trim()},` : "Hallo,";
-        const text = `${anrede}\n\ndanke für das kurze Gespräch eben. Wie besprochen: Abgemacht ist das Netzwerk für Firmen, Selbstständige und Privatleute aus unserer Region. Aufträge finden und vergeben, geprüfte Profile, keine Provision.\n\nHier tragen Sie sich in 20 Sekunden ein: https://ab-gemacht.info/?quelle=telefon\n\nBei Fragen einfach auf diese Mail antworten.\n\nViele Grüße\nSamuel Edele`;
+        const text = `${anrede}\n\ndanke für das kurze Gespräch eben. Wie besprochen: Abgemacht vermittelt Aufträge in der Region Ulm. Firmen, Hausverwaltungen und Privatleute schreiben in einem Satz, was sie brauchen. Ich frage bis zu fünf passende Betriebe an, der Auftraggeber wählt das beste Angebot. Sie entscheiden bei jeder Anfrage selbst, ob Sie ein Angebot machen.\n\nIn der Startphase ist das kostenlos, ohne Abo und ohne Vertrag. Später fällt nur bei einem vermittelten Auftrag eine Gebühr an (9 € bis 500 € Auftragswert, 29 € bis 2.000 €, 59 € darüber, Langzeitaufträge einmalig 199 €).\n\nWenn Sie Anfragen bekommen möchten, antworten Sie einfach kurz auf diese Mail oder tragen Sie sich hier ein: https://ab-gemacht.info/?quelle=telefon\n\nBei Fragen einfach auf diese Mail antworten.\n\nViele Grüße\nSamuel Edele`;
         u.innerHTML = `<div class="unter"><label for="mmail">E-Mail-Adresse</label><input id="mmail" type="email" value="${esc(k.email || "")}"><div class="reihe"><a class="btn ghost klein" id="mopen">Mail öffnen</a><button class="btn klein" id="ok">Gespeichert, nachfassen planen</button></div></div>`;
         const upd = () => u.querySelector("#mopen").href = `mailto:${encodeURIComponent(u.querySelector("#mmail").value)}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
         u.querySelector("#mmail").oninput = upd; upd();
         u.querySelector("#ok").onclick = () => sende("mail_gewuenscht");
       } else if (e === "eintrag") {
         const vorname = k.ansprechpartner ? k.ansprechpartner.split(/[,/(]/)[0].trim() : "";
-        u.innerHTML = `<div class="unter"><p style="font-size:13px;color:var(--muted);margin:0 0 8px">Was soll zum Start eingestellt werden? Nur echte Einträge, erst nach „Passt“ einstellen.</p>
-          <label for="e_art">Art</label><select id="e_art"><option>Stelle</option><option>Auftrag</option><option>Angebot</option></select>
-          <label for="e_titel" style="margin-top:8px">Titel</label><input id="e_titel" placeholder="z. B. Elektroniker (m/w/d) oder Dachrinne erneuern">
-          <label for="e_text" style="margin-top:8px">Kurzbeschreibung</label><textarea id="e_text" placeholder="1–2 Sätze, Ort, bis wann"></textarea>
-          <label for="e_kontakt" style="margin-top:8px">Kontakt bei Anfragen</label><input id="e_kontakt" value="${esc([vorname, k.telefon || k.email || ""].filter(Boolean).join(", "))}">
+        u.innerHTML = `<div class="unter"><p style="font-size:13px;color:var(--muted);margin:0 0 8px">Was soll für den Betrieb eingetragen werden? Erst nach „Passt“ als Partner freigeben.</p>
+          <label for="e_titel">Leistungen</label><input id="e_titel" value="${esc(k.leistungen || k.kategorie || "")}" placeholder="z. B. Elektro, E-Check, Wallbox">
+          <label for="e_text" style="margin-top:8px">Einsatzgebiet / Hinweise</label><textarea id="e_text" placeholder="z. B. Ulm, Neu-Ulm, 30 km · auch Langzeit/Wartung · ab KW 46 wieder Kapazität">${esc(k.ort || k.region || "")}</textarea>
+          <label for="e_kontakt" style="margin-top:8px">Anfragen an (Name, Handy/WhatsApp)</label><input id="e_kontakt" value="${esc([vorname, k.telefon || k.email || ""].filter(Boolean).join(", "))}">
+          <label class="check" style="margin-top:10px"><input type="checkbox" id="e_wa" checked> <span>Anfragen per WhatsApp schicken (Einwilligung über „Passt“)</span></label>
           <label for="e_mail" style="margin-top:8px">E-Mail für die Freigabe</label><input id="e_mail" type="email" value="${esc(k.email || k.warteliste_email || "")}">
           <p style="font-size:13px;color:var(--muted);margin:8px 0 0">Geht von hallo@ab-gemacht.info raus, Antworten landen dort, Kopie an dich.</p>
           <div class="reihe"><button class="btn klein" id="ok">Freigabe-Mail senden + speichern</button><button class="btn ghost klein" id="ok2">Nur speichern</button></div>
           <a id="e_open" style="font-size:13px;display:inline-block;margin-top:6px">oder im eigenen Mailprogramm öffnen</a></div>`;
         const g = (id) => u.querySelector(id).value.trim();
-        const BETREFF = "Ihr Start-Eintrag bei Abgemacht – bitte kurz freigeben";
+        const wa = () => u.querySelector("#e_wa").checked;
+        const BETREFF = "Abgemacht – Ihre Freigabe als Partner-Betrieb";
         let mailText = "";
         const upd = () => {
-          const text = mailText = `${vorname ? "Hallo " + vorname + "," : "Hallo,"}\n\nwie besprochen hier der Text für Ihren kostenlosen Start-Eintrag bei Abgemacht:\n\n${g("#e_art")}: ${g("#e_titel")}\n${g("#e_text")}\nKontakt bei Anfragen: ${g("#e_kontakt")}\n\nWenn alles passt, antworten Sie einfach mit „Passt“. Damit beauftragen Sie mich, Ihr Firmenprofil mit diesem Eintrag in Ihrem Namen bei Abgemacht anzulegen und zum Start zu veröffentlichen. Bis Sie Ihren eigenen Zugang übernehmen, ist das Profil als „Eingerichtet vom Abgemacht-Team“ gekennzeichnet und Anfragen gehen an Ihre Kontaktadresse. Sie können das jederzeit per Mail widerrufen, dann lösche ich alles. Datenschutz: https://ab-gemacht.info/datenschutz Gern auch ein Foto (Team, Werkstatt, Baustelle) mitschicken.\n\nViele Grüße\nSamuel Edele\nhttps://ab-gemacht.info`;
+          const weg = wa() ? "per WhatsApp an die oben genannte Nummer" : "per Telefon oder E-Mail";
+          const text = mailText = `${vorname ? "Hallo " + vorname + "," : "Guten Tag,"}\n\ndanke für das Gespräch eben. Wie besprochen nehme ich Sie gern als Partner-Betrieb bei Abgemacht auf.\n\nSo funktioniert es: Firmen, Hausverwaltungen und Privatleute aus der Region schreiben mir, was sie brauchen. Passt eine Anfrage zu Ihnen, schicke ich sie Ihnen. Sie entscheiden jedes Mal selbst, ob Sie ein Angebot machen. Wählt der Auftraggeber Ihr Angebot, gebe ich Ihnen seine Kontaktdaten weiter.\n\nDas würde ich für Sie eintragen:\nFirma: ${k.firma}\nLeistungen: ${g("#e_titel")}\n${g("#e_text") ? "Einsatzgebiet / Hinweise: " + g("#e_text") + "\n" : ""}Anfragen an: ${g("#e_kontakt")} (${wa() ? "per WhatsApp" : "per Telefon oder E-Mail"})\n\nKosten: In der Startphase ist alles kostenlos, ohne Abo und ohne Vertrag. Später fällt nur bei einem vermittelten Auftrag eine Gebühr an: 9 € bis 500 € Auftragswert, 29 € bis 2.000 €, 59 € darüber, bei Langzeitaufträgen einmalig 199 €. Bevor Gebühren gelten, schicke ich Ihnen die Bedingungen, und Sie entscheiden, ob Sie dabeibleiben.\n\nWenn alles passt, antworten Sie einfach mit „Passt“. Damit willigen Sie ein, dass ich Ihre Firmen- und Kontaktdaten für die Vermittlung speichere und Ihnen passende Anfragen ${weg} schicke. Sie können das jederzeit widerrufen, eine kurze Mail${wa() ? " oder „Stopp“ per WhatsApp" : ""} reicht, dann lösche ich Ihre Daten. Datenschutz: https://ab-gemacht.info/datenschutz\n\nViele Grüße\nSamuel Edele\nAbgemacht · https://ab-gemacht.info`;
           u.querySelector("#e_open").href = `mailto:${encodeURIComponent(g("#e_mail"))}?subject=${encodeURIComponent(BETREFF)}&body=${encodeURIComponent(text)}`;
         };
         u.querySelectorAll("input,textarea,select").forEach((x) => x.oninput = x.onchange = upd); upd();
         const speichern = async (mitMail, btn) => {
-          if (!g("#e_titel")) return msg("Bitte einen Titel eintragen.");
+          if (!g("#e_titel")) return msg("Bitte die Leistungen eintragen.");
           if (mitMail && !g("#e_mail")) return msg("Bitte die E-Mail für die Freigabe eintragen.");
-          const n = p.querySelector("#notiz"); n.value = [`${g("#e_art")}: ${g("#e_titel")}`, g("#e_text"), n.value.trim()].filter(Boolean).join(" · ");
+          const n = p.querySelector("#notiz"); n.value = [`Partner: ${g("#e_titel")}`, g("#e_text"), wa() ? "WhatsApp gewünscht" : "", n.value.trim()].filter(Boolean).join(" · ");
           btn.disabled = true;
-          await sende("eintrag", { eintrag: { art: g("#e_art"), titel: g("#e_titel"), text: g("#e_text"), kontakt: g("#e_kontakt"), ort: k.ort || k.region || "" },
+          await sende("eintrag", { eintrag: { art: "Partner", titel: g("#e_titel"), text: [g("#e_text"), wa() ? "Anfragen per WhatsApp" : "Anfragen per Telefon/E-Mail"].filter(Boolean).join(" · "), kontakt: g("#e_kontakt"), ort: k.ort || k.region || "" },
             ...(mitMail ? { mail: { an: g("#e_mail"), betreff: BETREFF, text: mailText } } : {}) });
           btn.disabled = false;
         };
         u.querySelector("#ok").onclick = (ev) => speichern(true, ev.target);
         u.querySelector("#ok2").onclick = (ev) => speichern(false, ev.target);
+      } else if (e === "eintrag_frei") {
+        u.innerHTML = `<div class="unter"><p style="font-size:13px;color:var(--muted);margin:0 0 8px">„Passt“ bekommen? Dann wird der Betrieb aktiver Partner in /vermittlung.</p>
+          <label class="check"><input type="checkbox" id="f_wa" checked> <span>Hat WhatsApp-Anfragen zugestimmt</span></label>
+          <div class="reihe"><button class="btn klein" id="ok">Als Partner freigeben</button></div></div>`;
+        u.querySelector("#ok").onclick = () => sende("eintrag_frei", { wa: u.querySelector("#f_wa").checked });
       } else { u.innerHTML = ""; sende(e); }
     });
     p.querySelector("#nurNotiz").onclick = async () => {
@@ -408,7 +415,7 @@
     api({ aktion: "verlauf", id }).then((d) => {
       if (d.eintraege && d.eintraege.length) {
         const box = p.querySelector("#eintraege");
-        box.innerHTML = `<h3 class="ab">Start-Einträge</h3>${d.eintraege.map((x) => eintragHtml(x, false)).join("")}`;
+        box.innerHTML = `<h3 class="ab">Partner-Freigaben</h3>${d.eintraege.map((x) => eintragHtml(x, false)).join("")}`;
         verdrahteEintraege(box, d.eintraege, (geaendert) => geaendert ? laden() : oeffne(id, true));
       }
       p.querySelector("#verlauf").innerHTML = d.log.length ? d.log.map((l) => `<li>${esc(l.text || ({ angelegt: "Kontakt angelegt" })[l.art] || l.art)}<small>${dt(l.created_at)}</small></li>`).join("") : "<li><small>Noch keine Einträge.</small></li>";
