@@ -487,9 +487,9 @@ ${knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")}`));
     if (email) await sendeMail(email, name, `Ihre Anfrage ist angekommen: ${leistung}`, mailLayout(
       `<p style="margin:0 0 12px">Hallo ${esc(name)},</p>
 <p style="margin:0 0 12px">vielen Dank, Ihre Anfrage ist bei uns angekommen:</p>${tabelle}
-<p style="margin:14px 0 12px">So geht es weiter: Wir melden uns innerhalb eines Werktags, klären offene Fragen und fragen dann passende Betriebe aus der Region an. Ihren Namen und Ihre Kontaktdaten bekommt ein Betrieb erst, wenn Sie sich für sein Angebot entscheiden.</p>
+<p style="margin:14px 0 12px">So geht es weiter: Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe aus der Region. Fehlt noch etwas Wichtiges, fragen wir kurz nach. Die Angebote bekommen Sie gesammelt. Ihren Namen und Ihre Kontaktdaten bekommt ein Betrieb erst, wenn Sie sich für sein Angebot entscheiden.</p>
 <p style="margin:0 0 12px">Für Sie ist das kostenlos. Falls Sie noch etwas ergänzen möchten, antworten Sie einfach auf diese E-Mail.</p>
-<p style="margin:0">Viele Grüße<br>Samuel von Abgemacht</p>`));
+<p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`));
     return Response.json({ ok: true, nr, mail: !!email });
   }
 
@@ -522,8 +522,8 @@ ${knopf(`${seite()}/vermittlung`, "In Vermittlung → Partner öffnen")}`));
     if (email) await sendeMail(email, name, "Danke für Ihr Interesse an Abgemacht", mailLayout(
       `<p style="margin:0 0 12px">Hallo${name ? " " + esc(name) : ""},</p>
 <p style="margin:0 0 12px">vielen Dank für Ihr Interesse, mit ${esc(firma)} Partner-Betrieb bei Abgemacht zu werden.</p>
-<p style="margin:0 0 12px">Wir melden uns in den nächsten Tagen kurz telefonisch, um Leistungen und Einsatzgebiet abzustimmen. Danach bekommen Sie passende Anfragen aus der Region. In der Startphase ist das für Sie kostenlos, die Bedingungen finden Sie unter <a href="${seite()}/bedingungen">${seite().replace(/^https?:\/\//, "")}/bedingungen</a>.</p>
-<p style="margin:0">Viele Grüße<br>Samuel von Abgemacht</p>`));
+<p style="margin:0 0 12px">Wir melden uns in den nächsten Tagen, um Leistungen und Einsatzgebiet abzustimmen. Danach bekommen Sie passende Anfragen aus der Region. In der Startphase ist das für Sie kostenlos, die Bedingungen finden Sie unter <a href="${seite()}/bedingungen">${seite().replace(/^https?:\/\//, "")}/bedingungen</a>.</p>
+<p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`));
     return Response.json({ ok: true });
   }
 
