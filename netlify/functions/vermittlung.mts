@@ -93,7 +93,8 @@ export default async (req: Request, _context: Context) => {
     await sql`UPDATE vermittlungen SET auftraggeber = ${w.auftraggeber}, kontakt = ${w.kontakt}, kanal = ${w.kanal}, leistung = ${w.leistung},
         ort = ${w.ort}, zeitraum = ${w.zeitraum}, budget = ${w.budget}, art = ${w.art || "einmalig"}, laufzeit = ${w.laufzeit},
         beschreibung = ${w.beschreibung}, notizen = ${w.notizen}, status = ${status},
-        auftragswert = ${wert}, bewertung = ${bew}, gebuehr = ${gebuehr(w.art || "einmalig", wert)}, updated_at = now()
+        auftragswert = ${wert}, bewertung = ${bew}, gebuehr = ${gebuehr(w.art || "einmalig", wert)}, updated_at = now(),
+        abgemacht_am = CASE WHEN ${status}::text IN ('abgemacht', 'erledigt') THEN COALESCE(abgemacht_am, now()) ELSE abgemacht_am END
       WHERE id = ${id}`;
     return Response.json({ ok: true });
   }
@@ -136,6 +137,30 @@ export default async (req: Request, _context: Context) => {
     return Response.json({ ok: true });
   }
 
+  /* Monatsabrechnung: alle abgemachten Vermittlungen eines Monats, gruppiert nach Betrieb */
+  if (aktion === "abrechnung" || aktion === "abgerechnet") {
+    const monat = /^\d{4}-\d{2}$/.test(String(body.monat)) ? String(body.monat) : new Date().toISOString().slice(0, 7);
+    const von = `${monat}-01 00:00 Europe/Berlin`;
+    const [jj, mm] = monat.split("-").map(Number);
+    const bis = `${mm === 12 ? jj + 1 : jj}-${String(mm === 12 ? 1 : mm + 1).padStart(2, "0")}-01 00:00 Europe/Berlin`;
+    if (aktion === "abgerechnet") {
+      const kid = Number(body.kontakt) || 0;
+      const an = body.wert !== false;
+      await sql`UPDATE vermittlungen SET abgerechnet_am = CASE WHEN ${an} THEN now() ELSE NULL END, updated_at = now()
+        WHERE gewaehlt_id = ${kid} AND status IN ('abgemacht', 'erledigt')
+          AND abgemacht_am >= ${von}::timestamptz AND abgemacht_am < ${bis}::timestamptz`;
+      await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'abrechnung', ${(an ? "Abgerechnet: " : "Abrechnung zurückgenommen: ") + monat})`;
+      return Response.json({ ok: true });
+    }
+    const posten = await sql`SELECT v.id, v.leistung, v.ort, v.art, v.laufzeit, v.auftragswert, v.gebuehr, v.abgemacht_am, v.abgerechnet_am, v.status, v.auftraggeber,
+        k.id AS kontakt_id, k.firma, k.ansprechpartner, k.email, k.telefon, k.ort AS k_ort, k.website
+      FROM vermittlungen v JOIN crm_kontakte k ON k.id = v.gewaehlt_id
+      WHERE v.status IN ('abgemacht', 'erledigt')
+        AND v.abgemacht_am >= ${von}::timestamptz AND v.abgemacht_am < ${bis}::timestamptz
+      ORDER BY k.firma, v.abgemacht_am`;
+    return Response.json({ ok: true, monat, posten }, { headers: { "Cache-Control": "no-store" } });
+  }
+
   if (aktion === "waehlen") {
     const vbid = Number(body.vb) || 0;
     const r = await sql`SELECT vb.vermittlung_id, vb.kontakt_id, vb.preis, v.art FROM vermittlung_betriebe vb JOIN vermittlungen v ON v.id = vb.vermittlung_id WHERE vb.id = ${vbid}`;
@@ -144,7 +169,7 @@ export default async (req: Request, _context: Context) => {
     const wert = zahl(body.auftragswert) ?? zahl(preis);
     await sql`UPDATE vermittlung_betriebe SET status = CASE WHEN id = ${vbid} THEN 'gewaehlt' WHEN status = 'angebot' THEN 'nicht_gewaehlt' ELSE status END
       WHERE vermittlung_id = ${vermittlung_id}`;
-    await sql`UPDATE vermittlungen SET status = 'abgemacht', gewaehlt_id = ${kontakt_id}, auftragswert = ${wert}, gebuehr = ${gebuehr(art, wert)}, updated_at = now()
+    await sql`UPDATE vermittlungen SET status = 'abgemacht', gewaehlt_id = ${kontakt_id}, auftragswert = ${wert}, gebuehr = ${gebuehr(art, wert)}, updated_at = now(), abgemacht_am = COALESCE(abgemacht_am, now())
       WHERE id = ${vermittlung_id}`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kontakt_id}, 'vermittlung', ${"Abgemacht: Anfrage #" + vermittlung_id})`;
     return Response.json({ ok: true, gebuehr: gebuehr(art, wert) });
