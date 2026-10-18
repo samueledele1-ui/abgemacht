@@ -66,8 +66,8 @@ const ERGEBNISSE: Record<string, string> = {
   kein_interesse: "Kein Interesse",
   keine_anrufe: "Will keine Anrufe",
   gespraech: "Gespräch geführt",
-  eintrag: "Start-Eintrag angeboten",
-  eintrag_frei: "Start-Eintrag freigegeben",
+  eintrag: "Partner angeboten (Freigabe offen)",
+  eintrag_frei: "Als Partner freigegeben",
 };
 
 export default async (req: Request, _context: Context) => {
@@ -154,7 +154,7 @@ export default async (req: Request, _context: Context) => {
   if (aktion === "eintrag_aendern") {
     const eid = Number(body.eid) || 0;
     const rows = await sql`SELECT kontakt_id, status FROM crm_eintraege WHERE id = ${eid}`;
-    if (!rows.length) return fehler("Start-Eintrag nicht gefunden.", 404);
+    if (!rows.length) return fehler("Freigabe nicht gefunden.", 404);
     const st = String(body.status || rows[0].status);
     if (!["angeboten", "freigegeben", "zurueckgezogen"].includes(st)) return fehler("Unbekannter Status.");
     const titel = clip(body.titel, 160);
@@ -167,7 +167,7 @@ export default async (req: Request, _context: Context) => {
       WHERE id = ${eid}`;
     const kid = rows[0].kontakt_id;
     const ES: Record<string, string> = { angeboten: "Freigabe offen", freigegeben: "freigegeben", zurueckgezogen: "zurückgezogen" };
-    await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'eintrag_geaendert', ${"Start-Eintrag " + (titel || "") + " geändert: " + ES[st]})`;
+    await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'eintrag_geaendert', ${"Partner-Freigabe " + (titel || "") + " geändert: " + ES[st]})`;
     await sql`UPDATE crm_kontakte SET eintrag = (
         SELECT CASE WHEN bool_or(status = 'freigegeben') THEN 'freigegeben' WHEN bool_or(status = 'angeboten') THEN 'angeboten' END
         FROM crm_eintraege WHERE kontakt_id = ${kid}), updated_at = now() WHERE id = ${kid}`;
@@ -244,7 +244,7 @@ export default async (req: Request, _context: Context) => {
               to: [{ email: an }],
               bcc: [{ email: antwort }],
               replyTo: { email: antwort, name: "Samuel Edele | Abgemacht" },
-              subject: clip(m.betreff, 200) || "Ihr Start-Eintrag bei Abgemacht",
+              subject: clip(m.betreff, 200) || "Abgemacht – Ihre Freigabe als Partner-Betrieb",
               textContent: clip(m.text, 5000) || "",
             }),
           });
@@ -270,9 +270,16 @@ export default async (req: Request, _context: Context) => {
       const e = (body.eintrag || {}) as Record<string, unknown>;
       const titel = clip(e.titel, 160);
       if (titel) await sql`INSERT INTO crm_eintraege (kontakt_id, art, titel, text, ort, kontakt) VALUES (${id}, ${clip(e.art, 30) || "Stelle"}, ${titel}, ${clip(e.text, 1000)}, ${clip(e.ort, 120)}, ${clip(e.kontakt, 200)})`;
+      if (titel && e.art === "Partner") await sql`UPDATE crm_kontakte SET leistungen = ${clip(titel, 300)}, partner = COALESCE(partner, 'interessiert'), updated_at = now() WHERE id = ${id}`;
     }
     if (erg === "eintrag_frei") {
       await sql`UPDATE crm_eintraege SET status = 'freigegeben', freigabe_am = now() WHERE kontakt_id = ${id} AND status = 'angeboten'`;
+      // Freigabe = aktiver Partner in /vermittlung (mit WhatsApp-Okay, wenn zugestimmt)
+      const wa = body.wa === true;
+      await sql`UPDATE crm_kontakte SET partner = 'aktiv', partner_seit = COALESCE(partner_seit, now()),
+          wa_ok_am = CASE WHEN ${wa} THEN COALESCE(wa_ok_am, now()) ELSE wa_ok_am END,
+          leistungen = COALESCE(leistungen, (SELECT titel FROM crm_eintraege WHERE kontakt_id = ${id} AND art = 'Partner' ORDER BY created_at DESC LIMIT 1)),
+          updated_at = now() WHERE id = ${id}`;
     }
     return Response.json({ ok: true, status, versuche, naechster_kontakt: naechster, hinweis });
   }
