@@ -211,7 +211,7 @@
     if (!d.angebote.length) liste = '<div class="box leer"><b style="color:var(--ink);display:block;font-size:18px;margin-bottom:6px">Noch keine Angebote</b>' +
       (d.angefragt ? d.angefragt + ' Betrieb' + (d.angefragt > 1 ? 'e sind' : ' ist') + ' angefragt.' : 'Ihre Anfrage geht spätestens am nächsten Werktag an passende Betriebe.') +
       ' Beim ersten Angebot bekommen Sie eine E-Mail. Diese Seite zeigt immer den aktuellen Stand.</div>';
-    var hinweis = d.offen && d.angebote.length ? '<p class="klein" style="margin:18px 4px 0">Namen und Kontaktdaten der Betriebe sehen Sie, sobald Sie ein Angebot annehmen. Dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten. Den Vertrag mit allen Einzelheiten machen Sie direkt mit dem Betrieb aus. Für Sie ist das kostenlos.</p>' : '';
+    var hinweis = d.offen && d.angebote.length ? '<p class="klein" style="margin:18px 4px 0">Nehmen Sie ein Angebot an und der Betrieb bestätigt, bekommen Sie beide gegenseitig die Kontaktdaten. Den Vertrag mit allen Einzelheiten machen Sie direkt mit dem Betrieb aus. Für Sie ist das kostenlos.</p>' : '';
     main.innerHTML = kopf + oben + liste + hinweis + '<details class="box"><summary style="cursor:pointer;font-weight:700">Ihre Anfrage</summary><div style="margin-top:12px">' + anfrageDaten(a) + '</div></details>';
     main.querySelectorAll('[data-an]').forEach(function (b) {
       b.onclick = function () {
