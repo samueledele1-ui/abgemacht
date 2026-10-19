@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="/marke.css">
 <style>
   main{max-width:680px;margin:0 auto;padding:8px 0 48px}
+  .fotos{display:flex;flex-wrap:wrap;gap:8px}
+  .fotos img{width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line, #DCE5E1);display:block}
   h1{font-size:clamp(30px,6vw,44px);line-height:1.02;margin:6px 0 10px}
   .unterzeile{color:var(--muted);margin:0 0 22px}
   .box{background:#fff;border:1px solid var(--line);border-radius:20px;padding:20px 22px;margin-top:16px}
@@ -76,7 +78,10 @@
   }
   function anfrageDaten(a) {
     var z = [['Leistung', a.leistung], ['Ort', a.ort], ['Wann', a.zeitraum], ['Art', (ART[a.art] || '') + (a.laufzeit ? ', ' + a.laufzeit : '')], ['Budget', a.budget], ['Details', a.beschreibung]];
-    return '<dl class="daten">' + z.filter(function (x) { return x[1]; }).map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + esc(x[1]).replace(/\n/g, '<br>') + '</dd>'; }).join('') + '</dl>';
+    var fotos = '';
+    for (var i = 1; i <= (a.fotos || 0); i++) { var u = '/api/foto?t=' + encodeURIComponent(t) + '&n=' + i; fotos += '<a href="' + u + '" target="_blank" rel="noopener"><img src="' + u + '" alt="Foto ' + i + ' zur Anfrage" loading="lazy"></a>'; }
+    return '<dl class="daten">' + z.filter(function (x) { return x[1]; }).map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + esc(x[1]).replace(/\n/g, '<br>') + '</dd>'; }).join('') +
+      (fotos ? '<dt>Fotos</dt><dd><div class="fotos">' + fotos + '</div></dd>' : '') + '</dl>';
   }
   function kontaktDaten(z) {
     return '<dl class="daten">' + z.filter(function (x) { return x[1]; }).map(function (x) {

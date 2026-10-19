@@ -100,6 +100,8 @@
   .kand input{width:18px;height:18px;flex:none;accent-color:var(--gruen)}
   .kand label{margin:0;font-weight:600;flex:1;cursor:pointer}
   .kand small{color:var(--muted);font-weight:500;display:block}
+  .fotos{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+  .fotos img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}
   .kand .km{display:inline-block;min-width:52px;margin-right:8px;padding:1px 7px;border-radius:999px;background:var(--minze, #DDF3EA);color:#0D4F3E;font-size:12px;font-weight:700;text-align:center}
   .suchzeile{display:grid;grid-template-columns:1.2fr 1.2fr 96px auto;gap:8px;align-items:end}
   .suchzeile label{margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -526,6 +528,7 @@
     ].join("");
     const p = panel(`<div class="kopf"><div><h2>${esc(v.leistung || "Anfrage")}${artTag(v)}</h2><small style="color:var(--muted)">#${v.id} · ${dt(v.created_at)} · ${esc(KANL[v.kanal] || "")}</small></div><button class="zu" aria-label="Schließen">×</button></div>
       <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Gebühr nach Modell: ${esc(String(v.gebuehr).replace(".", ","))} € (Startphase: gratis)</span>` : ""}</div>
+      ${v.fotos ? `<h3 class="ab">Fotos (${v.fotos})</h3><div class="fotos" id="vFotos"><small style="color:var(--muted)">Lädt …</small></div>` : ""}
       <h3 class="ab">Auftraggeber</h3><div class="vb"><small style="color:var(--muted)">${esc([v.auftraggeber, v.kontakt].filter(Boolean).join(" · "))}${v.kunde_mail_am ? " · ✉ Angebotsseite gemailt " + dt(v.kunde_mail_am) : ""}${v.angenommen_am ? " · selbst angenommen " + dt(v.angenommen_am) : ""}</small>
         <div class="knopfreihe">${v.kunde_token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(v.kunde_token))}">Angebotsseite-Link kopieren</button><button class="btn ghost klein" type="button" id="kLink">Link per Mail an Kunden</button>` : ""}</div></div>
       ${kundenTexte}
@@ -565,6 +568,7 @@
         + (weiter.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">${weiter.length} weitere weiter weg oder ohne Ortsangabe</summary>${weiter.slice(0, 30).map(zeile).join("")}</details>` : "");
       p.querySelector("#kAnfragen").hidden = !(nah.length || weiter.length);
     };
+    if (v.fotos) api({ aktion: "fotos", id }).then((d) => { const el = p.querySelector("#vFotos"); if (el) el.innerHTML = d.fotos.map((f) => `<a href="${f.src}" target="_blank" rel="noopener" download="anfrage-${id}-foto-${f.nr}.jpg"><img src="${f.src}" alt="Foto ${f.nr}"></a>`).join(""); }).catch(() => {});
     p.querySelector("#kSuchen").onclick = suchen;
     if (["neu", "angefragt", "angebote"].includes(v.status)) suchen();
     ["#kSuch", "#kOrt"].forEach((s) => p.querySelector(s).onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } });
