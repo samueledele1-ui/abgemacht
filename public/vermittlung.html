@@ -165,6 +165,7 @@
 
   /* ---------- Texte (wie im Textvorlagen-Dokument) ---------- */
   const artText = (v) => v.art === "langzeit" ? "Langzeit" + (v.laufzeit ? ", " + v.laufzeit : "") : v.art === "projekt" ? "Projekt" + (v.laufzeit ? ", " + v.laufzeit : "") : "";
+  const LINK = (tok) => location.origin + "/angebot?t=" + tok;
   const T = {
     anfrage: (v) => `Neue Anfrage für dich:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}${v.beschreibung ? "\nKurzbeschreibung: „" + v.beschreibung + "“" : ""}\n\nHast du Interesse? Schick mir einfach Termin und Preis – gern auch als Sprachnachricht. Passt es nicht, reicht ein kurzes „Nein“.`,
     erinnerung: (v) => `Kurze Erinnerung zur Anfrage (${v.leistung || "Auftrag"}, ${v.ort || "Region Ulm"}). Hast du Zeit dafür? Wenn ich bis morgen Mittag nichts höre, frage ich einen anderen Betrieb.`,
@@ -243,13 +244,13 @@
       abrechnung(el);
     } else {
       el.innerHTML = `<div class="box"><h3 style="margin-top:0">Ablauf einer Vermittlung</h3><ol style="line-height:1.7;margin:0;padding-left:20px">
-        <li>Anfrage kommt rein (WhatsApp, Anruf, Mail): mit „+ Anfrage“ anlegen und dem Auftraggeber den Text „So habe ich dich verstanden“ schicken.</li>
-        <li>In der Anfrage passende Betriebe suchen und bis zu 5 auswählen. Partner mit WhatsApp-Okay bekommen den Anfrage-Text per WhatsApp. Alle anderen anrufen und dabei fragen, ob sie Partner werden wollen.</li>
-        <li>Antworten eintragen: Preis und Angebot beim jeweiligen Betrieb, Status auf „Angebot“.</li>
-        <li>Text „Deine Angebote sind da“ an den Auftraggeber schicken. Er antwortet mit einer Nummer.</li>
+        <li>Anfragen über die Website kommen automatisch rein (der Kunde hat schon seinen Link zur Angebotsseite). WhatsApp, Anruf oder Mail: mit „+ Anfrage“ anlegen.</li>
+        <li>In der Anfrage passende Betriebe suchen und bis zu 5 auswählen. <b>Partner mit E-Mail bekommen die anonyme Anfrage automatisch</b> mit dem Knopf „Angebot abgeben“. Ohne E-Mail: „Link kopieren“ und per WhatsApp schicken oder anrufen.</li>
+        <li>Betriebe geben ihr Angebot selbst über den Link ab. Kontaktdaten werden darin automatisch ausgeblendet. Telefonische Angebote kannst du weiter von Hand eintragen.</li>
+        <li>Beim ersten Angebot bekommt der Kunde automatisch eine Mail. Er nimmt auf seiner Angebotsseite selbst an: Dann gehen die Kontaktdaten an beide, die Absagen an die anderen, und die Gebühr steht in der Abrechnung. Hat der Kunde keine E-Mail, schickst du ihm den Link per WhatsApp.</li>
         <li>Beim gewählten Betrieb „Abgemacht“ drücken. Die Texte für Kunde, Zusage und Absagen stehen dann bereit.</li>
         <li>Nach dem Termin „Hat's gepasst?“ schicken, Bewertung eintragen, Status „Erledigt“.</li></ol>
-        <p style="color:var(--muted);margin:12px 0 0">Gebühren werden zur Info berechnet (9/29/59 €, Langzeit 199 €), in der Startphase aber nicht verlangt. Sobald Gebühren gelten: unter Abrechnung → Rechnungsdaten Steuernummer und „Gebühren ab“ eintragen. Dann einmal im Monat pro Betrieb „Rechnung erstellen“, per Mail senden und bei Zahlungseingang „Bezahlt“ drücken. Kalte WhatsApp-Nachrichten ohne Okay sind tabu: erst anrufen.</p></div>`;
+        <p style="color:var(--muted);margin:12px 0 0">Gebühren werden zur Info berechnet (9 / 29 € / über 2.000 € 3 %, max. 400 €; regelmäßig 3 % vom ersten Vertragsjahr, 199–1.500 €), in der Startphase aber nicht verlangt. Sobald Gebühren gelten: unter Abrechnung → Rechnungsdaten Steuernummer und „Gebühren ab“ eintragen. Dann einmal im Monat pro Betrieb „Rechnung erstellen“, per Mail senden und bei Zahlungseingang „Bezahlt“ drücken. Kalte WhatsApp-Nachrichten ohne Okay sind tabu: erst anrufen.</p></div>`;
     }
   }
   function tabZahl() { const n = P.filter((p) => p.partner === "interessiert").length; const b = document.querySelector('.tabs button[data-v="partner"]'); if (b) b.textContent = "Partner-Betriebe" + (n ? ` (${n} neu)` : ""); }
@@ -433,7 +434,7 @@
       ${feld("budget", "Budget", v.budget)}${auswahl("art", "Art", v.art || "einmalig", ARTL)}
       ${feld("laufzeit", "Laufzeit (bei Projekt/Langzeit)", v.laufzeit)}${v.id ? auswahl("status", "Status", v.status, VS) : "<div></div>"}
       <div class="ganz"><label for="v_beschreibung">Beschreibung (Worte des Auftraggebers)</label><textarea id="v_beschreibung" data-f="beschreibung">${esc(v.beschreibung || "")}</textarea></div>
-      ${v.id ? feld("auftragswert", "Auftragswert in €", v.auftragswert, "text") + feld("bewertung", "Bewertung 1–5", v.bewertung, "number") : ""}
+      ${v.id ? feld("auftragswert", v.art === "langzeit" ? "Wert im 1. Vertragsjahr in €" : "Auftragswert in €", v.auftragswert, "text") + feld("bewertung", "Bewertung 1–5", v.bewertung, "number") : ""}
       <div class="ganz"><label for="v_notizen">Notizen</label><textarea id="v_notizen" data-f="notizen">${esc(v.notizen || "")}</textarea></div></div>`;
   }
   const werte = (root) => { const o = {}; root.querySelectorAll("[data-f]").forEach((e) => o[e.dataset.f] = e.value); return o; };
@@ -454,12 +455,12 @@
     const gew = bs.find((b) => b.status === "gewaehlt");
     const vbHtml = bs.map((b) => `<div class="vb" data-vb="${b.id}">
         <div class="zeile"><b>${esc(b.firma)}${b.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}</b><span class="st b-${b.status}">${BS[b.status]}</span></div>
-        <small style="color:var(--muted)">${esc([b.ansprechpartner, b.telefon, b.k_ort].filter(Boolean).join(" · "))} · angefragt ${dt(b.angefragt_am)}</small>
+        <small style="color:var(--muted)">${esc([b.ansprechpartner, b.telefon, b.k_ort].filter(Boolean).join(" · "))} · angefragt ${dt(b.angefragt_am)}${b.gemailt_am ? " · ✉ per Mail" : ""}${b.gesehen_am ? " · 👁 Link geöffnet" : ""}${b.preis_betrag ? " · Angebot selbst abgegeben" : ""}</small>
         <div class="reihe"><select data-g="status">${Object.entries(BS).filter(([k]) => k !== "gewaehlt" && k !== "nicht_gewaehlt").map(([k, t]) => `<option value="${k}" ${b.status === k ? "selected" : ""}>${t}</option>`).join("")}${["gewaehlt", "nicht_gewaehlt"].includes(b.status) ? `<option selected value="${b.status}">${BS[b.status]}</option>` : ""}</select>
           <input data-g="preis" placeholder="Preis, z. B. 380 €" value="${esc(b.preis || "")}" style="flex:1;min-width:120px"></div>
         <textarea data-g="angebot" placeholder="Angebot: Termin, was drin ist" style="margin-top:6px;min-height:50px">${esc(b.angebot || "")}</textarea>
-        <div class="knopfreihe"><button class="btn ghost klein" data-sp="${b.id}" type="button">Speichern</button>${b.telefon ? `<a class="btn ghost klein" href="tel:${esc(String(b.telefon).replace(/[^\d+]/g, ""))}">Anrufen</a>` : ""}${b.status === "angebot" ? `<button class="btn klein" data-wahl="${b.id}" type="button">Abgemacht</button>` : ""}</div>
-        ${b.status === "angefragt" ? vorlageHtml("Text: Anfrage an diesen Betrieb", T.anfrage(v), b.telefon, b.wa_ok_am) + vorlageHtml("Text: Erinnerung", T.erinnerung(v), b.telefon, b.wa_ok_am) : ""}
+        <div class="knopfreihe"><button class="btn ghost klein" data-sp="${b.id}" type="button">Speichern</button>${b.token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(b.token))}">Angebots-Link kopieren</button>` : ""}${b.telefon ? `<a class="btn ghost klein" href="tel:${esc(String(b.telefon).replace(/[^\d+]/g, ""))}">Anrufen</a>` : ""}${b.status === "angebot" ? `<button class="btn klein" data-wahl="${b.id}" type="button">Abgemacht</button>` : ""}</div>
+        ${b.status === "angefragt" ? vorlageHtml("Text: Anfrage an diesen Betrieb", T.anfrage(v) + (b.token ? "\n\nAngebot direkt hier abgeben: " + LINK(b.token) : ""), b.telefon, b.wa_ok_am) + vorlageHtml("Text: Erinnerung", T.erinnerung(v), b.telefon, b.wa_ok_am) : ""}
         ${b.status === "gewaehlt" ? vorlageHtml("Text: Zusage an den Betrieb", T.zusage(v, b), b.telefon, b.wa_ok_am) : ""}
         ${b.status === "nicht_gewaehlt" ? vorlageHtml("Text: Absage", T.absage(), b.telefon, b.wa_ok_am) : ""}
       </div>`).join("");
@@ -471,13 +472,17 @@
     ].join("");
     const p = panel(`<div class="kopf"><div><h2>${esc(v.leistung || "Anfrage")}${artTag(v)}</h2><small style="color:var(--muted)">#${v.id} · ${dt(v.created_at)} · ${esc(KANL[v.kanal] || "")}</small></div><button class="zu" aria-label="Schließen">×</button></div>
       <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Gebühr nach Modell: ${esc(String(v.gebuehr).replace(".", ","))} € (Startphase: gratis)</span>` : ""}</div>
-      <h3 class="ab">Texte an den Auftraggeber</h3>${kundenTexte}
+      <h3 class="ab">Auftraggeber</h3><div class="vb"><small style="color:var(--muted)">${esc([v.auftraggeber, v.kontakt].filter(Boolean).join(" · "))}${v.kunde_mail_am ? " · ✉ Angebotsseite gemailt " + dt(v.kunde_mail_am) : ""}${v.angenommen_am ? " · selbst angenommen " + dt(v.angenommen_am) : ""}</small>
+        <div class="knopfreihe">${v.kunde_token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(v.kunde_token))}">Angebotsseite-Link kopieren</button><button class="btn ghost klein" type="button" id="kLink">Link per Mail an Kunden</button>` : ""}</div></div>
+      ${kundenTexte}
       <h3 class="ab">Angefragte Betriebe (${bs.length})</h3>${vbHtml || '<div class="leer" style="padding:14px">Noch keine. Unten passende Betriebe suchen.</div>'}
       <div class="unter"><label for="kSuch">Betriebe suchen und anfragen (bis zu 5)</label><div style="display:flex;gap:8px"><input id="kSuch" value="${esc((v.leistung || "").split(/[ ,&]/)[0])}" placeholder="Branche, Leistung oder Firma"><button class="btn klein" id="kSuchen" type="button">Suchen</button></div>
         <div id="kListe"></div><button class="btn klein" id="kAnfragen" type="button" hidden style="margin-top:10px">Ausgewählte anfragen</button>
         <small style="color:var(--muted);display:block;margin-top:6px">Kein passender Betrieb dabei? Über Google Maps suchen, anrufen und mit „+ Partner“ anlegen.</small></div>
       <details class="unter" id="vEdit"><summary style="cursor:pointer;font-weight:700">Anfrage bearbeiten</summary>${vForm(v)}
         <div class="knopfreihe"><button class="btn klein" id="vSpeichern" type="button">Speichern</button><button class="btn ghost klein" id="vLoeschen" type="button">Löschen</button></div><div class="msg" id="vmsg"></div></details>`);
+    const kl = p.querySelector("#kLink");
+    if (kl) kl.onclick = async () => { kl.disabled = true; try { const r = await api({ aktion: "kunde_link_senden", id }); toast("Link gesendet an " + r.an); await laden(); oeffneV(id); } catch (e) { toast(e.message); kl.disabled = false; } };
     p.querySelectorAll("[data-sp]").forEach((b) => b.onclick = async () => {
       const box = b.closest("[data-vb]"); const g = (n) => box.querySelector(`[data-g="${n}"]`).value;
       try { await api({ aktion: "vb", vb: +b.dataset.sp, status: g("status"), preis: g("preis"), angebot: g("angebot") }); await laden(); oeffneV(id); toast("Gespeichert"); } catch (e) { toast(e.message); }
@@ -499,7 +504,7 @@
     p.querySelector("#kAnfragen").onclick = async () => {
       const ids = [...p.querySelectorAll("#kListe input:checked")].map((x) => +x.value);
       if (!ids.length) return toast("Bitte Betriebe auswählen.");
-      try { await api({ aktion: "anfragen", id, kontakte: ids }); await laden(); oeffneV(id); toast(ids.length + " Betrieb(e) angefragt – jetzt Text schicken oder anrufen"); } catch (e) { toast(e.message); }
+      try { const r = await api({ aktion: "anfragen", id, kontakte: ids }); await laden(); oeffneV(id); toast((r.gemailt ? r.gemailt + " per Mail angefragt. " : "") + (r.ohneMail && r.ohneMail.length ? "Ohne Mail (Link kopieren oder anrufen): " + r.ohneMail.join(", ") : "")); } catch (e) { toast(e.message); }
     };
     p.querySelector("#vSpeichern").onclick = async () => {
       const form = p.querySelector("#vEdit");
