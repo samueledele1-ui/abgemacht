@@ -164,7 +164,7 @@ function seiteFuer(b: Branche, o: Ort) {
   const andereBranchen = BRANCHEN.filter((x) => x.slug !== b.slug).map((x) => `<a href="/finden/${x.slug}-${o.slug}">${esc(x.name)} in ${esc(o.name)}</a>`).join("");
   const faq: [string, string][] = [
     [`Wie finde ich ${b.wer === "Reinigungskraft" ? "eine" : "einen"} ${b.wer} in ${o.name}?`, `Schicken Sie uns über das Anfrage-Formular kurz, was zu tun ist, zum Beispiel „${b.auftraege[0]}“. Wir fragen passende ${b.plural} aus ${o.name}, ${liste(o.nachbarn.slice(0, 2))} an und schicken Ihnen die Angebote.`],
-    ["Was kostet Abgemacht?", "Für Auftraggeber nichts. Betriebe zahlen in der Startphase ebenfalls nichts, später nur eine kleine Gebühr, wenn ein Auftrag zustande kommt."],
+    ["Was kostet Abgemacht?", "Für Auftraggeber nichts. Betriebe zahlen in der Startphase ebenfalls nichts, später nur eine kleine Freischaltgebühr für die Kontaktdaten, wenn ein Auftraggeber ihr Angebot angenommen hat."],
     ["Mit wem schließe ich den Vertrag?", `Direkt mit ${b.wer === "Reinigungskraft" ? "der Reinigungskraft" : "dem " + b.wer}. Abgemacht stellt nur den Kontakt her, Preis und Termin vereinbaren Sie direkt miteinander.`],
     [`Ich bin ${b.wer}. Wie bekomme ich Aufträge aus ${o.name}?`, `${b.anbieter} Tragen Sie sich als Partner-Betrieb ein, wir rufen kurz an und schicken Ihnen danach passende Anfragen aus Ihrem Gebiet.`],
   ];
