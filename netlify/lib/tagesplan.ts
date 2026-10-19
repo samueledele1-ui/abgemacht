@@ -112,9 +112,9 @@ export async function tagesplan(jetzt = new Date()) {
   const html = `<!doctype html><html lang="de"><body style="margin:0;background:#F6F8F7;font-family:Arial,Helvetica,sans-serif;color:#14231E">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border:1px solid #E2E8E5;border-radius:16px">
-<tr><td style="padding:24px 24px 0;font-size:21px;font-weight:bold">🤝 Morgen: ${esc(tagLang(morgen))}</td></tr>
+<tr><td style="padding:24px 24px 0;font-size:21px;font-weight:bold"><span style="display:inline-block;width:30px;height:30px;line-height:30px;text-align:center;background:#0D4F3E;color:#F2B33D;border-radius:9px;font-size:19px;font-weight:bold;vertical-align:middle;margin-right:8px">&#10003;</span>Morgen: ${esc(tagLang(morgen))}</td></tr>
 ${H("📅 Termine")}${B(termineHtml)}
-${H(`🤝 Offene Vermittlungen (${verm.length})`)}${B(vermHtml)}
+${H(`✓ Offene Vermittlungen (${verm.length})`)}${B(vermHtml)}
 ${H(`📞 Fällige Kontakte (${faellig.length})`)}${B(kontakteHtml)}
 ${H("🗺️ Fahrplan")}${B(fp || leer("Keine offenen Aufgaben für morgen."))}
 ${naechstes.length ? H("⏭️ Als Nächstes") + B(ul(naechstes)) : ""}
