@@ -100,6 +100,10 @@
   .kand input{width:18px;height:18px;flex:none;accent-color:var(--gruen)}
   .kand label{margin:0;font-weight:600;flex:1;cursor:pointer}
   .kand small{color:var(--muted);font-weight:500;display:block}
+  .kand .km{display:inline-block;min-width:52px;margin-right:8px;padding:1px 7px;border-radius:999px;background:var(--minze, #DDF3EA);color:#0D4F3E;font-size:12px;font-weight:700;text-align:center}
+  .suchzeile{display:grid;grid-template-columns:1.2fr 1.2fr 96px auto;gap:8px;align-items:end}
+  .suchzeile label{margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media (max-width:640px){.suchzeile{grid-template-columns:1fr 1fr}.suchzeile button{grid-column:1/-1}}
   .vorlage{white-space:pre-wrap;background:#FBFCFC;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-top:8px}
   .knopfreihe{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .kpis5{grid-template-columns:repeat(5,1fr)}
@@ -167,6 +171,54 @@
   /* ---------- Texte (wie im Textvorlagen-Dokument) ---------- */
   const artText = (v) => v.art === "langzeit" ? "Langzeit" + (v.laufzeit ? ", " + v.laufzeit : "") : v.art === "projekt" ? "Projekt" + (v.laufzeit ? ", " + v.laufzeit : "") : "";
   const LINK = (tok) => location.origin + "/angebot?t=" + tok;
+  /* Entfernung: PLZ- und Ortskoordinaten (offene Daten, © OpenStreetMap-Mitwirkende), einmal geladen und im Browser zwischengespeichert */
+  const geoBauen = async () => {
+    try { const c = localStorage.getItem("abg_plzgeo1"); if (c) return c; } catch {}
+    const csv = await (await fetch("https://raw.githubusercontent.com/WZBSocialScienceCenter/plz_geocoord/master/plz_geocoord.csv")).text();
+    const O = await (await fetch("https://cdn.jsdelivr.net/npm/postleitzahlen@1.0.0/data/ort.json")).json();
+    const r = (x) => Math.floor(x * 100 + 0.5), P = new Map();
+    for (const line of csv.trim().split("\n").slice(1)) { const [p, la, ln] = line.split(","); if (p.length === 5 && !P.has(p)) P.set(p, [r(parseFloat(la)), r(parseFloat(ln))]); }
+    const U = P.get("89073") || [4840, 1000], N = new Map();
+    for (const [name, plzs] of Object.entries(O)) { const k = name.toLowerCase().replace(/ß/g, "ss"); if (!N.has(k)) N.set(k, new Set()); for (const x of plzs) if (P.has(x)) N.get(k).add(x); }
+    const nl = [];
+    for (const k of [...N.keys()].sort()) { let best = null, bd = null; for (const p of [...N.get(k)].sort()) { const c = P.get(p), d = (c[0] - U[0]) ** 2 + (c[1] - U[1]) ** 2; if (bd === null || d < bd) { best = p; bd = d; } } if (best && !/[,;|]/.test(k)) nl.push(k + "," + best); }
+    const t = [...P.keys()].sort().map((p) => p + "," + P.get(p)[0] + "," + P.get(p)[1]).join(";") + "|" + nl.join(";");
+    try { localStorage.setItem("abg_plzgeo1", t); } catch {}
+    return t;
+  };
+  let GEO = null;
+  const geoLaden = () => GEO || (GEO = geoBauen().then((t) => {
+    const [a, b] = t.split("|"); const P = new Map(), N = new Map();
+    for (const e of a.split(";")) { const [p, la, ln] = e.split(","); P.set(p, [la / 100, ln / 100]); }
+    for (const e of b.split(";")) { const i = e.lastIndexOf(","); N.set(e.slice(0, i), e.slice(i + 1)); }
+    return { P, N };
+  }).catch(() => ({ P: new Map(), N: new Map() })));
+  const lage = (g, ...texte) => {
+    for (const t of texte) {
+      const s = String(t || ""); const plz = s.match(/\b\d{5}\b/);
+      if (plz && g.P.has(plz[0])) return g.P.get(plz[0]);
+      const n = s.toLowerCase().replace(/ß/g, "ss").replace(/\(.*?\)/g, " ").replace(/\b\d{5}\b/g, " ").replace(/\s+/g, " ").trim();
+      if (!n) continue;
+      const versuche = [n, n.split(/[,/]/)[0].trim(), ...n.split(/[\s,/]+/), n.replace(/-[^-]*$/, "")];
+      for (const v of versuche) {
+        if (!v || v.length < 3) continue;
+        // gleichnamige Orte („Biberach“ / „Biberach an der Riß“): den nächsten zur Startregion Ulm nehmen
+        const kand = [...g.N.keys()].filter((k) => k === v || k.startsWith(v + " ")).map((k) => g.P.get(g.N.get(k))).filter(Boolean);
+        if (kand.length) { const ulm = g.P.get("89073") || [48.4, 10]; return kand.sort((x, y) => km(ulm, x) - km(ulm, y))[0]; }
+      }
+    }
+    return null;
+  };
+  const km = (a, b) => { const r = Math.PI / 180, d1 = (b[0] - a[0]) * r, d2 = (b[1] - a[1]) * r;
+    const x = Math.sin(d1 / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(d2 / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+  // Sortiert Kandidaten nach Entfernung zum Ort; ohne Ort nach Passung
+  const nachNaehe = async (liste, ort) => {
+    const g = await geoLaden(); const ziel = ort ? lage(g, ort) : null;
+    const l = liste.map((k) => { const p = lage(g, k.ort, k.region); return { ...k, km: ziel && p ? Math.round(km(ziel, p)) : null }; });
+    l.sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || (b.punkte || 0) - (a.punkte || 0) || String(a.firma).localeCompare(String(b.firma)));
+    return { liste: l, zielGefunden: !!ziel };
+  };
+  const BRANCHEN_VORSCHLAG = ["Reinigung", "Hausmeister", "Maler", "Elektro", "Sanitär / SHK", "Solar", "Garten", "Umzug", "Dach", "Schreiner", "Boden", "Bau", "Schlüsseldienst", "Kfz", "IT", "KI", "Webdesign", "Marketing", "Fotograf", "Sport", "Sicherheit", "Catering", "Büro", "Event", "Beauty", "Finanzen / Versicherung"];
   const T = {
     anfrage: (v) => `Neue Anfrage für Sie:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}${v.beschreibung ? "\nKurzbeschreibung: „" + v.beschreibung + "“" : ""}\n\nHaben Sie Interesse? Schicken Sie mir einfach Termin und Preis – gern auch als Sprachnachricht. Passt es nicht, reicht ein kurzes „Nein“.`,
     erinnerung: (v) => `Kurze Erinnerung zur Anfrage (${v.leistung || "Auftrag"}, ${v.ort || "Ort offen"}). Haben Sie Zeit dafür? Wenn ich bis morgen Mittag nichts höre, frage ich einen anderen Betrieb.`,
@@ -230,17 +282,18 @@
         ${p.telefon ? `<a class="anruf" href="tel:${esc(String(p.telefon).replace(/[^\d+]/g, ""))}" title="Anrufen" onclick="event.stopPropagation()">📞</a>` : ""}
         <button class="btn klein" data-auf="${p.id}" type="button">Als Partner</button></div>`;
       el.innerHTML = (INT.length ? `<div class="box" style="border-color:var(--gruen)"><b>${INT.length} ${INT.length === 1 ? "Betrieb hat" : "Betriebe haben"} sich selbst gemeldet</b> <span style="color:var(--muted)">· über Warteliste oder Umfrage. Anrufen, Leistungen klären, dann als Partner aufnehmen.</span><div style="margin-top:10px">${INT.map(intKarte).join("")}</div></div>` : "") + `<div class="box"><b>${P.filter((p) => p.partner === "aktiv").length} aktive Partner</b> <span style="color:var(--muted)">· Ziel bis 15.11.: 30 Partner in 8 Branchen</span>
-        <div style="margin-top:10px"><label for="pSuch" style="margin-top:0">Betrieb aus dem CRM als Partner aufnehmen</label><div style="display:flex;gap:8px"><input id="pSuch" placeholder="Firma, Branche oder Ort"><button class="btn klein" id="pSuchen" type="button">Suchen</button></div><div id="pTreffer"></div></div></div>
+        <div style="margin-top:10px"><b style="display:block;margin-bottom:6px">Betrieb aus dem CRM als Partner aufnehmen</b><div class="suchzeile" style="grid-template-columns:1.4fr 1.2fr auto"><div><label for="pSuch">Branche / Firma</label><input id="pSuch" list="brListeP" placeholder="z. B. Maler"></div><div><label for="pOrt">Ort / PLZ / Region</label><input id="pOrt" placeholder="z. B. 89231 oder Ulm"></div><button class="btn klein" id="pSuchen" type="button">Suchen</button></div><datalist id="brListeP">${BRANCHEN_VORSCHLAG.map((x) => `<option value="${esc(x)}">`).join("")}</datalist><div id="pTreffer"></div></div></div>
         ${PP.length ? `<div class="tabelle"><table><thead><tr><th>Betrieb</th><th>Leistungen</th><th>Ort</th><th>WhatsApp</th><th>Angefragt</th><th>Angebote</th><th>Zusagen</th><th>Ø Antwort</th></tr></thead><tbody>${PP.map(zeile).join("")}</tbody></table></div>` : '<div class="leer">Noch keine Partner. Nimm Betriebe aus dem CRM auf oder leg sie mit „+ Partner“ an.</div>'}`;
       el.querySelectorAll("[data-p]").forEach((r) => r.onclick = () => oeffneP(+r.dataset.p));
       el.querySelectorAll("[data-auf]").forEach((b) => b.onclick = async (e) => { e.stopPropagation(); await api({ aktion: "partner", kontakt: +b.dataset.auf, partner: "aktiv" }); toast("Als Partner aufgenommen – Leistungen und WhatsApp-Okay im Profil ergänzen"); await laden(); oeffneP(+b.dataset.auf); });
       const suchen = async () => {
-        const q = $("pSuch").value.trim(); if (!q) return;
-        const d = await api({ aktion: "kandidaten", q });
-        $("pTreffer").innerHTML = d.kandidaten.filter((k) => !k.partner).map((k) => `<div class="kand"><span style="flex:1"><b>${esc(k.firma)}</b><small>${esc([k.kategorie, k.ort || k.region].filter(Boolean).join(" · "))}</small></span><button class="btn ghost klein" data-neu="${k.id}" type="button">Als Partner</button></div>`).join("") || '<p style="color:var(--muted)">Keine Treffer ohne Partner-Status.</p>';
+        const q = $("pSuch").value.trim(), ort = $("pOrt").value.trim(); if (!q && !ort) return;
+        const d = await api({ aktion: "kandidaten", q, ort });
+        const { liste } = await nachNaehe(d.kandidaten.filter((k) => !k.partner), ort);
+        $("pTreffer").innerHTML = liste.slice(0, 30).map((k) => `<div class="kand"><span style="flex:1">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}<b>${esc(k.firma)}</b><small>${esc([k.kategorie, k.ort || k.region].filter(Boolean).join(" · "))}</small></span><button class="btn ghost klein" data-neu="${k.id}" type="button">Als Partner</button></div>`).join("") || '<p style="color:var(--muted)">Keine Treffer ohne Partner-Status.</p>';
         $("pTreffer").querySelectorAll("[data-neu]").forEach((b) => b.onclick = async () => { await api({ aktion: "partner", kontakt: +b.dataset.neu, partner: "aktiv" }); toast("Als Partner aufgenommen"); await laden(); });
       };
-      $("pSuchen").onclick = suchen; $("pSuch").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } };
+      $("pSuchen").onclick = suchen; ["pSuch", "pOrt"].forEach((i) => $(i).onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } });
     } else if (ansicht === "abrechnung") {
       abrechnung(el);
     } else {
@@ -477,7 +530,12 @@
         <div class="knopfreihe">${v.kunde_token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(v.kunde_token))}">Angebotsseite-Link kopieren</button><button class="btn ghost klein" type="button" id="kLink">Link per Mail an Kunden</button>` : ""}</div></div>
       ${kundenTexte}
       <h3 class="ab">Angefragte Betriebe (${bs.length})</h3>${vbHtml || '<div class="leer" style="padding:14px">Noch keine. Unten passende Betriebe suchen.</div>'}
-      <div class="unter"><label for="kSuch">Betriebe suchen und anfragen (bis zu 5)</label><div style="display:flex;gap:8px"><input id="kSuch" value="${esc(v.leistung || "")}" placeholder="Leistung, Branche oder Firma"><button class="btn klein" id="kSuchen" type="button">Suchen</button></div>
+      <div class="unter"><b style="display:block;margin-bottom:6px">Betriebe suchen und anfragen (bis zu 5)</b>
+        <div class="suchzeile"><div><label for="kSuch">Branche / Leistung</label><input id="kSuch" list="brListe" value="${esc(v.leistung || "")}" placeholder="z. B. Maler, Reinigung, IT"></div>
+          <div><label for="kOrt">Ort / PLZ / Region</label><input id="kOrt" value="${esc(v.ort || "")}" placeholder="z. B. 89231 oder Ulm"></div>
+          <div><label for="kKm">Umkreis</label><select id="kKm"><option value="10">10 km</option><option value="25">25 km</option><option value="50" selected>50 km</option><option value="100">100 km</option><option value="0">egal</option></select></div>
+          <button class="btn klein" id="kSuchen" type="button">Suchen</button></div>
+        <datalist id="brListe">${BRANCHEN_VORSCHLAG.map((b) => `<option value="${esc(b)}">`).join("")}</datalist>
         <div id="kListe"></div><button class="btn klein" id="kAnfragen" type="button" hidden style="margin-top:10px">Ausgewählte anfragen</button>
         <small style="color:var(--muted);display:block;margin-top:6px">Kein passender Betrieb dabei? Über Google Maps suchen, anrufen und mit „+ Partner“ anlegen.</small></div>
       <details class="unter" id="vEdit"><summary style="cursor:pointer;font-weight:700">Anfrage bearbeiten</summary>${vForm(v)}
@@ -493,16 +551,24 @@
       try { await api({ aktion: "vb", vb: +b.dataset.wahl, status: "angebot", preis, angebot: box.querySelector('[data-g="angebot"]').value }); const d = await api({ aktion: "waehlen", vb: +b.dataset.wahl, auftragswert: preis }); await laden(); oeffneV(id); toast("Abgemacht!" + (d.gebuehr ? " Gebühr nach Modell: " + d.gebuehr + " €" : "")); } catch (e) { toast(e.message); }
     });
     const suchen = async () => {
-      const q = p.querySelector("#kSuch").value.trim(); if (!q) return;
-      const d = await api({ aktion: "kandidaten", q, ort: v.ort });
+      const q = p.querySelector("#kSuch").value.trim(), ort = p.querySelector("#kOrt").value.trim(), max = +p.querySelector("#kKm").value;
+      if (!q && !ort) return toast("Bitte Branche oder Ort eingeben.");
+      p.querySelector("#kListe").innerHTML = '<p style="color:var(--muted)">Suche …</p>';
+      const d = await api({ aktion: "kandidaten", q, ort });
       const schon = new Set(bs.map((b) => b.kontakt_id));
-      const l = d.kandidaten.filter((k) => !schon.has(k.id));
-      p.querySelector("#kListe").innerHTML = l.map((k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`).join("") || (d.kandidaten.length ? '<p style="color:var(--muted)">Alle passenden Betriebe sind schon angefragt.</p>' : `<p style="color:var(--muted)">Keine passenden Betriebe${d.gruppen && d.gruppen.length ? " (gesucht in: " + esc(d.gruppen.join(", ")) + ")" : ""}. Über Google Maps suchen und mit „+ Partner“ anlegen.</p>`);
-      p.querySelector("#kAnfragen").hidden = !l.length;
+      const { liste, zielGefunden } = await nachNaehe(d.kandidaten.filter((k) => !schon.has(k.id)), ort);
+      const nah = liste.filter((k) => !max || !zielGefunden || (k.km != null && k.km <= max)).slice(0, 30);
+      const weiter = zielGefunden && max ? liste.filter((k) => k.km == null || k.km > max) : [];
+      const zeile = (k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`;
+      const hinweis = ort && !zielGefunden ? `<p class="msg err" style="margin:6px 0">Ort „${esc(ort)}“ nicht erkannt, Treffer daher ohne Entfernung. Am besten die PLZ eingeben.</p>` : "";
+      p.querySelector("#kListe").innerHTML = hinweis + (nah.map(zeile).join("") || (d.kandidaten.length && !liste.length ? '<p style="color:var(--muted)">Alle passenden Betriebe sind schon angefragt.</p>' : `<p style="color:var(--muted)">Keine passenden Betriebe${max && zielGefunden ? " im Umkreis von " + max + " km" : ""}${d.gruppen && d.gruppen.length ? " (gesucht in: " + esc(d.gruppen.join(", ")) + ")" : ""}. Umkreis vergrößern oder über Google Maps suchen und mit „+ Partner“ anlegen.</p>`))
+        + (weiter.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">${weiter.length} weitere weiter weg oder ohne Ortsangabe</summary>${weiter.slice(0, 30).map(zeile).join("")}</details>` : "");
+      p.querySelector("#kAnfragen").hidden = !(nah.length || weiter.length);
     };
     p.querySelector("#kSuchen").onclick = suchen;
     if (["neu", "angefragt", "angebote"].includes(v.status)) suchen();
-    p.querySelector("#kSuch").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } };
+    ["#kSuch", "#kOrt"].forEach((s) => p.querySelector(s).onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } });
+    p.querySelector("#kKm").onchange = suchen;
     p.querySelector("#kAnfragen").onclick = async () => {
       const ids = [...p.querySelectorAll("#kListe input:checked")].map((x) => +x.value);
       if (!ids.length) return toast("Bitte Betriebe auswählen.");
