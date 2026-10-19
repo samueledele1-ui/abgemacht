@@ -168,15 +168,15 @@
   const artText = (v) => v.art === "langzeit" ? "Langzeit" + (v.laufzeit ? ", " + v.laufzeit : "") : v.art === "projekt" ? "Projekt" + (v.laufzeit ? ", " + v.laufzeit : "") : "";
   const LINK = (tok) => location.origin + "/angebot?t=" + tok;
   const T = {
-    anfrage: (v) => `Neue Anfrage für dich:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}${v.beschreibung ? "\nKurzbeschreibung: „" + v.beschreibung + "“" : ""}\n\nHast du Interesse? Schick mir einfach Termin und Preis – gern auch als Sprachnachricht. Passt es nicht, reicht ein kurzes „Nein“.`,
-    erinnerung: (v) => `Kurze Erinnerung zur Anfrage (${v.leistung || "Auftrag"}, ${v.ort || "Region Ulm"}). Hast du Zeit dafür? Wenn ich bis morgen Mittag nichts höre, frage ich einen anderen Betrieb.`,
-    verstanden: (v) => `Danke! So habe ich dich verstanden:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}\nPasst das? Dann frage ich jetzt passende Betriebe für dich an und melde mich mit Angeboten.`,
-    angebote: (v, liste) => `Deine Angebote sind da:\n\n${liste.map((b, i) => `${i + 1} · ${b.firma} – ${b.preis || "Preis auf Anfrage"}${b.angebot ? "\n" + b.angebot : ""}`).join("\n\n")}\n\nAntworte einfach mit ${liste.map((_, i) => i + 1).join(", ").replace(/, (\d+)$/, " oder $1")}. Bei Fragen ruf ich dich auch gern kurz an.`,
-    abgemachtKunde: (v, b) => `Abgemacht ✅ Mit ${b.firma}${b.preis ? " für " + b.preis : ""}.\nDer Betrieb hat bestätigt und meldet sich bei dir. Ich erinnere dich vorher noch einmal.`,
-    zusage: (v, b) => `Abgemacht ✅ Der Kunde hat dein Angebot angenommen${b.preis ? ": " + b.preis : ""}.\nKontakt: ${v.auftraggeber || "[Name]"}, ${v.kontakt || "[Telefon]"}${v.ort ? ", " + v.ort : ""}.\nBitte melde dich kurz bei ihm zur Bestätigung. Danke dir!`,
-    absage: () => `Danke für dein Angebot! Diesmal hat sich der Kunde für einen anderen Betrieb entschieden. Bei der nächsten passenden Anfrage melde ich mich wieder.`,
-    gepasst: (v) => `Hat mit ${v.gewaehlt_firma || "dem Betrieb"} alles gepasst? Antworte mit 1 bis 5 Sternen – das hilft anderen bei der Auswahl. Danke!`,
-    anmeldung: (k) => `Hi${k.ansprechpartner ? " " + k.ansprechpartner.split(" ")[0] : ""}, ich bin Samuel von Abgemacht. Ich vermittle Aufträge aus der Region Ulm an geprüfte Betriebe – in der Testphase kostenlos, ohne Abo und ohne Vertrag.\nDarf ich dir passende Anfragen hier per WhatsApp schicken? Du entscheidest bei jeder Anfrage selbst, ob du ein Angebot machst. Ein kurzes „Ja“ reicht. Abmelden geht jederzeit mit „Stopp“.`,
+    anfrage: (v) => `Neue Anfrage für Sie:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}${v.beschreibung ? "\nKurzbeschreibung: „" + v.beschreibung + "“" : ""}\n\nHaben Sie Interesse? Schicken Sie mir einfach Termin und Preis – gern auch als Sprachnachricht. Passt es nicht, reicht ein kurzes „Nein“.`,
+    erinnerung: (v) => `Kurze Erinnerung zur Anfrage (${v.leistung || "Auftrag"}, ${v.ort || "Ort offen"}). Haben Sie Zeit dafür? Wenn ich bis morgen Mittag nichts höre, frage ich einen anderen Betrieb.`,
+    verstanden: (v) => `Vielen Dank! So habe ich Sie verstanden:\nLeistung: ${v.leistung || "–"}\nOrt: ${v.ort || "–"}\nZeitraum: ${v.zeitraum || "flexibel"}\nBudget: ${v.budget || "offen"}${artText(v) ? "\nArt: " + artText(v) : ""}\nPasst das? Dann frage ich jetzt passende Betriebe für Sie an und melde mich mit Angeboten.`,
+    angebote: (v, liste) => `Ihre Angebote sind da:\n\n${liste.map((b, i) => `${i + 1} · ${b.firma} – ${b.preis || "Preis auf Anfrage"}${b.angebot ? "\n" + b.angebot : ""}`).join("\n\n")}\n\nAntworten Sie einfach mit ${liste.map((_, i) => i + 1).join(", ").replace(/, (\d+)$/, " oder $1")}. Bei Fragen rufe ich Sie auch gern kurz an.`,
+    abgemachtKunde: (v, b) => `Abgemacht ✅ Mit ${b.firma}${b.preis ? " für " + b.preis : ""}.\nDer Betrieb hat bestätigt und meldet sich bei Ihnen. Ich erinnere Sie vorher noch einmal.`,
+    zusage: (v, b) => `Abgemacht ✅ Der Kunde hat Ihr Angebot angenommen${b.preis ? ": " + b.preis : ""}.\nKontakt: ${v.auftraggeber || "[Name]"}, ${v.kontakt || "[Telefon]"}${v.ort ? ", " + v.ort : ""}.\nBitte melden Sie sich kurz zur Bestätigung. Vielen Dank!`,
+    absage: () => `Vielen Dank für Ihr Angebot! Diesmal hat sich der Kunde für einen anderen Betrieb entschieden. Bei der nächsten passenden Anfrage melde ich mich wieder.`,
+    gepasst: (v) => `Hat mit ${v.gewaehlt_firma || "dem Betrieb"} alles gepasst? Antworten Sie mit 1 bis 5 Sternen – das hilft anderen bei der Auswahl. Danke!`,
+    anmeldung: (k) => `Guten Tag${k.ansprechpartner ? " " + k.ansprechpartner : ""}, hier ist Samuel Edele von Abgemacht. Ich vermittle Aufträge aus allen Branchen an geprüfte Betriebe – in der Startphase kostenlos, ohne Abo und ohne Vertrag.\nDarf ich Ihnen passende Anfragen hier per WhatsApp schicken? Sie entscheiden bei jeder Anfrage selbst, ob Sie ein Angebot machen. Ein kurzes „Ja“ reicht. Abmelden geht jederzeit mit „Stopp“.`,
   };
   const nummer = (t) => { let n = String(t || "").replace(/\(0\)/g, "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "49" + n.slice(1); return n.length >= 8 ? n : ""; };
   const waLink = (tel, text) => nummer(tel) ? `https://wa.me/${nummer(tel)}?text=${encodeURIComponent(text)}` : "";
@@ -466,8 +466,8 @@
         ${b.status === "nicht_gewaehlt" ? vorlageHtml("Text: Absage", T.absage(), b.telefon, b.wa_ok_am) : ""}
       </div>`).join("");
     const kundenTexte = [
-      vorlageHtml("Text an Auftraggeber: So habe ich dich verstanden", T.verstanden(v), v.kontakt, v.kanal === "whatsapp"),
-      mitAngebot.length ? vorlageHtml("Text an Auftraggeber: Deine Angebote sind da", T.angebote(v, mitAngebot.filter((b) => b.status !== "nicht_gewaehlt")), v.kontakt, v.kanal === "whatsapp") : "",
+      vorlageHtml("Text an Auftraggeber: So habe ich Sie verstanden", T.verstanden(v), v.kontakt, v.kanal === "whatsapp"),
+      mitAngebot.length ? vorlageHtml("Text an Auftraggeber: Ihre Angebote sind da", T.angebote(v, mitAngebot.filter((b) => b.status !== "nicht_gewaehlt")), v.kontakt, v.kanal === "whatsapp") : "",
       gew ? vorlageHtml("Text an Auftraggeber: Abgemacht", T.abgemachtKunde(v, gew), v.kontakt, v.kanal === "whatsapp") : "",
       ["abgemacht", "erledigt"].includes(v.status) ? vorlageHtml("Text an Auftraggeber: Hat's gepasst?", T.gepasst(v), v.kontakt, v.kanal === "whatsapp") : "",
     ].join("");
