@@ -41,6 +41,18 @@ function anfrageZeilen(v: any, anonym: boolean): [string, string | null][] {
 export default async (req: Request, _context: Context) => {
   const dbUrl = Netlify.env.get("DATABASE_URL");
   if (!dbUrl) return fehler("Server ist noch nicht eingerichtet.", 500);
+  /* Foto einer Anfrage: nur mit gültigem Link (Betrieb oder Kunde dieser Anfrage) */
+  const url = new URL(req.url);
+  if (url.pathname === "/api/foto") {
+    const ft = url.searchParams.get("t") || "", n = Number(url.searchParams.get("n")) || 0;
+    if (!TOKEN_RE.test(ft) || n < 1 || n > 5) return new Response("Nicht gefunden", { status: 404 });
+    const sqlF = neon(dbUrl);
+    const f = (await (ft.startsWith("b_")
+      ? sqlF`SELECT f.mime, f.daten FROM anfrage_fotos f JOIN vermittlung_betriebe vb ON vb.vermittlung_id = f.vermittlung_id WHERE vb.token = ${ft} AND f.nr = ${n}`
+      : sqlF`SELECT f.mime, f.daten FROM anfrage_fotos f JOIN vermittlungen v ON v.id = f.vermittlung_id WHERE v.kunde_token = ${ft} AND f.nr = ${n}`))[0];
+    if (!f) return new Response("Nicht gefunden", { status: 404 });
+    return new Response(Buffer.from(f.daten, "base64"), { headers: { "content-type": f.mime, "cache-control": "private, max-age=86400", "x-content-type-options": "nosniff", "x-robots-tag": "noindex" } });
+  }
   let body: Record<string, unknown> = {};
   let t = "";
   if (req.method === "GET") t = new URL(req.url).searchParams.get("t") || "";
@@ -51,6 +63,7 @@ export default async (req: Request, _context: Context) => {
   if (!TOKEN_RE.test(t)) return fehler("Dieser Link ist ungültig.", 404);
   const sql = neon(dbUrl);
   const aktion = req.method === "GET" ? "ansehen" : String(body.aktion || "");
+  const fotoZahl = async (vid: number) => (await sql`SELECT count(*)::int AS n FROM anfrage_fotos WHERE vermittlung_id = ${vid}`)[0].n;
   const modell = { satz: SATZ, deckel_einzel: DECKEL_EINZEL, dauer_min: DAUER_MIN, dauer_max: DAUER_MAX };
 
   /* ================= Betrieb ================= */
@@ -71,7 +84,7 @@ export default async (req: Request, _context: Context) => {
         ok: true, rolle: "betrieb", firma: r.firma, status: r.status, offen,
         entschieden: ZU.includes(r.v_status) && !gewaehlt,
         anfrage: { nr: r.nr, leistung: r.leistung, ort: r.ort, zeitraum: r.zeitraum, budget: r.budget, art: r.art, laufzeit: r.laufzeit,
-          beschreibung: gewaehlt ? r.beschreibung : ohneKontakt(r.beschreibung), erstellt: r.v_created },
+          beschreibung: gewaehlt ? r.beschreibung : ohneKontakt(r.beschreibung), erstellt: r.v_created, fotos: await fotoZahl(r.nr) },
         angebot: r.preis_betrag ? { betrag: Number(r.preis_betrag), nachricht: r.angebot } : null,
         kunde: gewaehlt ? { name: r.auftraggeber, kontakt: r.kontakt } : null,
         gebuehren: { aktiv: geb.aktiv, ab: geb.ab, zugestimmt: !!r.gebuehren_ok_am }, modell,
@@ -136,7 +149,7 @@ export default async (req: Request, _context: Context) => {
     const gew = ["abgemacht", "erledigt"].includes(v.status) && v.gewaehlt_id;
     return antwort({
       ok: true, rolle: "kunde", status: v.status, offen: !ZU.includes(v.status), angefragt,
-      anfrage: { nr: v.id, leistung: v.leistung, ort: v.ort, zeitraum: v.zeitraum, budget: v.budget, art: v.art, laufzeit: v.laufzeit, beschreibung: v.beschreibung, erstellt: v.created_at },
+      anfrage: { nr: v.id, leistung: v.leistung, ort: v.ort, zeitraum: v.zeitraum, budget: v.budget, art: v.art, laufzeit: v.laufzeit, beschreibung: v.beschreibung, erstellt: v.created_at, fotos: await fotoZahl(v.id) },
       angebote: liste.map((a: any, i: number) => ({
         id: a.id, label: "Angebot " + String.fromCharCode(65 + i), status: a.status, kategorie: a.kategorie, ort: a.k_ort,
         betrag: a.preis_betrag === null ? null : Number(a.preis_betrag), preis: a.preis, nachricht: ohneKontakt(a.angebot), am: a.geantwortet_am,
@@ -196,4 +209,4 @@ export default async (req: Request, _context: Context) => {
   return fehler("Unbekannte Aktion.");
 };
 
-export const config: Config = { path: "/api/angebot" };
+export const config: Config = { path: ["/api/angebot", "/api/foto"] };

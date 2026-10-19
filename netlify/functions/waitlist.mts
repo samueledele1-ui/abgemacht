@@ -477,10 +477,21 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
               ${"Über die Website · " + (firma ? "Firma" : "Privat") + (quelle !== "direkt" ? " · Quelle: " + quelle : "")})
       RETURNING id, kunde_token`;
     const nr = r[0].id;
+    // Fotos (optional, bis 5): im Browser verkleinert, hier geprüft und gespeichert
+    let fotoAnzahl = 0;
+    for (const f of (Array.isArray(body.fotos) ? body.fotos : []).slice(0, 5)) {
+      const m = String(f || "").match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!m || m[2].length > 2_000_000) continue;
+      const kopf = Buffer.from(m[2].slice(0, 24), "base64");
+      const echt = m[1] === "jpeg" ? kopf[0] === 0xff && kopf[1] === 0xd8 : m[1] === "png" ? kopf.toString("latin1", 1, 4) === "PNG" : kopf.toString("latin1", 8, 12) === "WEBP";
+      if (!echt) continue;
+      fotoAnzahl++;
+      await sql`INSERT INTO anfrage_fotos (vermittlung_id, nr, mime, daten, bytes) VALUES (${nr}, ${fotoAnzahl}, ${"image/" + m[1]}, ${m[2]}, ${Math.floor(m[2].length * 3 / 4)})`;
+    }
     const angebotsLink = `${seite()}/angebot?t=${r[0].kunde_token}`;
     const ART: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
     const zeile = (k: string, w: string | null) => w ? `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:5px 0">${esc(w)}</td></tr>` : "";
-    const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}</table>`;
+    const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}${zeile("Fotos", fotoAnzahl ? fotoAnzahl + " angehängt" : null)}</table>`;
     await sendeMail(adminMail(), "Samuel", `Neue Anfrage #${nr}: ${leistung} in ${ort}`, mailLayout(
       `<p style="margin:0 0 12px"><b>Neue Anfrage über die Website</b></p>${tabelle}
 <p style="margin:14px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>${esc(auftraggeber)}</b>${firma ? "" : " (privat)"}<br>${esc(kontakt)}</p>

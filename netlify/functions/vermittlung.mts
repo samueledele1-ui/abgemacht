@@ -90,6 +90,7 @@ async function anfrageMail(v: any, b: any, aktiv: boolean) {
     absatz(`Guten Tag${b.ansprechpartner ? " " + escP(b.ansprechpartner) : ""},`) +
     absatz(`es gibt eine neue Anfrage, die zu ${escP(b.firma)} passen könnte:`) +
     tabelle([["Leistung", v.leistung], ["Ort", v.ort], ["Wann", v.zeitraum], ["Art", ARTNAME[v.art || "einmalig"] + (v.laufzeit ? ", " + v.laufzeit : "")], ["Budget", v.budget], ["Details", ohneKontakt(v.beschreibung)]]) +
+    (v.fotos ? absatz(`📷 Zur Anfrage gibt es ${v.fotos} ${v.fotos === 1 ? "Foto" : "Fotos"}. Sie sehen ${v.fotos === 1 ? "es" : "sie"} auf der Angebotsseite.`) : "") +
     absatz("Wenn Sie Interesse haben, geben Sie Ihr Angebot über den Knopf ab. Das dauert eine Minute. Name und Kontaktdaten des Auftraggebers bekommen Sie, sobald er Ihr Angebot annimmt.") +
     knopf(`${seite()}/angebot?t=${b.token}`, "Angebot abgeben") +
     absatz(`<span style="font-size:14px;color:#5B6B65">Kein Interesse oder keine Zeit? Dann sagen Sie auf derselben Seite kurz ab. ${aktiv ? "Eine Gebühr fällt nur an, wenn Ihr Angebot angenommen wird (siehe Bedingungen)." : "In der Startphase ist das für Sie kostenlos."}</span>`) + gruss));
@@ -113,7 +114,7 @@ export default async (req: Request, _context: Context) => {
 
   if (aktion === "liste") {
     const [vermittlungen, betriebe, partner] = await Promise.all([
-      sql`SELECT v.*, k.firma AS gewaehlt_firma FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id ORDER BY
+      sql`SELECT v.*, k.firma AS gewaehlt_firma, (SELECT count(*)::int FROM anfrage_fotos f WHERE f.vermittlung_id = v.id) AS fotos FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id ORDER BY
             CASE v.status WHEN 'neu' THEN 0 WHEN 'angefragt' THEN 1 WHEN 'angebote' THEN 2 WHEN 'abgemacht' THEN 3 ELSE 4 END, v.created_at DESC`,
       sql`SELECT vb.*, k.firma, k.ansprechpartner, k.telefon, k.email, k.kategorie, k.ort AS k_ort, k.wa_ok_am
             FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id ORDER BY vb.angefragt_am`,
@@ -163,6 +164,11 @@ export default async (req: Request, _context: Context) => {
     return Response.json({ ok: true });
   }
 
+  if (aktion === "fotos") {
+    const fs = await sql`SELECT nr, mime, daten FROM anfrage_fotos WHERE vermittlung_id = ${id} ORDER BY nr`;
+    return Response.json({ ok: true, fotos: fs.map((f: any) => ({ nr: f.nr, src: `data:${f.mime};base64,${f.daten}` })) });
+  }
+
   if (aktion === "kandidaten") {
     // Breite Suche: Wörter + Branchen-Gruppen (z. B. „Rechtsschutzberatung“ → alle Finanz-/Versicherungsbetriebe)
     // Suche nach Branche (q) und/oder Ort; die Sortierung nach Entfernung macht das Büro im Browser
@@ -183,7 +189,7 @@ export default async (req: Request, _context: Context) => {
     await sql`UPDATE vermittlungen SET status = 'angefragt', updated_at = now() WHERE id = ${id} AND status = 'neu'`;
     for (const k of ids) await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${k}, 'vermittlung', ${"Anfrage #" + id + " geschickt"})`;
     // Automatisch per Mail an alle angefragten Betriebe mit E-Mail-Adresse (Link „Angebot abgeben“)
-    const v = (await sql`SELECT * FROM vermittlungen WHERE id = ${id}`)[0];
+    const v = (await sql`SELECT v.*, (SELECT count(*)::int FROM anfrage_fotos f WHERE f.vermittlung_id = v.id) AS fotos FROM vermittlungen v WHERE v.id = ${id}`)[0];
     // Nur an Partner-Betriebe (haben den Bedingungen zugestimmt), nie an kalte Kontakte
     const bs = await sql`SELECT vb.id, vb.token, k.firma, k.ansprechpartner, CASE WHEN k.partner IN ('aktiv', 'interessiert') THEN k.email END AS email
       FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id
