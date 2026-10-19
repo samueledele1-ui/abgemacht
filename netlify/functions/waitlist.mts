@@ -71,9 +71,9 @@ function bestaetigungsMail(name: string | null, token: string) {
   const link = `${seite()}/bestaetigen?t=${token}`;
   return mailLayout(
     `<p style="margin:0 0 12px">Hallo${name ? " " + esc(name) : ""},</p>
-<p style="margin:0 0 12px">danke für dein Interesse an Abgemacht! Bitte bestätige mit einem Klick, dass du auf die Warteliste möchtest.</p>
+<p style="margin:0 0 12px">vielen Dank für Ihr Interesse an Abgemacht! Bitte bestätigen Sie Ihre Anmeldung mit einem Klick.</p>
 ${knopf(link, "Anmeldung bestätigen")}
-<p style="margin:0;font-size:14px;color:#5B6B65">Du hast dich nicht eingetragen? Dann ignoriere diese E-Mail einfach. Ohne Bestätigung löschen wir deine Adresse nach 30 Tagen.</p>`
+<p style="margin:0;font-size:14px;color:#5B6B65">Sie haben sich nicht eingetragen? Dann ignorieren Sie diese E-Mail einfach. Ohne Bestätigung löschen wir Ihre Adresse nach 30 Tagen.</p>`
   );
 }
 
@@ -81,10 +81,10 @@ function willkommensMail(name: string | null, token: string) {
   const abmelden = `${seite()}/abmelden?t=${token}`;
   return mailLayout(
     `<p style="margin:0 0 12px">Hallo${name ? " " + esc(name) : ""},</p>
-<p style="margin:0 0 12px"><b>Abgemacht!</b> Du stehst jetzt auf der Warteliste.</p>
-<p style="margin:0 0 12px">Sobald Abgemacht in deiner Region startet, bekommst du als Erstes Bescheid. So funktioniert es: Du schreibst in einem Satz, was du brauchst, wir fragen 5 passende Betriebe aus der Region an, und du sagst beim besten Angebot einfach „Abgemacht“. Einmalig, als Projekt oder langfristig.</p>
-<p style="margin:0 0 12px">Du bietest selbst Leistungen an? Dann bekommst du passende Anfragen aus deiner Nähe und zahlst nur, wenn ein Auftrag zustande kommt. In der Startphase ist alles kostenlos.</p>
-<p style="margin:0 0 12px">Je mehr Betriebe und Auftraggeber aus deiner Gegend dabei sind, desto mehr bringt dir Abgemacht. Leite diesen Link gern weiter:</p>
+<p style="margin:0 0 12px"><b>Abgemacht!</b> Ihre Anmeldung ist bestätigt.</p>
+<p style="margin:0 0 12px">So funktioniert Abgemacht: Sie schreiben in einem Satz, was Sie brauchen, wir fragen passende Betriebe an, und Sie sagen beim besten Angebot einfach „Abgemacht“. Einmalig, als Projekt oder langfristig, für alle Branchen.</p>
+<p style="margin:0 0 12px">Sie bieten selbst Leistungen an? Dann bekommen Sie passende Anfragen und zahlen nur, wenn ein Auftrag zustande kommt. In der Startphase ist alles kostenlos.</p>
+<p style="margin:0 0 12px">Je mehr Betriebe und Auftraggeber dabei sind, desto mehr bringt Ihnen Abgemacht. Leiten Sie diesen Link gern weiter:</p>
 ${knopf(`${seite()}/wa`, "Abgemacht weiterempfehlen")}
 <p style="margin:0">Bis bald<br>Samuel von Abgemacht</p>`,
     abmelden
@@ -252,10 +252,10 @@ function terminMail(token: string, vorschlaege: Date[]) {
     .join("");
   return mailLayout(
     `<p style="margin:0 0 12px">Hallo,</p>
-<p style="margin:0 0 12px">vielen Dank, dass du dir die Zeit für die Umfrage genommen hast! Du hast angegeben, dass du für ein kurzes Gespräch offen bist. Das freut mich sehr.</p>
-<p style="margin:0 0 16px">Es dauert etwa 15 Minuten, am Telefon oder per Video. Such dir einfach einen Termin aus:</p>
+<p style="margin:0 0 12px">vielen Dank, dass Sie sich die Zeit für die Umfrage genommen haben! Sie haben angegeben, dass Sie für ein kurzes Gespräch offen sind. Das freut mich sehr.</p>
+<p style="margin:0 0 16px">Es dauert etwa 15 Minuten, am Telefon oder per Video. Suchen Sie sich einfach einen Termin aus:</p>
 ${links}
-<p style="margin:16px 0 12px;font-size:14px;color:#5B6B65">Keiner passt? Antworte einfach auf diese E-Mail mit zwei, drei Zeiten, die dir besser passen.</p>
+<p style="margin:16px 0 12px;font-size:14px;color:#5B6B65">Keiner passt? Antworten Sie einfach auf diese E-Mail mit zwei, drei Zeiten, die Ihnen besser passen.</p>
 <p style="margin:0">Viele Grüße<br>Samuel von Abgemacht</p>`
   );
 }
@@ -318,7 +318,7 @@ export default async (req: Request, _context: Context) => {
     const { email, name } = vorher[0];
     const liste = Number(Netlify.env.get("BREVO_LIST_ID") || 0);
     if (liste) await brevo("/contacts", "POST", { email, listIds: [liste], updateEnabled: true });
-    await sendeMail(email, name, "Du bist dabei ✓", willkommensMail(name, t), `${seite()}/abmelden?t=${t}`);
+    await sendeMail(email, name, "Sie sind dabei ✓", willkommensMail(name, t), `${seite()}/abmelden?t=${t}`);
     return Response.json({ ok: true });
   }
 
@@ -378,7 +378,7 @@ export default async (req: Request, _context: Context) => {
       ) RETURNING id`;
     let mailGeschickt = false;
     if (istMail && vorschlaege.length) {
-      mailGeschickt = await sendeMail(kontakt!, null, "Danke für deine Antworten – wann passt ein kurzes Gespräch?", terminMail(token!, vorschlaege));
+      mailGeschickt = await sendeMail(kontakt!, null, "Danke für Ihre Antworten – wann passt ein kurzes Gespräch?", terminMail(token!, vorschlaege));
       if (mailGeschickt) await sql`UPDATE umfrage SET termin_mail_at = now() WHERE id = ${rows[0].id}`;
     }
     if (kontaktOk) {
@@ -409,23 +409,23 @@ export default async (req: Request, _context: Context) => {
 
     const s = Number(body.s);
     const wahl = vorschlaege.find((v) => v.zeit === s);
-    if (!wahl) return fehler("Dieser Termin ist nicht mehr verfügbar. Bitte wähle einen anderen.");
-    if (!wahl.frei) return fehler("Dieser Termin ist leider gerade vergeben. Bitte wähle einen anderen.", 409);
+    if (!wahl) return fehler("Dieser Termin ist nicht mehr verfügbar. Bitte wählen Sie einen anderen.");
+    if (!wahl.frei) return fehler("Dieser Termin ist leider gerade vergeben. Bitte wählen Sie einen anderen.", 409);
     const telefon = clip(body.telefon, 40);
     try {
       const upd = await sql`UPDATE umfrage SET termin = ${new Date(s).toISOString()}, termin_gebucht_at = now(), termin_telefon = ${telefon}
         WHERE token = ${t} AND termin IS NULL RETURNING id`;
       if (!upd.length) return fehler("Für diesen Link ist schon ein Termin eingetragen.", 409);
     } catch {
-      return fehler("Dieser Termin ist leider gerade vergeben. Bitte wähle einen anderen.", 409);
+      return fehler("Dieser Termin ist leider gerade vergeben. Bitte wählen Sie einen anderen.", 409);
     }
     const start = new Date(s);
-    const wie = telefon ? `Samuel ruft dich unter ${telefon} an.` : "Samuel meldet sich vorher kurz mit einem Link für den Videocall oder ruft dich an.";
+    const wie = telefon ? `Samuel ruft Sie unter ${telefon} an.` : "Samuel meldet sich vorher kurz mit einem Link für den Videocall oder ruft Sie an.";
     await sendeMail(String(r.kontakt), null, `Abgemacht! Unser Gespräch am ${terminText(start)}`, mailLayout(
       `<p style="margin:0 0 12px">Hallo,</p>
 <p style="margin:0 0 12px"><b>Abgemacht!</b> Wir sprechen am <b>${terminText(start)}</b>, etwa 15 Minuten.</p>
 <p style="margin:0 0 12px">${esc(wie)}</p>
-<p style="margin:0 0 12px">Den Termin findest du im Anhang für deinen Kalender. Falls etwas dazwischenkommt, antworte einfach auf diese E-Mail.</p>
+<p style="margin:0 0 12px">Den Termin finden Sie im Anhang für Ihren Kalender. Falls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail.</p>
 <p style="margin:0">Bis dann<br>Samuel von Abgemacht</p>`),
       undefined, { name: "abgemacht-termin.ics", text: kalenderDatei(start, `u${r.id}`, `Kurzes Gespräch zu Abgemacht. ${wie}`) });
     await crmInteressent(sql, { email: String(r.kontakt), telefon: telefon || null, branche: r.branche, ort: r.ort, typ: r.typ, quelle: "umfrage",
@@ -538,7 +538,7 @@ ${knopf(`${seite()}/vermittlung`, "In Vermittlung → Partner öffnen")}`));
   if (clip(body.website)) return Response.json({ ok: true, neu: true, mail: true });
 
   const email = (clip(body.email, 254) || "").toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fehler("Bitte gib eine gültige E-Mail-Adresse ein.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fehler("Bitte geben Sie eine gültige E-Mail-Adresse ein.");
   if (body.consent !== true) return fehler("Bitte stimme der Datenschutzerklärung zu.");
 
   const typ = TYPEN.includes(String(body.typ)) ? String(body.typ) : null;
@@ -567,7 +567,7 @@ ${knopf(`${seite()}/vermittlung`, "In Vermittlung → Partner öffnen")}`));
   const zuletzt = r.mail_sent_at ? new Date(r.mail_sent_at).getTime() : 0;
   let mail = false;
   if (Date.now() - zuletzt > 10 * 60 * 1000) {
-    mail = await sendeMail(email, r.name, "Bitte bestätige deine Anmeldung bei Abgemacht", bestaetigungsMail(r.name, r.token));
+    mail = await sendeMail(email, r.name, "Bitte bestätigen Sie Ihre Anmeldung bei Abgemacht", bestaetigungsMail(r.name, r.token));
     if (mail) await sql`UPDATE waitlist SET mail_sent_at = now() WHERE id = ${r.id}`;
   } else {
     mail = true;

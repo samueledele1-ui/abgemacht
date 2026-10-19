@@ -13,22 +13,22 @@ const BRANCHEN: Branche[] = [
   { slug: "elektriker", wer: "Elektriker", name: "Elektriker", plural: "Elektriker", kat: "Handwerk", meister: true, privat: true,
     auftraege: ["Steckdosen und Leitungen erweitern", "Sicherungskasten erneuern", "Wallbox für das E-Auto installieren", "Smart Home einrichten", "E-Check für Büro und Werkstatt"],
     tipp: "Arbeiten am Stromnetz dürfen nur Betriebe ausführen, die bei der Handwerkskammer und beim Netzbetreiber eingetragen sind. Eine Wallbox muss beim Netzbetreiber angemeldet werden, das übernimmt in der Regel der Elektriker.",
-    anbieter: "Du bist Elektriker und hast noch Kapazität? Auf Abgemacht siehst du Aufträge aus deiner Umgebung, bevor sie im Bekanntenkreis versanden." },
+    anbieter: "Sie sind Elektriker und haben noch Kapazität? Auf Abgemacht sehen Sie Aufträge aus Ihrer Umgebung, bevor sie im Bekanntenkreis versanden." },
   { slug: "installateur", wer: "Installateur", name: "Installateur", plural: "Installateure für Sanitär und Heizung", kat: "Handwerk", meister: true, privat: true,
     auftraege: ["Bad sanieren", "Heizung warten lassen", "Wärmepumpe planen und einbauen", "Tropfenden Wasserhahn oder Rohrbruch reparieren", "Durchlauferhitzer tauschen"],
     tipp: "Bei einer neuen Heizung lohnt es sich, Förderanträge zu stellen, bevor der Auftrag unterschrieben ist. Viele Programme zahlen nicht mehr, wenn schon begonnen wurde.",
     anbieter: "Sanitär- und Heizungsbetriebe bekommen auf Abgemacht Anfragen direkt aus der Region, ohne Gebühr pro Kontakt." },
   { slug: "maler", wer: "Maler", name: "Maler", plural: "Maler und Lackierer", kat: "Handwerk", meister: true, privat: true,
     auftraege: ["Wohnung vor dem Auszug streichen", "Fassade erneuern", "Tapezieren", "Türen und Heizkörper lackieren", "Büroräume renovieren"],
-    tipp: "Vergleiche Angebote am besten pro Quadratmeter und frag nach, ob Abkleben, Abdecken und Material im Preis enthalten sind.",
+    tipp: "Vergleichen Sie Angebote am besten pro Quadratmeter und fragen Sie nach, ob Abkleben, Abdecken und Material im Preis enthalten sind.",
     anbieter: "Malerbetriebe mit Lücken im Kalender finden auf Abgemacht kurzfristige Aufträge aus der Nachbarschaft." },
   { slug: "fliesenleger", wer: "Fliesenleger", name: "Fliesenleger", plural: "Fliesenleger", kat: "Handwerk", meister: true, privat: true,
     auftraege: ["Badezimmer fliesen", "Küchenspiegel verlegen", "Terrasse mit Platten belegen", "Fugen erneuern", "Balkon abdichten und fliesen"],
-    tipp: "Seit 2020 ist das Fliesenlegerhandwerk wieder meisterpflichtig. Frag nach der Eintragung in die Handwerksrolle, wenn du einen Betrieb beauftragst.",
+    tipp: "Seit 2020 ist das Fliesenlegerhandwerk wieder meisterpflichtig. Fragen Sie nach der Eintragung in die Handwerksrolle, wenn Sie einen Betrieb beauftragen.",
     anbieter: "Fliesenleger erreichen über Abgemacht Bauherren, Sanierer und Betriebe, die einen Partner für Bäder suchen." },
   { slug: "schreiner", wer: "Schreiner", name: "Schreiner", plural: "Schreiner und Tischler", kat: "Handwerk", meister: true, privat: true,
     auftraege: ["Einbauschrank nach Maß", "Küche anpassen oder montieren", "Innentüren tauschen", "Treppe sanieren", "Ladeneinrichtung bauen"],
-    tipp: "Bei Möbeln nach Maß lohnt sich ein Aufmaß vor Ort. Ein seriöser Schreiner nennt dir Holzart, Oberfläche und Lieferzeit schriftlich.",
+    tipp: "Bei Möbeln nach Maß lohnt sich ein Aufmaß vor Ort. Ein seriöser Schreiner nennt Ihnen Holzart, Oberfläche und Lieferzeit schriftlich.",
     anbieter: "Schreinereien zeigen auf Abgemacht ihre Arbeiten und bekommen Anfragen von Privatleuten und Firmen aus der Gegend." },
   { slug: "dachdecker", wer: "Dachdecker", name: "Dachdecker", plural: "Dachdecker", kat: "Handwerk", meister: true, privat: true,
     auftraege: ["Undichtes Dach reparieren", "Dachfenster einbauen", "Dach dämmen", "Dachrinne erneuern", "Sturmschaden beheben"],
@@ -36,15 +36,15 @@ const BRANCHEN: Branche[] = [
     anbieter: "Dachdecker finden auf Abgemacht Aufträge und Partner für größere Projekte, etwa mit Zimmerern oder Solarteuren." },
   { slug: "gartenhilfe", wer: "Gartenhelfer", name: "Gartenhilfe", plural: "Gartenhelfer und Gartenpfleger", kat: "Sonstiges", privat: true,
     auftraege: ["Rasen mähen", "Hecke schneiden", "Laub entfernen", "Beete anlegen und pflegen", "Grünschnitt abtransportieren"],
-    tipp: "Arbeitskosten für Gartenpflege kannst du als haushaltsnahe Dienstleistung anteilig von der Steuer absetzen (§ 35a EStG), wenn du per Überweisung bezahlst und eine Rechnung hast.",
-    anbieter: "Du hilfst nebenbei im Garten oder hast einen Gartenbaubetrieb? Auf Abgemacht findest du Aufträge direkt bei dir um die Ecke." },
+    tipp: "Arbeitskosten für Gartenpflege können Sie als haushaltsnahe Dienstleistung anteilig von der Steuer absetzen (§ 35a EStG), wenn Sie per Überweisung bezahlen und eine Rechnung haben.",
+    anbieter: "Sie helfen nebenbei im Garten oder haben einen Gartenbaubetrieb? Auf Abgemacht finden Sie Aufträge direkt bei Ihnen um die Ecke." },
   { slug: "reinigung", wer: "Reinigungskraft", name: "Reinigungskraft", plural: "Reinigungskräfte und Reinigungsfirmen", kat: "Sonstiges", privat: true,
     auftraege: ["Büro regelmäßig reinigen", "Fenster putzen", "Grundreinigung nach Umzug", "Treppenhaus reinigen", "Praxisreinigung"],
     tipp: "Wer privat eine Haushaltshilfe beschäftigt, meldet sie am einfachsten als Minijob über das Haushaltsscheckverfahren der Minijob-Zentrale an.",
     anbieter: "Reinigungsfirmen und Selbstständige bekommen auf Abgemacht feste Aufträge von Betrieben und Privatleuten aus der Region." },
   { slug: "umzugshelfer", wer: "Umzugshelfer", name: "Umzugshelfer", plural: "Umzugshelfer und Umzugsfirmen", kat: "Sonstiges", privat: true,
     auftraege: ["Tragehilfe für ein paar Stunden", "Umzug mit Transporter", "Möbel ab- und aufbauen", "Keller entrümpeln", "Büroumzug am Wochenende"],
-    tipp: "Kläre vorher, wer für Schäden haftet. Umzugsfirmen sind versichert, private Helfer meist nicht.",
+    tipp: "Klären Sie vorher, wer für Schäden haftet. Umzugsfirmen sind versichert, private Helfer meist nicht.",
     anbieter: "Umzugsfirmen und Helfer finden auf Abgemacht kurzfristige Einsätze in der Nähe." },
   { slug: "hausmeisterservice", wer: "Hausmeister", name: "Hausmeisterservice", plural: "Hausmeisterdienste", kat: "Sonstiges", privat: true,
     auftraege: ["Winterdienst übernehmen", "Treppenhaus und Außenanlagen pflegen", "Kleine Reparaturen", "Mülltonnen raus- und reinstellen", "Objektbetreuung für Vermieter"],
@@ -52,19 +52,19 @@ const BRANCHEN: Branche[] = [
     anbieter: "Hausmeisterdienste erreichen auf Abgemacht Vermieter, Hausverwaltungen und Gewerbe aus der Region." },
   { slug: "fotograf", wer: "Fotograf", name: "Fotograf", plural: "Fotografen", kat: "Sonstiges", privat: true,
     auftraege: ["Business-Porträts fürs Team", "Produktfotos für den Shop", "Immobilienfotos", "Hochzeit oder Feier", "Fotos für Social Media"],
-    tipp: "Kläre vorher, wofür du die Bilder nutzen darfst: nur Website, auch Werbung, auch Druck. Diese Nutzungsrechte stehen im Angebot.",
+    tipp: "Klären Sie vorher, wofür Sie die Bilder nutzen dürfen: nur Website, auch Werbung, auch Druck. Diese Nutzungsrechte stehen im Angebot.",
     anbieter: "Fotografen zeigen auf Abgemacht ihr Portfolio und bekommen Anfragen von Firmen und Privatleuten aus der Gegend." },
   { slug: "webdesigner", wer: "Webdesigner", name: "Webdesigner", plural: "Webdesigner und Webagenturen", kat: "Marketing & Social Media", privat: false,
     auftraege: ["Neue Firmenwebsite", "Onlineshop aufbauen", "Bestehende Seite modernisieren", "Bei Google besser gefunden werden", "Website-Pflege im Monatspaket"],
-    tipp: "Lass die Domain immer auf deinen eigenen Namen registrieren und hol dir die Zugänge. Impressum und Datenschutzerklärung gehören zur fertigen Website dazu.",
+    tipp: "Lassen Sie die Domain immer auf Ihren eigenen Namen registrieren und holen Sie sich die Zugänge. Impressum und Datenschutzerklärung gehören zur fertigen Website dazu.",
     anbieter: "Webdesigner und Agenturen finden auf Abgemacht Betriebe aus der Region, die gerade eine neue Website brauchen." },
   { slug: "social-media", wer: "Social-Media-Manager", name: "Social-Media-Manager", plural: "Social-Media-Manager und Agenturen", kat: "Marketing & Social Media", privat: false,
     auftraege: ["Instagram und TikTok betreuen", "Reels drehen und schneiden", "Redaktionsplan erstellen", "Werbeanzeigen schalten", "Recruiting-Kampagne"],
-    tipp: "Achte darauf, dass die Konten auf deine Firma laufen und du die Zugänge behältst, auch wenn die Zusammenarbeit endet.",
+    tipp: "Achten Sie darauf, dass die Konten auf Ihre Firma laufen und Sie die Zugänge behalten, auch wenn die Zusammenarbeit endet.",
     anbieter: "Freelancer und Agenturen für Social Media treffen auf Abgemacht Firmen, die sichtbarer werden wollen." },
   { slug: "grafikdesigner", wer: "Grafikdesigner", name: "Grafikdesigner", plural: "Grafikdesigner", kat: "Marketing & Social Media", privat: false,
     auftraege: ["Logo entwickeln", "Flyer und Plakate", "Visitenkarten", "Fahrzeugbeschriftung", "Präsentationen gestalten"],
-    tipp: "Lass dir beim Logo die Nutzungsrechte ausdrücklich übertragen und die Dateien in allen Formaten geben, auch als Vektor.",
+    tipp: "Lassen Sie sich beim Logo die Nutzungsrechte ausdrücklich übertragen und die Dateien in allen Formaten geben, auch als Vektor.",
     anbieter: "Grafikdesigner finden auf Abgemacht Aufträge von Gründern und Betrieben aus der Region." },
   { slug: "it-service", wer: "IT-Dienstleister", name: "IT-Service", plural: "IT-Dienstleister", kat: "IT & Software", privat: true,
     auftraege: ["PC oder Laptop einrichten", "Netzwerk und WLAN im Büro", "Datensicherung aufsetzen", "Microsoft 365 einrichten", "Telefonanlage umstellen"],
@@ -158,15 +158,15 @@ function seiteFuer(b: Branche, o: Ort) {
   const titel = `${b.name} in ${o.name} finden | Abgemacht`;
   const beschreibung = `${b.plural} in ${o.name} und Umgebung finden oder als ${b.name} Aufträge aus ${o.name} bekommen. Einmal Anfrage schicken, passende Angebote bekommen. Für Auftraggeber kostenlos.`;
   const status = o.start
-    ? `Abgemacht vermittelt in ${o.name} und Umgebung. Schick uns deine Anfrage, wir melden uns innerhalb eines Werktags und fragen passende Betriebe an.`
-    : `Unser Schwerpunkt liegt aktuell in Ulm und Neu-Ulm, das Netz in ${o.name} bauen wir gerade auf. Schick uns deine Anfrage trotzdem, wir schauen, ob wir passende Betriebe finden.`;
+    ? `Abgemacht vermittelt in ${o.name} und Umgebung. Schicken Sie uns Ihre Anfrage, wir melden uns innerhalb eines Werktags und fragen passende Betriebe an.`
+    : `Unser Netz an Partnerbetrieben in ${o.name} wächst gerade. Schicken Sie uns Ihre Anfrage trotzdem, wir suchen passende Betriebe für Sie.`;
   const andereOrte = ORTE.filter((x) => x.slug !== o.slug).map((x) => `<a href="/finden/${b.slug}-${x.slug}">${esc(b.name)} in ${esc(x.name)}</a>`).join("");
   const andereBranchen = BRANCHEN.filter((x) => x.slug !== b.slug).map((x) => `<a href="/finden/${x.slug}-${o.slug}">${esc(x.name)} in ${esc(o.name)}</a>`).join("");
   const faq: [string, string][] = [
-    [`Wie finde ich ${b.wer === "Reinigungskraft" ? "eine" : "einen"} ${b.wer} in ${o.name}?`, `Schick uns über das Anfrage-Formular kurz, was zu tun ist, zum Beispiel „${b.auftraege[0]}“. Wir fragen passende ${b.plural} aus ${o.name}, ${liste(o.nachbarn.slice(0, 2))} an und schicken dir die Angebote.`],
+    [`Wie finde ich ${b.wer === "Reinigungskraft" ? "eine" : "einen"} ${b.wer} in ${o.name}?`, `Schicken Sie uns über das Anfrage-Formular kurz, was zu tun ist, zum Beispiel „${b.auftraege[0]}“. Wir fragen passende ${b.plural} aus ${o.name}, ${liste(o.nachbarn.slice(0, 2))} an und schicken Ihnen die Angebote.`],
     ["Was kostet Abgemacht?", "Für Auftraggeber nichts. Betriebe zahlen in der Startphase ebenfalls nichts, später nur eine kleine Gebühr, wenn ein Auftrag zustande kommt."],
-    ["Mit wem schließe ich den Vertrag?", `Direkt mit ${b.wer === "Reinigungskraft" ? "der Reinigungskraft" : "dem " + b.wer}. Abgemacht stellt nur den Kontakt her, Preis und Termin vereinbart ihr untereinander.`],
-    [`Ich bin ${b.wer}. Wie bekomme ich Aufträge aus ${o.name}?`, `${b.anbieter} Trag dich als Partner-Betrieb ein, wir rufen kurz an und schicken dir danach passende Anfragen aus deinem Gebiet.`],
+    ["Mit wem schließe ich den Vertrag?", `Direkt mit ${b.wer === "Reinigungskraft" ? "der Reinigungskraft" : "dem " + b.wer}. Abgemacht stellt nur den Kontakt her, Preis und Termin vereinbaren Sie direkt miteinander.`],
+    [`Ich bin ${b.wer}. Wie bekomme ich Aufträge aus ${o.name}?`, `${b.anbieter} Tragen Sie sich als Partner-Betrieb ein, wir rufen kurz an und schicken Ihnen danach passende Anfragen aus Ihrem Gebiet.`],
   ];
   if (b.meister) faq.push([`Muss ein ${b.name} einen Meisterbrief haben?`, `${b.name}-Betriebe gehören zu den zulassungspflichtigen Handwerken. Wer den Betrieb führt, muss in die Handwerksrolle eingetragen sein, meist mit Meisterbrief oder einer gleichwertigen Qualifikation. Wir fragen bei der Aufnahme als Partner-Betrieb danach.`]);
 
@@ -174,7 +174,7 @@ function seiteFuer(b: Branche, o: Ort) {
 <p class="krumen"><a href="/">Abgemacht</a> › <a href="/finden">Branchen und Orte</a> › ${esc(b.name)} in ${esc(o.name)}</p>
 <span class="pill">${o.start ? "Aktiv in " + esc(o.name) : "Im Aufbau: " + esc(o.name)}</span>
 <h1>${esc(b.name)} in ${esc(o.name)} finden</h1>
-<p class="lead">Ob privat oder für die Firma: Du schickst uns einmal deine Anfrage, wir fragen passende ${esc(b.plural)} aus ${esc(o.name)} und Umgebung an und schicken dir die Angebote. Kein Rumtelefonieren, kein Warten auf Rückrufe.</p>
+<p class="lead">Ob privat oder für die Firma: Sie schicken uns einmal Ihre Anfrage, wir fragen passende ${esc(b.plural)} aus ${esc(o.name)} und Umgebung an und schicken Ihnen die Angebote. Kein Rumtelefonieren, kein Warten auf Rückrufe.</p>
 <p><a class="btn" href="${anmeldeLink(b, o)}">Kostenlos anfragen</a></p>
 
 <h2>Typische Aufträge für ${esc(b.plural)} in ${esc(o.name)}</h2>
@@ -186,12 +186,12 @@ function seiteFuer(b: Branche, o: Ort) {
 <h2>So funktioniert Abgemacht</h2>
 <div class="schritte">
   <div><b>1. Anfrage schicken</b>Kurz beschreiben, was zu tun ist und bis wann. Dauert eine Minute.</div>
-  <div><b>2. Wir fragen Betriebe an</b>Passende ${esc(b.plural)} aus der Nähe bekommen deine Anfrage, zunächst ohne deinen Namen und deine Kontaktdaten.</div>
-  <div><b>3. Abgemacht</b>Du vergleichst die Angebote und entscheidest. Den Vertrag schließt du direkt mit dem Betrieb.</div>
+  <div><b>2. Wir fragen Betriebe an</b>Passende ${esc(b.plural)} aus der Nähe bekommen Ihre Anfrage, zunächst ohne Ihren Namen und Ihre Kontaktdaten.</div>
+  <div><b>3. Abgemacht</b>Sie vergleichen die Angebote und entscheiden. Den Vertrag schließen Sie direkt mit dem Betrieb.</div>
 </div>
 
 <h2>Für ${esc(b.plural)} aus ${esc(o.name)}</h2>
-<p>${esc(b.anbieter)} Als Partner-Betrieb bekommst du passende Anfragen mit Ort, Zeitraum und Budget und entscheidest selbst, ob du ein Angebot machst. <a href="${partnerLink()}">Partner-Betrieb werden</a></p>
+<p>${esc(b.anbieter)} Als Partner-Betrieb bekommen Sie passende Anfragen mit Ort, Zeitraum und Budget und entscheiden selbst, ob Sie ein Angebot machen. <a href="${partnerLink()}">Partner-Betrieb werden</a></p>
 
 <div class="box gruen">
   <b>${esc(b.name)} in ${esc(o.name)} gesucht?</b>
@@ -219,14 +219,14 @@ ${faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></de
 }
 
 function uebersicht() {
-  const zeilen = ORTE.map((o) => `<h2>${esc(o.name)}${o.start ? "" : ' <span style="font-size:14px;color:var(--muted);font-weight:600">· nach dem Start in Ulm</span>'}</h2><div class="links">${BRANCHEN.map((b) => `<a href="/finden/${b.slug}-${o.slug}">${esc(b.name)}</a>`).join("")}</div>`).join("");
+  const zeilen = ORTE.map((o) => `<h2>${esc(o.name)}${o.start ? "" : ' <span style="font-size:14px;color:var(--muted);font-weight:600">· im Aufbau</span>'}</h2><div class="links">${BRANCHEN.map((b) => `<a href="/finden/${b.slug}-${o.slug}">${esc(b.name)}</a>`).join("")}</div>`).join("");
   const inhalt = `
 <p class="krumen"><a href="/">Abgemacht</a> › Branchen und Orte</p>
-<h1>Aufträge und Betriebe aus deiner Region</h1>
-<p class="lead">Abgemacht verbindet Firmen, Selbstständige, Freelancer und Privatleute. Wähle deine Stadt und die Branche, die du suchst oder anbietest.</p>
+<h1>Aufträge und Betriebe aus Ihrer Region</h1>
+<p class="lead">Abgemacht verbindet Firmen, Selbstständige, Freelancer und Privatleute. Wählen Sie Ihre Stadt und die Branche, die Sie suchen oder anbieten.</p>
 ${zeilen}
-<div class="box gruen"><b>Deine Branche fehlt?</b><p style="margin:6px 0 14px">Schick uns einfach deine Anfrage, wir schauen, wer passt. Du bietest selbst etwas an? Dann werde Partner-Betrieb.</p><a class="btn" href="${anmeldeLink()}">Anfrage stellen</a> <a class="btn ghost" href="${partnerLink()}">Partner-Betrieb werden</a></div>`;
-  return rahmen({ titel: "Branchen und Orte | Abgemacht", beschreibung: "Handwerker, Dienstleister und Freelancer in Ulm, Neu-Ulm, Augsburg, Memmingen und Kempten finden. Oder selbst Aufträge aus der Region bekommen.", pfad: "/finden", inhalt });
+<div class="box gruen"><b>Ihre Branche fehlt?</b><p style="margin:6px 0 14px">Schicken Sie uns einfach Ihre Anfrage, wir schauen, wer passt. Sie bieten selbst etwas an? Dann werden Sie Partner-Betrieb.</p><a class="btn" href="${anmeldeLink()}">Anfrage stellen</a> <a class="btn ghost" href="${partnerLink()}">Partner-Betrieb werden</a></div>`;
+  return rahmen({ titel: "Branchen und Orte | Abgemacht", beschreibung: "Betriebe, Dienstleister und Freelancer aller Branchen finden, vom Handwerk über IT bis Marketing. Oder selbst Aufträge aus Ihrer Region bekommen.", pfad: "/finden", inhalt });
 }
 
 function sitemap() {
