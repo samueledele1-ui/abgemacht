@@ -22,7 +22,7 @@ const clip = (v: unknown, n = 120): string | null => {
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const fehler = (msg: string, status = 400) => Response.json({ ok: false, error: msg }, { status });
 const neuerToken = () => crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
-const seite = () => (Netlify.env.get("PUBLIC_URL") || "https://abgemacht.netlify.app").replace(/\/$/, "");
+const seite = () => (Netlify.env.get("PUBLIC_URL") || "https://ab-gemacht.info").replace(/\/$/, "");
 
 /* ---------- E-Mail über Brevo (nur aktiv, wenn BREVO_API_KEY gesetzt ist) ---------- */
 
@@ -490,6 +490,7 @@ ${knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")}`));
 <p style="margin:0 0 12px">vielen Dank, Ihre Anfrage ist bei uns angekommen:</p>${tabelle}
 <p style="margin:14px 0 12px">So geht es weiter: Spätestens am nächsten Werktag geht Ihre Anfrage ohne Ihren Namen und Ihre Kontaktdaten an passende Betriebe aus der Region. Sobald das erste Angebot da ist, bekommen Sie eine E-Mail. Auf Ihrer Angebotsseite sehen Sie alle Angebote und nehmen das passende mit einem Klick an. Erst dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten.</p>
 ${knopf(angebotsLink, "Meine Angebotsseite")}
+<p style="margin:-14px 0 20px;font-size:13px;line-height:1.4;color:#5B6B65;word-break:break-all">Falls der Knopf nicht reagiert: <a href="${angebotsLink}" style="color:#138A6B">${angebotsLink}</a></p>
 <p style="margin:0 0 12px;font-size:14px;color:#5B6B65">Bewahren Sie diese E-Mail auf: Der Link ist nur für Sie.</p>
 <p style="margin:0 0 12px">Für Sie ist das kostenlos. Falls Sie noch etwas ergänzen möchten, antworten Sie einfach auf diese E-Mail.</p>
 <p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`));
