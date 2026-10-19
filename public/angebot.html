@@ -33,6 +33,7 @@
   .sterne{color:#B7791F;font-weight:700}
   .marke{display:inline-block;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--minze);color:var(--tanne)}
   .marke.grau{background:var(--nebel);color:var(--muted)}
+  .marke.gold{background:#FCEFD2;color:#7A4E00}
   .abgemacht{background:var(--tanne);color:#fff;border:0}
   .abgemacht h2{color:#fff;font-size:26px}
   .abgemacht dl.daten dt{color:#A9D9C6}
@@ -94,17 +95,41 @@
   }
 
   /* ================= Betrieb ================= */
-  function gebuehrBerechnen(m, art, betrag) {
-    if (art === 'langzeit') { var w = betrag ? betrag * 12 : 0; return Math.round(Math.min(m.dauer_max, Math.max(m.dauer_min, w * m.satz)) * 100) / 100; }
-    if (!betrag) return null;
-    if (betrag <= 500) return 9;
-    if (betrag <= 2000) return 29;
-    return Math.round(Math.min(m.deckel_einzel, betrag * m.satz) * 100) / 100;
+  // Freischaltgebühr: Stufe nach Budget des Kunden (sonst nach Ihrem Preis), Gründungspartner zahlen die Hälfte
+  function gebuehrBerechnen(m, art, betrag, gruender) {
+    var wert = m.budgetwert != null ? m.budgetwert : (betrag ? (art === 'langzeit' ? betrag * 12 : betrag) : null);
+    var st = m.stufe ? m.stufen[m.stufe - 1] : (wert ? m.stufen.find(function (x) { return x.bis == null || wert <= x.bis; }) : m.stufen[1]);
+    return { preis: Math.round(st.preis * (gruender ? m.rabatt : 1) * 100) / 100, grund: st.preis, text: st.text };
   }
+  function stufenText(m) { return m.stufen.map(function (x) { return x.text + ': ' + euro(x.preis); }).join(' · '); }
   function betrieb(d) {
     var a = d.anfrage, lang = a.art === 'langzeit';
     var kopf = '<h1>' + esc(a.leistung || 'Anfrage') + '</h1><p class="unterzeile">Anfrage #' + a.nr + ' vom ' + datum(a.erstellt) + (a.ort ? ' · ' + esc(a.ort) : '') + ' · für ' + esc(d.firma) + '</p>';
     var details = '<div class="box"><h2>Das wird gesucht</h2>' + anfrageDaten(a) + '</div>';
+    var gr = d.gruender ? '<p class="marke" style="margin:-12px 0 18px">★ Gründungspartner Nr. ' + d.gruender + ' · dauerhaft 50 % auf Freischaltungen</p>' : '';
+    kopf += gr;
+    if (d.status === 'gewaehlt' && d.freischalten) {
+      var fz = d.freischalten, q = new URLSearchParams(location.search);
+      main.innerHTML = kopf + '<div class="box abgemacht"><span class="stempel-gross">Angenommen</span><h2>Der Auftraggeber hat sich für Sie entschieden</h2>' +
+        (fz.online ? '<p>Schalten Sie jetzt seine Kontaktdaten frei. Einmalig <b>' + euro(fz.preis) + '</b>' + (fz.rabatt ? ' <span style="opacity:.8">(Gründungspartner-Preis, statt ' + euro(fz.grundpreis) + ')</span>' : '') + '. Sie zahlen online per Karte oder Lastschrift, die Rechnung kommt per E-Mail.</p>'
+          : '<p>Bestätigen Sie kurz, dann bekommen Sie und der Auftraggeber gegenseitig die Kontaktdaten.' + (d.gebuehren.aktiv ? '' : ' In der Startphase ist das kostenlos.') + '</p>') +
+        '<button class="btn" type="button" id="frei" style="background:#F2B33D;color:#0A3F31">' + (fz.online ? 'Kontaktdaten freischalten · ' + euro(fz.preis) : 'Bestätigen und Kontaktdaten erhalten') + '</button>' +
+        '<div class="msg" id="fmsg" role="status" style="margin-top:10px"></div>' +
+        '<p class="klein" style="color:#CFEBDF;margin:14px 0 0">Bitte innerhalb von 48 Stunden, sonst kann der Auftraggeber ein anderes Angebot wählen.</p></div>' + details;
+      var fmsg = $('fmsg');
+      if (q.get('abgebrochen')) { fmsg.textContent = 'Zahlung abgebrochen. Sie können es jederzeit erneut versuchen.'; fmsg.className = 'msg err'; }
+      $('frei').onclick = async function () {
+        this.disabled = true; fmsg.textContent = ''; fmsg.className = 'msg';
+        try { var r = await api({ aktion: 'bezahlen' }); if (r.url) { location.href = r.url; return; } history.replaceState(null, '', '?t=' + t); laden(); }
+        catch (err) { fmsg.textContent = err.message; fmsg.className = 'msg err'; this.disabled = false; }
+      };
+      if (q.get('zahlung')) {
+        fmsg.textContent = 'Zahlung wird bestätigt …';
+        api({ aktion: 'zahlung_pruefen', zahlung: q.get('zahlung') }).then(function () { history.replaceState(null, '', '?t=' + t); laden(); })
+          .catch(function (err) { fmsg.textContent = err.message; fmsg.className = 'msg err'; });
+      }
+      return;
+    }
     if (d.status === 'gewaehlt') {
       main.innerHTML = kopf + '<div class="box abgemacht"><span class="stempel-gross">Abgemacht</span><h2>Ihr Angebot wurde angenommen</h2>' +
         '<p>Bitte melden Sie sich innerhalb von 24 Stunden beim Auftraggeber, um alles Weitere direkt abzustimmen.</p>' +
@@ -125,16 +150,16 @@
       '<label for="nachricht" style="margin-top:14px">Was ist enthalten, wann können Sie?</label>' +
       '<textarea id="nachricht" maxlength="2000" placeholder="z. B. Termin ab KW 46 möglich, inkl. Material und Anfahrt. Telefonnummern, E-Mail- und Web-Adressen werden ausgeblendet, die Kontaktdaten gibt es nach der Zusage.">' + (hatAngebot ? esc(d.angebot.nachricht || '') : '') + '</textarea>' +
       '<div class="gebuehr" id="gebuehr"></div>' +
-      '<label class="check" style="margin-top:14px"><input type="checkbox" id="bed"' + (hatAngebot ? ' checked' : '') + '> <span>Ich akzeptiere die <a href="/bedingungen" target="_blank">Bedingungen</a>' + (g.aktiv ? ' einschließlich des Gebührenmodells' : '') + '.</span></label>' +
+      '<label class="check" style="margin-top:14px"><input type="checkbox" id="bed"' + (hatAngebot ? ' checked' : '') + '> <span>Ich akzeptiere die <a href="/bedingungen" target="_blank">Bedingungen</a>' + (g.aktiv ? ' einschließlich der Freischaltgebühr' : '') + '.</span></label>' +
       '<button class="btn" id="senden" type="submit" style="width:100%;margin-top:16px">' + (hatAngebot ? 'Angebot aktualisieren' : 'Angebot abgeben') + '</button>' +
       '<div class="msg" id="msg" role="status"></div></form>' +
       '<p style="margin:16px 0 0;text-align:center"><button class="linkknopf" id="absagen" type="button">Keine Zeit oder kein Interesse? Kurz absagen</button></p></div>';
 
     function gebuehrText() {
-      var b = zahl($('betrag').value), f = gebuehrBerechnen(m, a.art, b);
-      var modell = lang ? 'Bei regelmäßigen Aufträgen einmalig 3\u00a0% vom ersten Vertragsjahr (mind. ' + euro(m.dauer_min) + ', max. ' + euro(m.dauer_max) + ').' : 'Bis 500 € Auftragswert 9 €, bis 2.000 € 29 €, darüber 3\u00a0% (max. ' + euro(m.deckel_einzel) + ').';
-      if (!g.aktiv) $('gebuehr').innerHTML = '<b>In der Startphase kostenlos.</b> Später nur bei Zusage: ' + modell;
-      else $('gebuehr').innerHTML = (f ? '<b>Gebühr nur bei Zusage: ' + euro(f) + '</b>' + (lang && b ? ' (Jahreswert ' + euro(b * 12) + ')' : '') + '. ' : '<b>Gebühr nur bei Zusage.</b> ') + modell;
+      var b = zahl($('betrag').value), f = gebuehrBerechnen(m, a.art, b, !!d.gruender);
+      var modell = 'Freischaltung nach Budget des Auftraggebers: ' + stufenText(m) + (d.gruender ? '. Als Gründungspartner zahlen Sie die Hälfte.' : '.');
+      if (!g.aktiv) $('gebuehr').innerHTML = '<b>In der Startphase kostenlos.</b> Später zahlen Sie nur, wenn der Auftraggeber Ihr Angebot annimmt, einmalig für die Kontaktdaten. ' + modell;
+      else $('gebuehr').innerHTML = '<b>Nur wenn Ihr Angebot angenommen wird: einmalig ' + euro(f.preis) + ' für die Kontaktdaten</b>' + (d.gruender ? ' (statt ' + euro(f.grund) + ')' : '') + '. ' + modell;
     }
     gebuehrText();
     $('betrag').addEventListener('input', gebuehrText);
@@ -168,6 +193,8 @@
       oben = '<div class="box abgemacht"><span class="stempel-gross">Abgemacht</span><h2>' + esc(b.firma) + '</h2><p>Der Betrieb hat Ihre Kontaktdaten bekommen und meldet sich bei Ihnen. Sie können sich auch direkt melden:</p>' +
         kontaktDaten([['Ansprechpartner', b.ansprechpartner], ['Telefon', b.telefon], ['E-Mail', b.email], ['Website', b.website]]) +
         '<p class="klein" style="color:#CFEBDF;margin:14px 0 0">Den Vertrag schließen Sie direkt mit dem Betrieb. Nach dem Auftrag fragen wir kurz, ob alles gepasst hat.</p></div>';
+    } else if (d.wartet) {
+      oben = '<div class="box abgemacht"><span class="stempel-gross">Angenommen</span><h2>Danke für Ihre Entscheidung</h2><p style="margin:0">Der Betrieb wurde benachrichtigt und bestätigt in Kürze. Danach bekommen Sie seine Kontaktdaten per E-Mail und hier auf dieser Seite, und er meldet sich bei Ihnen.</p></div>';
     } else if (!d.offen) {
       oben = '<div class="box"><h2>Diese Anfrage ist abgeschlossen</h2><p style="margin:0">Haben Sie etwas Neues? <a href="/#anfrage">Neue Anfrage stellen</a></p></div>';
     }
@@ -176,7 +203,7 @@
       var preis = o.betrag != null ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
       var cls = o.status === 'gewaehlt' ? ' gewaehlt' : o.status === 'nicht_gewaehlt' ? ' aus' : '';
       var knopf = d.offen && o.status === 'angebot' ? '<div class="aktion" data-o="' + o.id + '"><button class="btn" type="button" data-an="' + o.id + '">Dieses Angebot annehmen</button></div>' : '';
-      return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + '</div>' +
+      return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + (o.gruender ? ' <span class="marke gold" title="Einer der ersten 30 Partner-Betriebe von Abgemacht">★ Gründungspartner</span>' : '') + '</div>' +
         '<div class="wer">' + esc([o.kategorie, o.ort].filter(Boolean).join(' · ') || 'Betrieb aus der Region') + '</div><div class="wer">' + bew + '</div></div>' +
         '<div class="betrag">' + preis + '</div></div>' + (o.nachricht ? '<p class="text">' + esc(o.nachricht) + '</p>' : '') +
         '<p class="klein" style="margin:10px 0 0">Eingegangen am ' + datum(o.am) + '</p>' + knopf + '</div>';
@@ -189,7 +216,7 @@
     main.querySelectorAll('[data-an]').forEach(function (b) {
       b.onclick = function () {
         var box = b.parentNode, id = +b.dataset.an;
-        box.innerHTML = '<span><b>Angebot annehmen?</b> Sie und der Betrieb bekommen dann gegenseitig die Kontaktdaten, die anderen Betriebe eine kurze Absage.</span>' +
+        box.innerHTML = '<span><b>Angebot annehmen?</b> Der Betrieb wird benachrichtigt und bestätigt, dann bekommen Sie beide gegenseitig die Kontaktdaten. Die anderen Betriebe bekommen eine kurze Absage.</span>' +
           '<button class="btn" type="button" data-ja>Ja, annehmen</button><button class="linkknopf" type="button" data-nein>Abbrechen</button>';
         box.querySelector('[data-nein]').onclick = laden;
         box.querySelector('[data-ja]').onclick = async function () {

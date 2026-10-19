@@ -102,6 +102,7 @@
   .kand small{color:var(--muted);font-weight:500;display:block}
   .fotos{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
   .fotos img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}
+  .tag2.t-gold{background:#FCEFD2;color:#7A4E00}
   .kand .km{display:inline-block;min-width:52px;margin-right:8px;padding:1px 7px;border-radius:999px;background:var(--minze, #DDF3EA);color:#0D4F3E;font-size:12px;font-weight:700;text-align:center}
   .suchzeile{display:grid;grid-template-columns:1.2fr 1.2fr 96px auto;gap:8px;align-items:end}
   .suchzeile label{margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -275,7 +276,7 @@
         : `<div class="leer">Noch keine Anfragen. Leg die erste mit „+ Anfrage“ an, sobald jemand schreibt oder anruft.</div>`;
       el.querySelectorAll("[data-v]").forEach((k) => k.onclick = () => oeffneV(+k.dataset.v));
     } else if (ansicht === "partner") {
-      const zeile = (p) => `<tr data-p="${p.id}"><td><b>${esc(p.firma)}</b>${p.partner === "pausiert" ? '<span class="tag2 t-proj">pausiert</span>' : ""}</td><td>${esc(p.leistungen || p.kategorie || "")}</td><td>${esc(p.ort || p.region || "")}</td>
+      const zeile = (p) => `<tr data-p="${p.id}"><td><b>${esc(p.firma)}</b>${p.gruender_nr ? `<span class="tag2 t-gold" title="Gründungspartner: dauerhaft 50 % auf Freischaltungen, Vorrang bei Anfragen">★ Gründer ${p.gruender_nr}</span>` : ""}${p.partner === "pausiert" ? '<span class="tag2 t-proj">pausiert</span>' : ""}</td><td>${esc(p.leistungen || p.kategorie || "")}</td><td>${esc(p.ort || p.region || "")}</td>
         <td>${p.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : "–"}</td><td>${p.angefragt}</td><td>${p.angebote}</td><td>${p.zusagen}</td><td>${p.antwort_h != null ? esc(String(p.antwort_h).replace(".", ",")) + " Std." : "–"}</td></tr>`;
       const INT = P.filter((p) => p.partner === "interessiert");
       const PP = P.filter((p) => p.partner !== "interessiert");
@@ -303,10 +304,10 @@
         <li>Anfragen über die Website kommen automatisch rein (der Kunde hat schon seinen Link zur Angebotsseite). WhatsApp, Anruf oder Mail: mit „+ Anfrage“ anlegen.</li>
         <li>In der Anfrage passende Betriebe suchen und bis zu 5 auswählen. <b>Partner mit E-Mail bekommen die anonyme Anfrage automatisch</b> mit dem Knopf „Angebot abgeben“. Ohne E-Mail: „Link kopieren“ und per WhatsApp schicken oder anrufen.</li>
         <li>Betriebe geben ihr Angebot selbst über den Link ab. Kontaktdaten werden darin automatisch ausgeblendet. Telefonische Angebote kannst du weiter von Hand eintragen.</li>
-        <li>Beim ersten Angebot bekommt der Kunde automatisch eine Mail. Er nimmt auf seiner Angebotsseite selbst an: Dann gehen die Kontaktdaten an beide, die Absagen an die anderen, und die Gebühr steht in der Abrechnung. Hat der Kunde keine E-Mail, schickst du ihm den Link per WhatsApp.</li>
+        <li>Beim ersten Angebot bekommt der Kunde automatisch eine Mail. Er nimmt auf seiner Angebotsseite selbst an: Die anderen bekommen eine Absage, der gewählte Betrieb schaltet die Kontaktdaten frei (sobald Gebühren gelten: online bezahlt, Stufe nach Budget, Gründungspartner −50 %), dann gehen die Kontaktdaten an beide. Hat der Kunde keine E-Mail, schickst du ihm den Link per WhatsApp.</li>
         <li>Beim gewählten Betrieb „Abgemacht“ drücken. Die Texte für Kunde, Zusage und Absagen stehen dann bereit.</li>
         <li>Nach dem Termin „Hat's gepasst?“ schicken, Bewertung eintragen, Status „Erledigt“.</li></ol>
-        <p style="color:var(--muted);margin:12px 0 0">Gebühren werden zur Info berechnet (9 / 29 € / über 2.000 € 3 %, max. 400 €; regelmäßig 3 % vom ersten Vertragsjahr, 199–1.500 €), in der Startphase aber nicht verlangt. Sobald Gebühren gelten: unter Abrechnung → Rechnungsdaten Steuernummer und „Gebühren ab“ eintragen. Dann einmal im Monat pro Betrieb „Rechnung erstellen“, per Mail senden und bei Zahlungseingang „Bezahlt“ drücken. Kalte WhatsApp-Nachrichten ohne Okay sind tabu: erst anrufen.</p></div>`;
+        <p style="color:var(--muted);margin:12px 0 0">Freischaltgebühr nach Budget des Kunden: bis 500 € 9 €, bis 2.000 € 29 €, bis 10.000 € 69 €, darüber oder große Daueraufträge 129 €. Gründungspartner (die ersten 30 festen Partner, ★) zahlen dauerhaft die Hälfte und stehen bei der Betriebssuche vorne. In der Startphase wird nichts verlangt. Online-Zahlung startet, sobald unter Abrechnung → Rechnungsdaten „Gebühren ab“ erreicht ist und in Netlify STRIPE_SECRET_KEY gesetzt ist. Ohne Stripe kommt die Gebühr wie bisher in die Monatsrechnung.</p></div>`;
     }
   }
   function tabZahl() { const n = P.filter((p) => p.partner === "interessiert").length; const b = document.querySelector('.tabs button[data-v="partner"]'); if (b) b.textContent = "Partner-Betriebe" + (n ? ` (${n} neu)` : ""); }
@@ -527,7 +528,10 @@
       ["abgemacht", "erledigt"].includes(v.status) ? vorlageHtml("Text an Auftraggeber: Hat's gepasst?", T.gepasst(v), v.kontakt, v.kanal === "whatsapp") : "",
     ].join("");
     const p = panel(`<div class="kopf"><div><h2>${esc(v.leistung || "Anfrage")}${artTag(v)}</h2><small style="color:var(--muted)">#${v.id} · ${dt(v.created_at)} · ${esc(KANL[v.kanal] || "")}</small></div><button class="zu" aria-label="Schließen">×</button></div>
-      <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Gebühr nach Modell: ${esc(String(v.gebuehr).replace(".", ","))} € (Startphase: gratis)</span>` : ""}</div>
+      <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Freischaltung: ${esc(String(v.gebuehr).replace(".", ","))} €${v.bezahlt_am ? " · bezahlt " + dt(v.bezahlt_am) : ""}</span>` : ""}</div>
+      ${v.status === "abgemacht" && !v.freigeschaltet_am ? `<div class="vb" style="border-color:#F2B33D;background:#FFF8E8;margin-top:10px"><b>Wartet auf Freischaltung</b><small style="color:var(--muted);display:block">Kunde hat ${v.angenommen_am ? "am " + dt(v.angenommen_am) : ""} angenommen. Der Betrieb hat den Freischalt-Link per Mail, die Kontaktdaten gehen raus, sobald er bezahlt.</small>
+        <div class="knopfreihe"><button class="btn ghost klein" type="button" id="vFrei">Von Hand freischalten</button><button class="btn ghost klein" type="button" id="vReset">Zurücksetzen, Kunde wählt neu</button></div></div>` : ""}
+      ${["neu", "angefragt", "angebote"].includes(v.status) || (v.status === "abgemacht" && !v.freigeschaltet_am) ? `<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">Freischaltstufe: <select id="vStufe" style="width:auto;display:inline-block;padding:4px 8px;font-size:13.5px"><option value="">automatisch nach Budget</option><option value="1" ${v.freischalt_stufe == 1 ? "selected" : ""}>bis 500 € · 9 €</option><option value="2" ${v.freischalt_stufe == 2 ? "selected" : ""}>bis 2.000 € · 29 €</option><option value="3" ${v.freischalt_stufe == 3 ? "selected" : ""}>bis 10.000 € · 69 €</option><option value="4" ${v.freischalt_stufe == 4 ? "selected" : ""}>darüber · 129 €</option></select></div>` : ""}
       ${v.fotos ? `<h3 class="ab">Fotos (${v.fotos})</h3><div class="fotos" id="vFotos"><small style="color:var(--muted)">Lädt …</small></div>` : ""}
       <h3 class="ab">Auftraggeber</h3><div class="vb"><small style="color:var(--muted)">${esc([v.auftraggeber, v.kontakt].filter(Boolean).join(" · "))}${v.kunde_mail_am ? " · ✉ Angebotsseite gemailt " + dt(v.kunde_mail_am) : ""}${v.angenommen_am ? " · selbst angenommen " + dt(v.angenommen_am) : ""}</small>
         <div class="knopfreihe">${v.kunde_token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(v.kunde_token))}">Angebotsseite-Link kopieren</button><button class="btn ghost klein" type="button" id="kLink">Link per Mail an Kunden</button>` : ""}</div></div>
@@ -560,14 +564,18 @@
       const d = await api({ aktion: "kandidaten", q, ort });
       const schon = new Set(bs.map((b) => b.kontakt_id));
       const { liste, zielGefunden } = await nachNaehe(d.kandidaten.filter((k) => !schon.has(k.id)), ort);
-      const nah = liste.filter((k) => !max || !zielGefunden || (k.km != null && k.km <= max)).slice(0, 30);
+      // Gründungspartner im Umkreis zuerst (Vorrang bei Aufträgen), sonst nach Entfernung
+      const nah = liste.filter((k) => !max || !zielGefunden || (k.km != null && k.km <= max)).sort((a, b) => (b.gruender_nr ? 1 : 0) - (a.gruender_nr ? 1 : 0)).slice(0, 30);
       const weiter = zielGefunden && max ? liste.filter((k) => k.km == null || k.km > max) : [];
-      const zeile = (k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`;
+      const zeile = (k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}${esc(k.firma)}${k.gruender_nr ? '<span class="tag2 t-gold">★ Gründer</span>' : ""}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`;
       const hinweis = ort && !zielGefunden ? `<p class="msg err" style="margin:6px 0">Ort „${esc(ort)}“ nicht erkannt, Treffer daher ohne Entfernung. Am besten die PLZ eingeben.</p>` : "";
       p.querySelector("#kListe").innerHTML = hinweis + (nah.map(zeile).join("") || (d.kandidaten.length && !liste.length ? '<p style="color:var(--muted)">Alle passenden Betriebe sind schon angefragt.</p>' : `<p style="color:var(--muted)">Keine passenden Betriebe${max && zielGefunden ? " im Umkreis von " + max + " km" : ""}${d.gruppen && d.gruppen.length ? " (gesucht in: " + esc(d.gruppen.join(", ")) + ")" : ""}. Umkreis vergrößern oder über Google Maps suchen und mit „+ Partner“ anlegen.</p>`))
         + (weiter.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">${weiter.length} weitere weiter weg oder ohne Ortsangabe</summary>${weiter.slice(0, 30).map(zeile).join("")}</details>` : "");
       p.querySelector("#kAnfragen").hidden = !(nah.length || weiter.length);
     };
+    const vf = p.querySelector("#vFrei"); if (vf) vf.onclick = async (e) => { if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich ohne Zahlung freischalten?"; return; } try { await api({ aktion: "freigeben", id }); await laden(); oeffneV(id); toast("Freigeschaltet, Kontaktdaten sind raus"); } catch (er) { toast(er.message); } };
+    const vr = p.querySelector("#vReset"); if (vr) vr.onclick = async (e) => { if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich zurücksetzen?"; return; } try { await api({ aktion: "zuruecksetzen", id }); await laden(); oeffneV(id); toast("Zurückgesetzt. Dem Kunden kurz Bescheid geben, dass er neu wählen kann."); } catch (er) { toast(er.message); } };
+    const vs = p.querySelector("#vStufe"); if (vs) vs.onchange = async () => { try { await api({ aktion: "stufe", id, stufe: vs.value }); toast("Freischaltstufe gespeichert"); } catch (er) { toast(er.message); } };
     if (v.fotos) api({ aktion: "fotos", id }).then((d) => { const el = p.querySelector("#vFotos"); if (el) el.innerHTML = d.fotos.map((f) => `<a href="${f.src}" target="_blank" rel="noopener" download="anfrage-${id}-foto-${f.nr}.jpg"><img src="${f.src}" alt="Foto ${f.nr}"></a>`).join(""); }).catch(() => {});
     p.querySelector("#kSuchen").onclick = suchen;
     if (["neu", "angefragt", "angebote"].includes(v.status)) suchen();
