@@ -459,8 +459,8 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     if (!leistung) return fehler("Bitte schreiben Sie kurz, was Sie brauchen.");
     if (!ort) return fehler("Bitte geben Sie den Ort oder die PLZ an.");
     if (!name) return fehler("Bitte geben Sie Ihren Namen an.");
-    if (!telefon && !email) return fehler("Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.");
-    if (email && !EMAIL_RE.test(email)) return fehler("Bitte prüfen Sie die E-Mail-Adresse.");
+    if (!email) return fehler("Bitte geben Sie Ihre E-Mail-Adresse an. Dorthin schicken wir die Angebote.");
+    if (!EMAIL_RE.test(email)) return fehler("Bitte prüfen Sie die E-Mail-Adresse.");
     if (telefon && telefon.replace(/\D/g, "").length < 6) return fehler("Bitte prüfen Sie die Telefonnummer.");
     if (body.consent !== true) return fehler("Bitte bestätigen Sie kurz die Datenschutzhinweise.");
     const kontakt = [telefon, email].filter(Boolean).join(" · ");
@@ -475,8 +475,9 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, beschreibung, notizen)
       VALUES (${auftraggeber}, ${kontakt}, 'web', ${leistung}, ${ort}, ${zeitraum}, ${budget}, ${art}, ${beschreibung},
               ${"Über die Website · " + (firma ? "Firma" : "Privat") + (quelle !== "direkt" ? " · Quelle: " + quelle : "")})
-      RETURNING id`;
+      RETURNING id, kunde_token`;
     const nr = r[0].id;
+    const angebotsLink = `${seite()}/angebot?t=${r[0].kunde_token}`;
     const ART: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
     const zeile = (k: string, w: string | null) => w ? `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:5px 0">${esc(w)}</td></tr>` : "";
     const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}</table>`;
@@ -487,7 +488,9 @@ ${knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")}`));
     if (email) await sendeMail(email, name, `Ihre Anfrage ist angekommen: ${leistung}`, mailLayout(
       `<p style="margin:0 0 12px">Hallo ${esc(name)},</p>
 <p style="margin:0 0 12px">vielen Dank, Ihre Anfrage ist bei uns angekommen:</p>${tabelle}
-<p style="margin:14px 0 12px">So geht es weiter: Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe aus der Region. Fehlt noch etwas Wichtiges, fragen wir kurz nach. Die Angebote bekommen Sie gesammelt. Ihren Namen und Ihre Kontaktdaten bekommt ein Betrieb erst, wenn Sie sich für sein Angebot entscheiden.</p>
+<p style="margin:14px 0 12px">So geht es weiter: Spätestens am nächsten Werktag geht Ihre Anfrage ohne Ihren Namen und Ihre Kontaktdaten an passende Betriebe aus der Region. Sobald das erste Angebot da ist, bekommen Sie eine E-Mail. Auf Ihrer Angebotsseite sehen Sie alle Angebote und nehmen das passende mit einem Klick an. Erst dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten.</p>
+${knopf(angebotsLink, "Meine Angebotsseite")}
+<p style="margin:0 0 12px;font-size:14px;color:#5B6B65">Bewahren Sie diese E-Mail auf: Der Link ist nur für Sie.</p>
 <p style="margin:0 0 12px">Für Sie ist das kostenlos. Falls Sie noch etwas ergänzen möchten, antworten Sie einfach auf diese E-Mail.</p>
 <p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`));
     return Response.json({ ok: true, nr, mail: !!email });
