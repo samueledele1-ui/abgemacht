@@ -220,7 +220,7 @@
     <div class="ablauf">
       <div><h3>Anfrage schicken</h3><p>Kurz schreiben, was zu tun ist, wo und bis wann. Das dauert eine Minute. Fehlt etwas Wichtiges, fragen wir kurz nach.</p></div>
       <div><h3>Betriebe werden angefragt</h3><p>Passende Betriebe aus der Region bekommen Ihre Anfrage, zunächst ohne Ihren Namen und Ihre Kontaktdaten. Sagt einer ab, wird der nächste gefragt.</p></div>
-      <div><h3>Vergleichen und „Abgemacht“</h3><p>Sie bekommen die Angebote mit Preis und Termin gesammelt zugeschickt. Sagen Sie bei einem „Abgemacht“, bekommen Sie und der Betrieb die Kontaktdaten.</p></div>
+      <div><h3>Vergleichen und „Abgemacht“</h3><p>Die Angebote mit Preis und Termin sehen Sie auf Ihrer persönlichen Angebotsseite. Ein Klick auf „Annehmen“, und Sie und der Betrieb bekommen die Kontaktdaten.</p></div>
     </div>
   </section>
 
@@ -302,10 +302,10 @@
               <div id="firmaFeld"><label for="a_firmaname">Firma</label><input id="a_firmaname" name="firma" maxlength="120" autocomplete="organization"></div>
             </div>
             <div class="row">
-              <div><label for="a_tel">Telefon</label><input id="a_tel" name="telefon" type="tel" maxlength="40" autocomplete="tel" placeholder="für Rückfragen"></div>
-              <div><label for="a_mail">E-Mail</label><input id="a_mail" name="email" type="email" maxlength="254" autocomplete="email"></div>
+              <div><label for="a_mail">E-Mail *</label><input id="a_mail" name="email" type="email" maxlength="254" autocomplete="email" required></div>
+              <div><label for="a_tel">Telefon</label><input id="a_tel" name="telefon" type="tel" maxlength="40" autocomplete="tel" placeholder="optional, für Rückfragen"></div>
             </div>
-            <p class="klein">Telefon oder E-Mail reicht.</p>
+            <p class="klein">Die Angebote kommen per E-Mail. Dort nehmen Sie das passende mit einem Klick an.</p>
             <div class="hp" aria-hidden="true"><label for="a_website">Website</label><input id="a_website" name="website" tabindex="-1" autocomplete="off"></div>
             <label class="check"><input type="checkbox" id="a_consent"> <span>Ich habe die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen. Meine Angaben werden zur Bearbeitung der Anfrage gespeichert und ohne Namen und Kontaktdaten an passende Betriebe weitergegeben.</span></label>
             <button class="btn" id="anfrageBtn" type="submit" style="width:100%;margin-top:18px">Anfrage abschicken</button>
@@ -315,7 +315,7 @@
         <div class="danke" id="anfrageDanke" hidden>
           <span class="stempel" id="anfrageStempel">✓ Angekommen</span>
           <h2>Danke für Ihre Anfrage!</h2>
-          <p class="sub" id="anfrageDankeText">Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe. Die Angebote bekommen Sie gesammelt.</p>
+          <p class="sub" id="anfrageDankeText">Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe. Sobald das erste Angebot da ist, bekommen Sie eine E-Mail.</p>
           <button class="btn ghost" id="nochEine" type="button">Weitere Anfrage stellen</button>
         </div>
       </div>
@@ -329,11 +329,11 @@
     <div class="preis-grid">
       <div class="karte"><b>Startphase</b><div class="gross">0 €</div><p>Bis auf Weiteres kostenlos. Gebühren kommen erst nach Ankündigung mit 4 Wochen Vorlauf und nur mit Ihrer Zustimmung.</p></div>
       <div class="karte"><b>Danach geplant: nur bei Auftrag, je nach Auftragswert</b>
-        <div class="staffel" role="img" aria-label="Gebühr pro Auftrag: 9 Euro bis 500 Euro Auftragswert, 29 Euro bis 2.000 Euro, 59 Euro darüber.">
+        <div class="staffel" role="img" aria-label="Gebühr pro Auftrag: 9 Euro bis 500 Euro Auftragswert, 29 Euro bis 2.000 Euro, darüber 3 Prozent, höchstens 400 Euro.">
           <div class="st"><b>9 €</b><small>bis 500 €</small></div>
-          <div class="rest"><div class="st b2"><b>29 €</b><small>500 bis 2.000 €</small></div><div class="st b3"><b>59 €</b><small>über 2.000 €</small></div></div>
+          <div class="rest"><div class="st b2"><b>29 €</b><small>500 bis 2.000 €</small></div><div class="st b3"><b>3&nbsp;%</b><small>über 2.000 €, max. 400 €</small></div></div>
         </div>
-        <div class="extras"><span><b>199 €</b> einmalig für einen regelmäßigen Auftrag</span><span><b>Optional Pro 29 €</b> im Monat: halbe Gebühr pro Auftrag, monatlich kündbar</span></div>
+        <div class="extras"><span><b>Regelmäßiger Auftrag:</b> einmalig 3&nbsp;% vom ersten Vertragsjahr, mind. 199 €, max. 1.500 €. Verlängerungen gebührenfrei</span><span><b>Optional Pro 29 €</b> im Monat: halbe Gebühr pro Auftrag, monatlich kündbar</span></div>
         <p class="hinweis">Geplante Preise, Änderungen vorbehalten. Einzelheiten in den <a href="/bedingungen">Bedingungen</a>.</p>
       </div>
     </div>
@@ -344,7 +344,7 @@
       <div class="intro">
         <h2>Partner-Betrieb werden</h2>
         <p>Tragen Sie sich ein. Nach einer kurzen Abstimmung zu Leistungen und Einsatzgebiet bekommen Sie passende Anfragen.</p>
-        <ul><li>Nur Anfragen, die zu Ihnen passen</li><li>Keine Grundgebühr, Abo nur auf Wunsch</li><li>Angebot mit einer kurzen Antwort abgeben</li><li>Jederzeit ohne Frist beenden</li></ul>
+        <ul><li>Nur Anfragen, die zu Ihnen passen</li><li>Keine Grundgebühr, Abo nur auf Wunsch</li><li>Angebot mit einem Klick über den Link in der E-Mail</li><li>Jederzeit ohne Frist beenden</li></ul>
       </div>
       <div class="formbox">
         <div id="partnerTeil">
@@ -383,7 +383,8 @@
     <details><summary>Was kostet mich das als Auftraggeber?</summary><p>Nichts. Anfragen sind für Auftraggeber kostenlos und unverbindlich, auch wenn Sie sich am Ende für keines der Angebote entscheiden.</p></details>
     <details><summary>Mit wem schließe ich den Vertrag?</summary><p>Direkt mit dem Betrieb, den Sie wählen. Abgemacht vermittelt nur. Preis, Termin und Ausführung vereinbaren Sie mit dem Betrieb.</p></details>
     <details><summary>Wer sieht meine Daten?</summary><p>Die angefragten Betriebe sehen zunächst nur Leistung, Ort, Zeitraum, Budget und Ihre Beschreibung. Name und Kontaktdaten gibt es erst für den Betrieb, dessen Angebot Sie annehmen.</p></details>
-    <details><summary>Wie schnell bekomme ich Angebote?</summary><p>Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe. Wie schnell die Angebote kommen, hängt vom Auftrag ab, bei kleineren Arbeiten oft nach ein, zwei Tagen.</p></details>
+    <details><summary>Wie schnell bekomme ich Angebote?</summary><p>Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe. Wie schnell die Angebote kommen, hängt vom Auftrag ab, bei kleineren Arbeiten oft nach ein, zwei Tagen. Beim ersten Angebot bekommen Sie eine E-Mail, weitere erscheinen automatisch auf Ihrer Angebotsseite.</p></details>
+    <details><summary>Was kostet ein großer oder regelmäßiger Auftrag für Betriebe?</summary><p>Nach der Startphase gilt: bis 500 € Auftragswert 9 €, bis 2.000 € 29 €, darüber 3&nbsp;% vom Auftragswert, höchstens 400 €. Bei regelmäßigen Aufträgen, etwa einem Reinigungsvertrag über zwei Jahre, einmalig 3&nbsp;% vom Wert des ersten Vertragsjahres, mindestens 199 € und höchstens 1.500 €. Die weitere Laufzeit und Verlängerungen kosten nichts. In der Startphase ist alles kostenlos.</p></details>
     <details><summary>In welcher Region sind Sie aktiv?</summary><p>In Ulm, Neu-Ulm und Umgebung, zum Beispiel Senden, Blaustein, Langenau, Illertissen und Weißenhorn. Schreiben Sie uns gern auch, wenn Sie etwas weiter weg sind.</p></details>
     <details><summary>Ich habe eine Hausverwaltung und regelmäßig Aufträge. Geht das auch?</summary><p>Genau dafür ist Abgemacht gemacht. Schicken Sie einfach die erste Anfrage. Für mehrere Objekte oder feste Rahmenaufträge schreiben Sie an <a href="mailto:hallo@ab-gemacht.info">hallo@ab-gemacht.info</a>.</p></details>
   </section>
@@ -452,8 +453,8 @@
         if (!af.ort.value.trim()) return ['Bitte geben Sie den Ort oder die PLZ an.', 'a_ort'];
         if (!af.name.value.trim()) return ['Bitte geben Sie Ihren Namen an.', 'a_name'];
         var m = af.email.value.trim(), t = af.telefon.value.trim();
-        if (!m && !t) return ['Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.', 'a_tel'];
-        if (m && !EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'a_mail'];
+        if (!m) return ['Bitte geben Sie Ihre E-Mail-Adresse an. Dorthin kommen die Angebote.', 'a_mail'];
+        if (!EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'a_mail'];
         if (!$('a_consent').checked) return ['Bitte bestätigen Sie kurz die Datenschutzhinweise.'];
       },
       daten: function(){
@@ -462,7 +463,7 @@
           firma: af.firma.value, telefon: af.telefon.value, email: af.email.value, website: af.website.value, consent: true, quelle: quelle };
       },
       fertig: function(d){
-        if (d.mail) $('anfrageDankeText').textContent = 'Eine Bestätigung ist per E-Mail unterwegs. Wir melden uns innerhalb eines Werktags und fragen dann passende Betriebe an.';
+        if (d.mail) $('anfrageDankeText').textContent = 'Eine Bestätigung mit dem Link zu Ihrer persönlichen Angebotsseite ist per E-Mail unterwegs. Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe.';
         $('anfrage').scrollIntoView({behavior: 'smooth', block: 'start'});
       }
     });
