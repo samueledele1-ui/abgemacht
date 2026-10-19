@@ -16,8 +16,10 @@ export function mailLayout(inhalt: string) {
 </td></tr></table></body></html>`;
 }
 
+// Knopf plus sichtbarer Link darunter (falls ein Mail-Programm den Knopf nicht öffnet)
 export const knopf = (href: string, text: string) =>
-  `<p style="margin:24px 0"><a href="${href}" style="display:inline-block;background:#138A6B;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 24px;border-radius:999px">${text}</a></p>`;
+  `<p style="margin:24px 0 8px"><a href="${href}" target="_blank" style="display:inline-block;background:#138A6B;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 24px;border-radius:999px">${text}</a></p>` +
+  `<p style="margin:0 0 20px;font-size:13px;line-height:1.4;color:#5B6B65;word-break:break-all">Falls der Knopf nicht reagiert: <a href="${href}" target="_blank" style="color:#138A6B">${href}</a></p>`;
 
 export const absatz = (html: string) => `<p style="margin:0 0 12px">${html}</p>`;
 export const gruss = `<p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`;
