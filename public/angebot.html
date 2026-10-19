@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Angebote – Abgemacht</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='28' fill='%23138A6B'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle'%3E🤝%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/marke.css">
+<style>
+  main{max-width:680px;margin:0 auto;padding:8px 0 48px}
+  h1{font-size:clamp(30px,6vw,44px);line-height:1.02;margin:6px 0 10px}
+  .unterzeile{color:var(--muted);margin:0 0 22px}
+  .box{background:#fff;border:1px solid var(--line);border-radius:20px;padding:20px 22px;margin-top:16px}
+  .box h2{font-size:20px;margin:0 0 12px}
+  dl.daten{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0}
+  dl.daten dt{color:var(--muted);white-space:nowrap}
+  dl.daten dd{margin:0;overflow-wrap:anywhere}
+  .angebot{position:relative}
+  .angebot .kopf{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .angebot .label{font-family:var(--disp);font-weight:800;font-size:20px}
+  .angebot .wer{color:var(--muted);font-size:14.5px;margin-top:2px}
+  .angebot .betrag{font-family:var(--disp);font-weight:800;font-size:26px;color:var(--tanne);white-space:nowrap;text-align:right}
+  .angebot .betrag small{display:block;font-family:var(--text);font-weight:500;font-size:13px;color:var(--muted)}
+  .angebot .text{margin:12px 0 0;white-space:pre-line;overflow-wrap:anywhere}
+  .angebot .aktion{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .angebot.gewaehlt{border:2px solid var(--gruen);box-shadow:0 18px 40px -26px rgba(13,79,62,.6)}
+  .angebot.aus{opacity:.55}
+  .sterne{color:#B7791F;font-weight:700}
+  .marke{display:inline-block;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--minze);color:var(--tanne)}
+  .marke.grau{background:var(--nebel);color:var(--muted)}
+  .abgemacht{background:var(--tanne);color:#fff;border:0}
+  .abgemacht h2{color:#fff;font-size:26px}
+  .abgemacht dl.daten dt{color:#A9D9C6}
+  .abgemacht a{color:#fff}
+  .stempel-gross{display:inline-block;font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;border:2.5px solid var(--sonne);color:var(--sonne);padding:4px 12px;border-radius:10px;transform:rotate(-4deg);margin-bottom:10px}
+  textarea{width:100%;min-height:110px;resize:vertical}
+  .euro{position:relative}
+  .euro input{padding-right:44px;font-size:20px;font-weight:700}
+  .euro span{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+  .gebuehr{margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--gruen-l);font-size:14.5px}
+  .klein{font-size:14px;color:var(--muted)}
+  .linkknopf{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:14px}
+  .leer{color:var(--muted);text-align:center;padding:26px 10px}
+  .lade{color:var(--muted);padding:40px 0;text-align:center}
+  @media (max-width:560px){ .box{padding:18px 16px} .angebot .kopf{flex-direction:column} .angebot .betrag{text-align:left} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a></header>
+  <main id="inhalt"><p class="lade">Wird geladen …</p></main>
+  <footer><span>© 2026 Abgemacht</span><span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/bedingungen">Bedingungen</a></span></footer>
+</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var main = $('inhalt');
+  var t = new URLSearchParams(location.search).get('t') || '';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var euro = function (n) { return Number(n).toLocaleString('de-DE', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €'; };
+  var datum = function (d) { return d ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' }).format(new Date(d)) : ''; };
+  var ART = { einmalig: 'Einmalig', projekt: 'Projekt', langzeit: 'Regelmäßig / langfristig' };
+  var zahl = function (v) { var n = Number(String(v || '').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.')); return isFinite(n) && n > 0 ? n : null; };
+
+  async function api(daten) {
+    var res = await fetch(daten ? '/api/angebot' : '/api/angebot?t=' + encodeURIComponent(t), daten ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ t: t }, daten)) } : undefined);
+    var d = await res.json().catch(function () { return { ok: false, error: 'Verbindung fehlgeschlagen. Bitte später erneut versuchen.' }; });
+    if (!d.ok) throw new Error(d.error || 'Fehler');
+    return d;
+  }
+  function fehlerSeite(msg) {
+    main.innerHTML = '<h1>Link nicht gefunden</h1><p class="unterzeile">' + esc(msg) + '</p><div class="box"><p style="margin:0">Bitte nutzen Sie den Link aus Ihrer E-Mail. Bei Fragen schreiben Sie an <a href="mailto:hallo@ab-gemacht.info">hallo@ab-gemacht.info</a>.</p></div>';
+  }
+  function anfrageDaten(a) {
+    var z = [['Leistung', a.leistung], ['Ort', a.ort], ['Wann', a.zeitraum], ['Art', (ART[a.art] || '') + (a.laufzeit ? ', ' + a.laufzeit : '')], ['Budget', a.budget], ['Details', a.beschreibung]];
+    return '<dl class="daten">' + z.filter(function (x) { return x[1]; }).map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + esc(x[1]).replace(/\n/g, '<br>') + '</dd>'; }).join('') + '</dl>';
+  }
+  function kontaktDaten(z) {
+    return '<dl class="daten">' + z.filter(function (x) { return x[1]; }).map(function (x) {
+      var w = esc(x[1]);
+      if (x[0] === 'Telefon') w = '<a href="tel:' + esc(String(x[1]).replace(/[^\d+]/g, '')) + '">' + w + '</a>';
+      if (x[0] === 'E-Mail') w = '<a href="mailto:' + esc(x[1]) + '">' + w + '</a>';
+      if (x[0] === 'Website') w = '<a href="' + esc(/^https?:/.test(x[1]) ? x[1] : 'https://' + x[1]) + '" target="_blank" rel="noopener">' + w + '</a>';
+      return '<dt>' + x[0] + '</dt><dd>' + w + '</dd>';
+    }).join('') + '</dl>';
+  }
+
+  /* ================= Betrieb ================= */
+  function gebuehrBerechnen(m, art, betrag) {
+    if (art === 'langzeit') { var w = betrag ? betrag * 12 : 0; return Math.round(Math.min(m.dauer_max, Math.max(m.dauer_min, w * m.satz)) * 100) / 100; }
+    if (!betrag) return null;
+    if (betrag <= 500) return 9;
+    if (betrag <= 2000) return 29;
+    return Math.round(Math.min(m.deckel_einzel, betrag * m.satz) * 100) / 100;
+  }
+  function betrieb(d) {
+    var a = d.anfrage, lang = a.art === 'langzeit';
+    var kopf = '<h1>' + esc(a.leistung || 'Anfrage') + '</h1><p class="unterzeile">Anfrage #' + a.nr + ' vom ' + datum(a.erstellt) + (a.ort ? ' · ' + esc(a.ort) : '') + ' · für ' + esc(d.firma) + '</p>';
+    var details = '<div class="box"><h2>Das wird gesucht</h2>' + anfrageDaten(a) + '</div>';
+    if (d.status === 'gewaehlt') {
+      main.innerHTML = kopf + '<div class="box abgemacht"><span class="stempel-gross">Abgemacht</span><h2>Ihr Angebot wurde angenommen</h2>' +
+        '<p>Bitte melden Sie sich innerhalb von 24 Stunden beim Auftraggeber, um alles Weitere direkt abzustimmen.</p>' +
+        kontaktDaten([['Auftraggeber', d.kunde.name], ['Kontakt', d.kunde.kontakt]]) + '</div>' + details;
+      return;
+    }
+    if (d.status === 'abgesagt') { main.innerHTML = kopf + '<div class="box"><h2>Sie haben abgesagt</h2><p style="margin:0">Danke für die Rückmeldung. Bei der nächsten passenden Anfrage melden wir uns wieder.</p></div>' + details; return; }
+    if (!d.offen) { main.innerHTML = kopf + '<div class="box"><h2>Entscheidung gefallen</h2><p style="margin:0">Der Auftraggeber hat sich für ein anderes Angebot entschieden. Danke für Ihr Angebot! Bei der nächsten passenden Anfrage melden wir uns wieder.</p></div>' + details; return; }
+
+    var hatAngebot = !!d.angebot;
+    var g = d.gebuehren, m = d.modell;
+    main.innerHTML = kopf + details +
+      '<div class="box" id="formBox"><h2>' + (hatAngebot ? 'Ihr Angebot (Sie können es noch ändern)' : 'Ihr Angebot') + '</h2>' +
+      (hatAngebot ? '<p class="marke" style="margin:0 0 12px">✓ Liegt beim Auftraggeber</p>' : '') +
+      '<form id="aForm" novalidate>' +
+      '<label for="betrag">' + (lang ? 'Ihr Preis pro Monat *' : 'Ihr Preis (Gesamtbetrag) *') + '</label>' +
+      '<div class="euro"><input id="betrag" inputmode="decimal" autocomplete="off" placeholder="' + (lang ? 'z. B. 380' : 'z. B. 450') + '" value="' + (hatAngebot ? esc(String(d.angebot.betrag).replace('.', ',')) : '') + '"><span>€' + (lang ? ' / Monat' : '') + '</span></div>' +
+      '<label for="nachricht" style="margin-top:14px">Was ist enthalten, wann können Sie?</label>' +
+      '<textarea id="nachricht" maxlength="2000" placeholder="z. B. Termin ab KW 46 möglich, inkl. Material und Anfahrt. Telefonnummern, E-Mail- und Web-Adressen werden ausgeblendet, die Kontaktdaten gibt es nach der Zusage.">' + (hatAngebot ? esc(d.angebot.nachricht || '') : '') + '</textarea>' +
+      '<div class="gebuehr" id="gebuehr"></div>' +
+      '<label class="check" style="margin-top:14px"><input type="checkbox" id="bed"' + (hatAngebot ? ' checked' : '') + '> <span>Ich akzeptiere die <a href="/bedingungen" target="_blank">Bedingungen</a>' + (g.aktiv ? ' einschließlich des Gebührenmodells' : '') + '.</span></label>' +
+      '<button class="btn" id="senden" type="submit" style="width:100%;margin-top:16px">' + (hatAngebot ? 'Angebot aktualisieren' : 'Angebot abgeben') + '</button>' +
+      '<div class="msg" id="msg" role="status"></div></form>' +
+      '<p style="margin:16px 0 0;text-align:center"><button class="linkknopf" id="absagen" type="button">Keine Zeit oder kein Interesse? Kurz absagen</button></p></div>';
+
+    function gebuehrText() {
+      var b = zahl($('betrag').value), f = gebuehrBerechnen(m, a.art, b);
+      var modell = lang ? 'Bei regelmäßigen Aufträgen einmalig 3\u00a0% vom ersten Vertragsjahr (mind. ' + euro(m.dauer_min) + ', max. ' + euro(m.dauer_max) + ').' : 'Bis 500 € Auftragswert 9 €, bis 2.000 € 29 €, darüber 3\u00a0% (max. ' + euro(m.deckel_einzel) + ').';
+      if (!g.aktiv) $('gebuehr').innerHTML = '<b>In der Startphase kostenlos.</b> Später nur bei Zusage: ' + modell;
+      else $('gebuehr').innerHTML = (f ? '<b>Gebühr nur bei Zusage: ' + euro(f) + '</b>' + (lang && b ? ' (Jahreswert ' + euro(b * 12) + ')' : '') + '. ' : '<b>Gebühr nur bei Zusage.</b> ') + modell;
+    }
+    gebuehrText();
+    $('betrag').addEventListener('input', gebuehrText);
+    $('aForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var msg = $('msg'), btn = $('senden');
+      if (!zahl($('betrag').value)) { msg.textContent = 'Bitte geben Sie Ihren Preis an.'; msg.className = 'msg err'; $('betrag').focus(); return; }
+      if (!$('bed').checked) { msg.textContent = 'Bitte bestätigen Sie die Bedingungen.'; msg.className = 'msg err'; return; }
+      btn.disabled = true; msg.textContent = ''; msg.className = 'msg';
+      try {
+        await api({ aktion: 'angebot', betrag: $('betrag').value, nachricht: $('nachricht').value, bedingungen: true });
+        $('formBox').innerHTML = '<span class="stempel drauf">✓ Abgegeben</span><h2 style="margin-top:12px">Ihr Angebot ist beim Auftraggeber</h2><p style="margin:0 0 14px">Sobald er sich entscheidet, bekommen Sie eine E-Mail. Nimmt er Ihr Angebot an, stehen darin seine Kontaktdaten.</p><button class="btn ghost" type="button" id="nochmal">Angebot ändern</button>';
+        $('nochmal').onclick = laden;
+      } catch (err) { msg.textContent = err.message; msg.className = 'msg err'; btn.disabled = false; }
+    });
+    $('absagen').onclick = function () {
+      var p = this.parentNode;
+      p.innerHTML = '<span class="klein">Wirklich absagen? </span><button class="btn ghost" type="button" id="jaAb" style="padding:8px 16px;font-size:14px">Ja, absagen</button> <button class="linkknopf" type="button" id="neinAb">Abbrechen</button>';
+      $('neinAb').onclick = laden;
+      $('jaAb').onclick = async function () { try { await api({ aktion: 'absagen' }); laden(); } catch (err) { alertBox(err.message); } };
+    };
+  }
+
+  /* ================= Auftraggeber ================= */
+  function kunde(d) {
+    var a = d.anfrage, lang = a.art === 'langzeit';
+    var kopf = '<h1>' + (d.betrieb ? 'Abgemacht!' : 'Ihre Angebote') + '</h1><p class="unterzeile">' + esc(a.leistung || 'Anfrage') + (a.ort ? ' in ' + esc(a.ort) : '') + ' · Anfrage #' + a.nr + ' vom ' + datum(a.erstellt) + '</p>';
+    var oben = '';
+    if (d.betrieb) {
+      var b = d.betrieb;
+      oben = '<div class="box abgemacht"><span class="stempel-gross">Abgemacht</span><h2>' + esc(b.firma) + '</h2><p>Der Betrieb hat Ihre Kontaktdaten bekommen und meldet sich bei Ihnen. Sie können sich auch direkt melden:</p>' +
+        kontaktDaten([['Ansprechpartner', b.ansprechpartner], ['Telefon', b.telefon], ['E-Mail', b.email], ['Website', b.website]]) +
+        '<p class="klein" style="color:#CFEBDF;margin:14px 0 0">Den Vertrag schließen Sie direkt mit dem Betrieb. Nach dem Auftrag fragen wir kurz, ob alles gepasst hat.</p></div>';
+    } else if (!d.offen) {
+      oben = '<div class="box"><h2>Diese Anfrage ist abgeschlossen</h2><p style="margin:0">Haben Sie etwas Neues? <a href="/#anfrage">Neue Anfrage stellen</a></p></div>';
+    }
+    var liste = d.angebote.map(function (o) {
+      var bew = o.bewertungen ? '<span class="sterne">★ ' + String(o.sterne).replace('.', ',') + '</span> aus ' + o.bewertungen + ' Bewertung' + (o.bewertungen > 1 ? 'en' : '') : (o.auftraege ? o.auftraege + ' Auftrag' + (o.auftraege > 1 ? 'e' : '') + ' über Abgemacht' : '<span class="marke grau">Neu bei Abgemacht</span>');
+      var preis = o.betrag != null ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
+      var cls = o.status === 'gewaehlt' ? ' gewaehlt' : o.status === 'nicht_gewaehlt' ? ' aus' : '';
+      var knopf = d.offen && o.status === 'angebot' ? '<div class="aktion" data-o="' + o.id + '"><button class="btn" type="button" data-an="' + o.id + '">Dieses Angebot annehmen</button></div>' : '';
+      return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + '</div>' +
+        '<div class="wer">' + esc([o.kategorie, o.ort].filter(Boolean).join(' · ') || 'Betrieb aus der Region') + '</div><div class="wer">' + bew + '</div></div>' +
+        '<div class="betrag">' + preis + '</div></div>' + (o.nachricht ? '<p class="text">' + esc(o.nachricht) + '</p>' : '') +
+        '<p class="klein" style="margin:10px 0 0">Eingegangen am ' + datum(o.am) + '</p>' + knopf + '</div>';
+    }).join('');
+    if (!d.angebote.length) liste = '<div class="box leer"><b style="color:var(--ink);display:block;font-size:18px;margin-bottom:6px">Noch keine Angebote</b>' +
+      (d.angefragt ? d.angefragt + ' Betrieb' + (d.angefragt > 1 ? 'e sind' : ' ist') + ' angefragt.' : 'Ihre Anfrage geht spätestens am nächsten Werktag an passende Betriebe.') +
+      ' Beim ersten Angebot bekommen Sie eine E-Mail. Diese Seite zeigt immer den aktuellen Stand.</div>';
+    var hinweis = d.offen && d.angebote.length ? '<p class="klein" style="margin:18px 4px 0">Namen und Kontaktdaten der Betriebe sehen Sie, sobald Sie ein Angebot annehmen. Dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten. Den Vertrag mit allen Einzelheiten machen Sie direkt mit dem Betrieb aus. Für Sie ist das kostenlos.</p>' : '';
+    main.innerHTML = kopf + oben + liste + hinweis + '<details class="box"><summary style="cursor:pointer;font-weight:700">Ihre Anfrage</summary><div style="margin-top:12px">' + anfrageDaten(a) + '</div></details>';
+    main.querySelectorAll('[data-an]').forEach(function (b) {
+      b.onclick = function () {
+        var box = b.parentNode, id = +b.dataset.an;
+        box.innerHTML = '<span><b>Angebot annehmen?</b> Sie und der Betrieb bekommen dann gegenseitig die Kontaktdaten, die anderen Betriebe eine kurze Absage.</span>' +
+          '<button class="btn" type="button" data-ja>Ja, annehmen</button><button class="linkknopf" type="button" data-nein>Abbrechen</button>';
+        box.querySelector('[data-nein]').onclick = laden;
+        box.querySelector('[data-ja]').onclick = async function () {
+          this.disabled = true;
+          try { await api({ aktion: 'annehmen', vb: id }); await laden(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+          catch (err) { box.innerHTML = '<span class="msg err" style="display:block">' + esc(err.message) + '</span>'; setTimeout(laden, 2500); }
+        };
+      };
+    });
+  }
+
+  function alertBox(t) { var m = document.createElement('p'); m.className = 'msg err'; m.textContent = t; main.prepend(m); }
+
+  async function laden() {
+    if (!/^[bk]_[0-9a-f]{32}$/.test(t)) return fehlerSeite('Dieser Link ist unvollständig.');
+    try {
+      var d = await api();
+      document.title = (d.rolle === 'betrieb' ? 'Anfrage' : 'Ihre Angebote') + ' – Abgemacht';
+      (d.rolle === 'betrieb' ? betrieb : kunde)(d);
+    } catch (e) { fehlerSeite(e.message); }
+  }
+  laden();
+})();
+</script>
+</body>
+</html>
