@@ -1,6 +1,8 @@
 import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
 import { rechnungPdf, datumDE, euro, type Absender } from "../lib/rechnung.ts";
+import { gebuehr, auftragswert } from "../lib/gebuehr.ts";
+import { seite, esc as escP, mailLayout, knopf, absatz, gruss, tabelle, sendeMail, ohneKontakt, mailAus } from "../lib/post.ts";
 
 // Vermittlung von Hand (Startphase): Anfragen von Auftraggebern, Partner-Betriebe, Angebote, „Abgemacht“.
 // Geschützt mit demselben ADMIN_PASSWORT wie /crm. Alles über POST /api/vermittlung mit {pw, aktion, ...}.
@@ -76,11 +78,20 @@ async function gleich(a: string, b: string) {
   return d === 0;
 }
 
-// Gebühr nach Preismodell: bis 500 € 9 €, bis 2.000 € 29 €, darüber 59 €, Langzeit einmalig 199 €
-function gebuehr(art: string, wert: number | null) {
-  if (art === "langzeit") return 199;
-  if (!wert) return null;
-  return wert > 2000 ? 59 : wert > 500 ? 29 : 9;
+const ARTNAME: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
+async function gebuehrenAktiv(sql: any) {
+  const r = await sql`SELECT wert FROM einstellungen WHERE schluessel = 'gebuehren_ab'`;
+  return !!r[0]?.wert && r[0].wert <= berlinHeute();
+}
+// Mail an einen angefragten Betrieb mit anonymer Anfrage und persönlichem „Angebot abgeben“-Link
+async function anfrageMail(v: any, b: any, aktiv: boolean) {
+  return sendeMail(b.email, b.ansprechpartner || b.firma, `Neue Anfrage: ${v.leistung || "Auftrag"}${v.ort ? " in " + v.ort : ""}`, mailLayout(
+    absatz(`Guten Tag${b.ansprechpartner ? " " + escP(b.ansprechpartner) : ""},`) +
+    absatz(`es gibt eine neue Anfrage, die zu ${escP(b.firma)} passen könnte:`) +
+    tabelle([["Leistung", v.leistung], ["Ort", v.ort], ["Wann", v.zeitraum], ["Art", ARTNAME[v.art || "einmalig"] + (v.laufzeit ? ", " + v.laufzeit : "")], ["Budget", v.budget], ["Details", ohneKontakt(v.beschreibung)]]) +
+    absatz("Wenn Sie Interesse haben, geben Sie Ihr Angebot über den Knopf ab. Das dauert eine Minute. Name und Kontaktdaten des Auftraggebers bekommen Sie, sobald er Ihr Angebot annimmt.") +
+    knopf(`${seite()}/angebot?t=${b.token}`, "Angebot abgeben") +
+    absatz(`<span style="font-size:14px;color:#5B6B65">Kein Interesse oder keine Zeit? Dann sagen Sie auf derselben Seite kurz ab. ${aktiv ? "Eine Gebühr fällt nur an, wenn Ihr Angebot angenommen wird (siehe Bedingungen)." : "In der Startphase ist das für Sie kostenlos."}</span>`) + gruss));
 }
 
 export default async (req: Request, _context: Context) => {
@@ -166,7 +177,22 @@ export default async (req: Request, _context: Context) => {
     for (const k of ids) await sql`INSERT INTO vermittlung_betriebe (vermittlung_id, kontakt_id) VALUES (${id}, ${k}) ON CONFLICT DO NOTHING`;
     await sql`UPDATE vermittlungen SET status = 'angefragt', updated_at = now() WHERE id = ${id} AND status = 'neu'`;
     for (const k of ids) await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${k}, 'vermittlung', ${"Anfrage #" + id + " geschickt"})`;
-    return Response.json({ ok: true });
+    // Automatisch per Mail an alle angefragten Betriebe mit E-Mail-Adresse (Link „Angebot abgeben“)
+    const v = (await sql`SELECT * FROM vermittlungen WHERE id = ${id}`)[0];
+    // Nur an Partner-Betriebe (haben den Bedingungen zugestimmt), nie an kalte Kontakte
+    const bs = await sql`SELECT vb.id, vb.token, k.firma, k.ansprechpartner, CASE WHEN k.partner IN ('aktiv', 'interessiert') THEN k.email END AS email
+      FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id
+      WHERE vb.vermittlung_id = ${id} AND vb.kontakt_id = ANY(${ids}::int[]) AND vb.gemailt_am IS NULL`;
+    const aktiv = await gebuehrenAktiv(sql);
+    const ohneMail: string[] = [];
+    let gemailt = 0;
+    for (const b of bs) {
+      if (b.email && body.mail !== false && (await anfrageMail(v, b, aktiv))) {
+        gemailt++;
+        await sql`UPDATE vermittlung_betriebe SET gemailt_am = now() WHERE id = ${b.id}`;
+      } else ohneMail.push(b.firma);
+    }
+    return Response.json({ ok: true, gemailt, ohneMail });
   }
 
   if (aktion === "vb") {
@@ -210,10 +236,13 @@ export default async (req: Request, _context: Context) => {
 
   if (aktion === "waehlen") {
     const vbid = Number(body.vb) || 0;
-    const r = await sql`SELECT vb.vermittlung_id, vb.kontakt_id, vb.preis, v.art FROM vermittlung_betriebe vb JOIN vermittlungen v ON v.id = vb.vermittlung_id WHERE vb.id = ${vbid}`;
+    const r = await sql`SELECT vb.vermittlung_id, vb.kontakt_id, vb.preis, vb.preis_betrag, v.art FROM vermittlung_betriebe vb JOIN vermittlungen v ON v.id = vb.vermittlung_id WHERE vb.id = ${vbid}`;
     if (!r.length) return fehler("Nicht gefunden.", 404);
-    const { vermittlung_id, kontakt_id, preis, art } = r[0];
-    const wert = zahl(body.auftragswert) ?? zahl(preis);
+    const { vermittlung_id, kontakt_id, preis, preis_betrag, art } = r[0];
+    // Bei regelmäßigen Aufträgen zählt der Wert des ersten Vertragsjahres (Monatspreis × 12)
+    const roh = zahl(body.auftragswert) ?? zahl(preis) ?? (preis_betrag === null ? null : Number(preis_betrag));
+    const proMonat = art === "langzeit" && (preis_betrag !== null || /monat|mtl|monatl/i.test(String(body.auftragswert || preis || "")));
+    const wert = proMonat ? auftragswert("langzeit", roh) : roh;
     await sql`UPDATE vermittlung_betriebe SET status = CASE WHEN id = ${vbid} THEN 'gewaehlt' WHEN status = 'angebot' THEN 'nicht_gewaehlt' ELSE status END
       WHERE vermittlung_id = ${vermittlung_id}`;
     await sql`UPDATE vermittlungen SET status = 'abgemacht', gewaehlt_id = ${kontakt_id}, auftragswert = ${wert}, gebuehr = ${gebuehr(art, wert)}, updated_at = now(), abgemacht_am = COALESCE(abgemacht_am, now())
@@ -380,6 +409,20 @@ export default async (req: Request, _context: Context) => {
       sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${o.kontakt_id}, 'abrechnung', ${"Rechnung " + o.nummer + " storniert (" + nummer + ")"})`,
     ]);
     return Response.json({ ok: true, id: sid, nummer });
+  }
+
+  if (aktion === "kunde_link_senden") {
+    const v = (await sql`SELECT id, leistung, ort, kontakt, kunde_token FROM vermittlungen WHERE id = ${id}`)[0];
+    if (!v) return fehler("Nicht gefunden.", 404);
+    const an = mailAus(clip(body.an, 254) || v.kontakt);
+    if (!an) return fehler("Beim Auftraggeber ist keine E-Mail-Adresse hinterlegt.");
+    const ok = await sendeMail(an, null, `Ihre Angebote: ${v.leistung || "Ihre Anfrage"}`, mailLayout(
+      absatz("Guten Tag,") +
+      absatz(`über den Knopf sehen Sie alle Angebote zu Ihrer Anfrage „${escP(v.leistung || "")}“${v.ort ? " in " + escP(v.ort) : ""} und nehmen das passende mit einem Klick an. Erst dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten.`) +
+      knopf(`${seite()}/angebot?t=${v.kunde_token}`, "Angebote ansehen") + gruss));
+    if (!ok) return fehler("Mail konnte nicht gesendet werden (Brevo nicht eingerichtet?).", 502);
+    await sql`UPDATE vermittlungen SET kunde_mail_am = now() WHERE id = ${id}`;
+    return Response.json({ ok: true, an });
   }
 
   if (aktion === "loeschen") {
