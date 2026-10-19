@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
 import { rechnungPdf, datumDE, euro, type Absender } from "../lib/rechnung.ts";
 import { gebuehr, auftragswert } from "../lib/gebuehr.ts";
+import { bewerte, analysiere } from "../lib/passend.ts";
 import { seite, esc as escP, mailLayout, knopf, absatz, gruss, tabelle, sendeMail, ohneKontakt, mailAus } from "../lib/post.ts";
 
 // Vermittlung von Hand (Startphase): Anfragen von Auftraggebern, Partner-Betriebe, Angebote, „Abgemacht“.
@@ -163,12 +164,13 @@ export default async (req: Request, _context: Context) => {
   }
 
   if (aktion === "kandidaten") {
-    const q = `%${(clip(body.q, 60) || "").replace(/[%_]/g, "")}%`;
-    const rows = await sql`SELECT id, firma, kategorie, leistungen, ort, region, telefon, partner, wa_ok_am, status FROM crm_kontakte
-      WHERE (firma ILIKE ${q} OR kategorie ILIKE ${q} OR leistungen ILIKE ${q} OR ort ILIKE ${q})
-        AND status NOT IN ('kein_interesse', 'keine_anrufe')
-      ORDER BY (partner = 'aktiv') DESC NULLS LAST, (wa_ok_am IS NOT NULL) DESC, firma LIMIT 25`;
-    return Response.json({ ok: true, kandidaten: rows });
+    // Breite Suche: Wörter + Branchen-Gruppen (z. B. „Rechtsschutzberatung“ → alle Finanz-/Versicherungsbetriebe)
+    const q = clip(body.q, 200) || "";
+    if (!q) return Response.json({ ok: true, kandidaten: [], gruppen: [] });
+    const alle = await sql`SELECT id, firma, kategorie, leistungen, ort, region, telefon, email, partner, wa_ok_am, status FROM crm_kontakte
+      WHERE status IS NULL OR status NOT IN ('kein_interesse', 'keine_anrufe')`;
+    const treffer = bewerte(alle as any[], q, clip(body.ort, 80)).slice(0, 25);
+    return Response.json({ ok: true, kandidaten: treffer, gruppen: analysiere(q).gruppen });
   }
 
   if (aktion === "anfragen") {
