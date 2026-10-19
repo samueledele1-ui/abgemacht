@@ -44,7 +44,7 @@ function mailLayout(inhalt: string, abmeldeLink?: string) {
   return `<!doctype html><html lang="de"><body style="margin:0;background:#F6F8F7;font-family:Arial,Helvetica,sans-serif;color:#14231E">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F8F7;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #E2E8E5;border-radius:16px">
-<tr><td style="padding:24px 28px 0;font-size:20px;font-weight:bold">🤝 Abgemacht</td></tr>
+<tr><td style="padding:24px 28px 0;font-size:20px;font-weight:bold"><span style="display:inline-block;width:30px;height:30px;line-height:30px;text-align:center;background:#0D4F3E;color:#F2B33D;border-radius:9px;font-size:19px;font-weight:bold;vertical-align:middle;margin-right:8px">&#10003;</span>Abgemacht</td></tr>
 <tr><td style="padding:16px 28px 28px;font-size:16px;line-height:1.55">${inhalt}</td></tr>
 </table>
 <p style="max-width:520px;font-size:12px;line-height:1.5;color:#5B6B65;margin:16px auto 0">${fuss}</p>
@@ -318,7 +318,7 @@ export default async (req: Request, _context: Context) => {
     const { email, name } = vorher[0];
     const liste = Number(Netlify.env.get("BREVO_LIST_ID") || 0);
     if (liste) await brevo("/contacts", "POST", { email, listIds: [liste], updateEnabled: true });
-    await sendeMail(email, name, "Du bist dabei 🤝", willkommensMail(name, t), `${seite()}/abmelden?t=${t}`);
+    await sendeMail(email, name, "Du bist dabei ✓", willkommensMail(name, t), `${seite()}/abmelden?t=${t}`);
     return Response.json({ ok: true });
   }
 

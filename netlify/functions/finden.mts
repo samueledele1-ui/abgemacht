@@ -125,7 +125,7 @@ ${o.noindex ? '<meta name="robots" content="noindex">' : ""}
 <meta property="og:title" content="${esc(o.titel)}">
 <meta property="og:description" content="${esc(o.beschreibung)}">
 <meta property="og:url" content="${url}">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='28' fill='%23138A6B'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle'%3E🤝%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <style>${CSS}</style>
 ${ld}
@@ -133,7 +133,7 @@ ${ld}
 <body>
 <div class="wrap">
   <header>
-    <a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a>
+    <a class="logo" href="/"><span class="mark"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5.5 12.5l4.2 4.2L18.5 7.8" fill="none" stroke="#F2B33D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Abgemacht</a>
     <a class="btn" href="/?quelle=seo#anfrage">Anfrage stellen</a>
   </header>
   <main class="seo">${o.inhalt}</main>

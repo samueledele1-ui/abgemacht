@@ -38,7 +38,7 @@ export default async () => {
   const html = `<!doctype html><html lang="de"><body style="margin:0;background:#F6F8F7;font-family:Arial,Helvetica,sans-serif;color:#14231E">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #E2E8E5;border-radius:16px">
-<tr><td style="padding:24px 24px 4px;font-size:20px;font-weight:bold">🤝 Heute anrufen: ${rows.length}</td></tr>
+<tr><td style="padding:24px 24px 4px;font-size:20px;font-weight:bold"><span style="display:inline-block;width:30px;height:30px;line-height:30px;text-align:center;background:#0D4F3E;color:#F2B33D;border-radius:9px;font-size:19px;font-weight:bold;vertical-align:middle;margin-right:8px">&#10003;</span>Heute anrufen: ${rows.length}</td></tr>
 <tr><td style="padding:8px 24px 24px;font-size:15px;line-height:1.5">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:15px">${zeilen}</table>
 <p style="margin:22px 0 0"><a href="${seite}/crm" style="display:inline-block;background:#138A6B;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:999px">CRM öffnen</a></p>
