@@ -165,12 +165,15 @@ export default async (req: Request, _context: Context) => {
 
   if (aktion === "kandidaten") {
     // Breite Suche: Wörter + Branchen-Gruppen (z. B. „Rechtsschutzberatung“ → alle Finanz-/Versicherungsbetriebe)
+    // Suche nach Branche (q) und/oder Ort; die Sortierung nach Entfernung macht das Büro im Browser
     const q = clip(body.q, 200) || "";
-    if (!q) return Response.json({ ok: true, kandidaten: [], gruppen: [] });
-    const alle = await sql`SELECT id, firma, kategorie, leistungen, ort, region, telefon, email, partner, wa_ok_am, status FROM crm_kontakte
-      WHERE status IS NULL OR status NOT IN ('kein_interesse', 'keine_anrufe')`;
-    const treffer = bewerte(alle as any[], q, clip(body.ort, 80)).slice(0, 25);
-    return Response.json({ ok: true, kandidaten: treffer, gruppen: analysiere(q).gruppen });
+    const ort = clip(body.ort, 80) || "";
+    if (!q && !ort) return Response.json({ ok: true, kandidaten: [], gruppen: [] });
+    const alle = (await sql`SELECT id, firma, kategorie, leistungen, ort, region, telefon, email, partner, wa_ok_am, status FROM crm_kontakte
+      WHERE (status IS NULL OR status NOT IN ('kein_interesse', 'keine_anrufe'))
+        AND coalesce(kategorie, '') NOT ILIKE 'Auftraggeber%'`) as any[];
+    const treffer = q ? bewerte(alle, q, ort) : alle.map((k) => ({ ...k, punkte: 0, grund: "" }));
+    return Response.json({ ok: true, kandidaten: treffer.slice(0, 400), gruppen: q ? analysiere(q).gruppen : [] });
   }
 
   if (aktion === "anfragen") {
