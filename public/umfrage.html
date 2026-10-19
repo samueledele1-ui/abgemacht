@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Umfrage – Abgemacht</title>
 <meta name="description" content="2 Minuten, die Abgemacht besser machen: Wie findest du heute Aufträge oder gute Betriebe in der Region?">
@@ -20,7 +21,7 @@
 .weg .zeile b{color:var(--tanne)}
 .fortschritt{height:10px;background:var(--nebel);border-radius:99px;overflow:visible;margin:0;position:relative}
 .fortschritt i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gruen),#3FB08E);border-radius:99px;transition:width .5s cubic-bezier(.3,1.3,.5,1);position:relative}
-.fortschritt i::after{content:"🤝";position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--gruen);display:grid;place-items:center;font-size:14px;box-shadow:0 4px 10px -4px rgba(0,0,0,.3)}
+.fortschritt i::after{content:"✓";color:var(--tanne);font-weight:800;position:absolute;right:-14px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--gruen);display:grid;place-items:center;font-size:14px;box-shadow:0 4px 10px -4px rgba(0,0,0,.3)}
 .fortschritt .ziel{position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;border:2px dashed var(--sonne);background:#fff}
 .frage{margin-top:30px}
 .frage > b{display:block;font-family:var(--disp);font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.3;margin-bottom:6px}
@@ -46,7 +47,7 @@ textarea{width:100%;font:inherit;padding:12px 14px;min-height:96px;resize:vertic
 </head>
 <body>
 <div class="wrap">
-  <header><a class="logo" href="/"><span class="mark">🤝</span>Abgemacht</a></header>
+  <header><a class="logo" href="/"><span class="mark"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5.5 12.5l4.2 4.2L18.5 7.8" fill="none" stroke="#F2B33D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Abgemacht</a></header>
 
   <div class="kopfband muster">
     <span class="pill">2 Minuten · anonym, wenn du willst</span>
