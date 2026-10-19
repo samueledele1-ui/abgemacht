@@ -476,7 +476,7 @@
         <div class="knopfreihe">${v.kunde_token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(v.kunde_token))}">Angebotsseite-Link kopieren</button><button class="btn ghost klein" type="button" id="kLink">Link per Mail an Kunden</button>` : ""}</div></div>
       ${kundenTexte}
       <h3 class="ab">Angefragte Betriebe (${bs.length})</h3>${vbHtml || '<div class="leer" style="padding:14px">Noch keine. Unten passende Betriebe suchen.</div>'}
-      <div class="unter"><label for="kSuch">Betriebe suchen und anfragen (bis zu 5)</label><div style="display:flex;gap:8px"><input id="kSuch" value="${esc((v.leistung || "").split(/[ ,&]/)[0])}" placeholder="Branche, Leistung oder Firma"><button class="btn klein" id="kSuchen" type="button">Suchen</button></div>
+      <div class="unter"><label for="kSuch">Betriebe suchen und anfragen (bis zu 5)</label><div style="display:flex;gap:8px"><input id="kSuch" value="${esc(v.leistung || "")}" placeholder="Leistung, Branche oder Firma"><button class="btn klein" id="kSuchen" type="button">Suchen</button></div>
         <div id="kListe"></div><button class="btn klein" id="kAnfragen" type="button" hidden style="margin-top:10px">Ausgewählte anfragen</button>
         <small style="color:var(--muted);display:block;margin-top:6px">Kein passender Betrieb dabei? Über Google Maps suchen, anrufen und mit „+ Partner“ anlegen.</small></div>
       <details class="unter" id="vEdit"><summary style="cursor:pointer;font-weight:700">Anfrage bearbeiten</summary>${vForm(v)}
@@ -493,13 +493,14 @@
     });
     const suchen = async () => {
       const q = p.querySelector("#kSuch").value.trim(); if (!q) return;
-      const d = await api({ aktion: "kandidaten", q });
+      const d = await api({ aktion: "kandidaten", q, ort: v.ort });
       const schon = new Set(bs.map((b) => b.kontakt_id));
       const l = d.kandidaten.filter((k) => !schon.has(k.id));
-      p.querySelector("#kListe").innerHTML = l.map((k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}</small></label></div>`).join("") || '<p style="color:var(--muted)">Keine Treffer.</p>';
+      p.querySelector("#kListe").innerHTML = l.map((k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${esc(k.firma)}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`).join("") || (d.kandidaten.length ? '<p style="color:var(--muted)">Alle passenden Betriebe sind schon angefragt.</p>' : `<p style="color:var(--muted)">Keine passenden Betriebe${d.gruppen && d.gruppen.length ? " (gesucht in: " + esc(d.gruppen.join(", ")) + ")" : ""}. Über Google Maps suchen und mit „+ Partner“ anlegen.</p>`);
       p.querySelector("#kAnfragen").hidden = !l.length;
     };
     p.querySelector("#kSuchen").onclick = suchen;
+    if (["neu", "angefragt", "angebote"].includes(v.status)) suchen();
     p.querySelector("#kSuch").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } };
     p.querySelector("#kAnfragen").onclick = async () => {
       const ids = [...p.querySelectorAll("#kListe input:checked")].map((x) => +x.value);
