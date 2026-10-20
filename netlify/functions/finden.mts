@@ -152,7 +152,7 @@ function anmeldeLink(b?: Branche, o?: Ort) {
   if (o) p.set("ort", o.name);
   return `/?${p.toString()}#anfrage`;
 }
-const partnerLink = () => "/?quelle=seo#partner";
+const partnerLink = () => "/betriebe?quelle=seo#partner";
 
 function seiteFuer(b: Branche, o: Ort) {
   const titel = `${b.name} in ${o.name} finden | Abgemacht`;
@@ -231,7 +231,7 @@ ${zeilen}
 
 function sitemap() {
   const heute = new Date().toISOString().slice(0, 10);
-  const urls = ["/", "/umfrage", "/finden", ...ORTE.flatMap((o) => BRANCHEN.map((b) => `/finden/${b.slug}-${o.slug}`))];
+  const urls = ["/", "/betriebe", "/finden", ...ORTE.flatMap((o) => BRANCHEN.map((b) => `/finden/${b.slug}-${o.slug}`))];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${basis()}${u}</loc><lastmod>${heute}</lastmod></url>`).join("\n")}
