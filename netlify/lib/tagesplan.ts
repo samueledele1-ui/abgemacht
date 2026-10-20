@@ -59,8 +59,8 @@ export async function tagesplan(jetzt = new Date()) {
         ORDER BY naechster_kontakt LIMIT 40`,
     sql`SELECT count(*)::int AS n FROM crm_kontakte WHERE status = 'neu' AND naechster_kontakt IS NULL`,
     sql`SELECT count(*) FILTER (WHERE status = 'freigegeben')::int AS frei, count(*) FILTER (WHERE status = 'angeboten')::int AS offen FROM crm_eintraege`,
-    sql`SELECT count(*) FILTER (WHERE status = 'bestaetigt')::int AS best, count(*) FILTER (WHERE status = 'bestaetigt' AND confirmed_at > now() - interval '24 hours')::int AS neu FROM waitlist`,
-    sql`SELECT count(*)::int AS n, count(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS neu, count(*) FILTER (WHERE zahlen = 'ja')::int AS ja FROM umfrage WHERE version >= 2`,
+    sql`SELECT count(*)::int AS best, count(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS neu FROM vermittlungen WHERE created_at > date_trunc('month', now())`,
+    sql`SELECT count(*) FILTER (WHERE status IN ('abgemacht', 'erledigt'))::int AS n, count(*) FILTER (WHERE status IN ('abgemacht', 'erledigt') AND updated_at > now() - interval '24 hours')::int AS neu, (SELECT count(*)::int FROM crm_kontakte WHERE gruender_nr IS NOT NULL) AS ja FROM vermittlungen WHERE created_at > date_trunc('month', now())`,
     sql`SELECT phase, text, typ, von, bis FROM fahrplan_aufgaben WHERE NOT erledigt AND von <= ${morgen}::date AND bis >= ${morgen}::date ORDER BY (von = bis) DESC, typ DESC, von, id`,
     sql`SELECT phase, text, von FROM fahrplan_aufgaben WHERE NOT erledigt AND von > ${morgen}::date AND typ <> 'gate' ORDER BY von, id LIMIT 4`,
     sql`SELECT text, von FROM fahrplan_aufgaben WHERE typ = 'gate' AND NOT erledigt AND von >= ${morgen}::date ORDER BY von LIMIT 1`,
@@ -101,8 +101,9 @@ export async function tagesplan(jetzt = new Date()) {
 
   // Zahlen
   const zahlen = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px">
-    <tr><td style="padding:2px 16px 2px 0">Warteliste bestätigt</td><td><b>${wl[0].best}</b> / 100${wl[0].neu ? ` <span style="color:#138A6B">(+${wl[0].neu} heute)</span>` : ""}</td></tr>
-    <tr><td style="padding:2px 16px 2px 0">Umfrage-Antworten (neu)</td><td><b>${umf[0].n}</b> / 30${umf[0].neu ? ` <span style="color:#138A6B">(+${umf[0].neu} heute)</span>` : ""} · ${umf[0].ja} Betriebe: 9 € okay</td></tr>
+    <tr><td style="padding:2px 16px 2px 0">Anfragen diesen Monat</td><td><b>${wl[0].best}</b>${wl[0].neu ? ` <span style="color:#138A6B">(+${wl[0].neu} heute)</span>` : ""}</td></tr>
+    <tr><td style="padding:2px 16px 2px 0">Abgemacht diesen Monat</td><td><b>${umf[0].n}</b>${umf[0].neu ? ` <span style="color:#138A6B">(+${umf[0].neu} heute)</span>` : ""}</td></tr>
+    <tr><td style="padding:2px 16px 2px 0">Gründungspartner</td><td><b>${umf[0].ja}</b> / 30</td></tr>
     <tr><td style="padding:2px 16px 2px 0">Partner-Betriebe aktiv</td><td><b>${partner[0].aktiv}</b> / 30 · ${partner[0].wa} mit WhatsApp-Okay</td></tr>
     <tr><td style="padding:2px 16px 2px 0">Partner-Freigaben</td><td><b>${eintraege[0].frei}</b>${eintraege[0].offen ? ` · ${eintraege[0].offen} Freigabe offen` : ""}</td></tr></table>`;
   const VSL: Record<string, string> = { neu: "neu, Betriebe anfragen", angefragt: "wartet auf Angebote", angebote: "Angebote an Kunden schicken", abgemacht: "nach dem Termin bewerten lassen" };
