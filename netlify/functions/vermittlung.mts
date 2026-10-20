@@ -94,7 +94,7 @@ async function anfrageMail(v: any, b: any, aktiv: boolean) {
     (v.fotos ? absatz(`📷 Zur Anfrage gibt es ${v.fotos} ${v.fotos === 1 ? "Foto" : "Fotos"}. Sie sehen ${v.fotos === 1 ? "es" : "sie"} auf der Angebotsseite.`) : "") +
     absatz("Wenn Sie Interesse haben, geben Sie Ihr Angebot über den Knopf ab. Das dauert eine Minute. Name und Kontaktdaten des Auftraggebers bekommen Sie, sobald er Ihr Angebot annimmt" + (aktiv ? " und Sie die Kontaktdaten freigeschaltet haben." : ".")) +
     knopf(`${seite()}/angebot?t=${b.token}`, "Angebot abgeben") +
-    absatz(`<span style="font-size:14px;color:#5B6B65">Kein Interesse oder keine Zeit? Dann sagen Sie auf derselben Seite kurz ab. ${aktiv ? "Kosten entstehen nur, wenn der Auftraggeber Ihr Angebot annimmt: dann einmalig die Freischaltgebühr nach Budget (siehe Bedingungen)." : "In der Startphase ist das für Sie kostenlos."}</span>`) + gruss));
+    absatz(`<span style="font-size:14px;color:#5B6B65">Kein Interesse oder keine Zeit? Dann sagen Sie auf derselben Seite kurz ab. ${aktiv ? "Kosten entstehen nur, wenn der Auftraggeber Ihr Angebot annimmt: dann einmalig die Freischaltgebühr nach Budget, bei einer Spanne nach dem oberen Wert (siehe Bedingungen)." : "In der Startphase ist das für Sie kostenlos."}</span>`) + gruss));
 }
 
 export default async (req: Request, _context: Context) => {
