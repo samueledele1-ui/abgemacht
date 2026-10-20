@@ -157,7 +157,7 @@
 
     function gebuehrText() {
       var b = zahl($('betrag').value), f = gebuehrBerechnen(m, a.art, b, !!d.gruender);
-      var modell = 'Freischaltung nach Budget des Auftraggebers: ' + stufenText(m) + (d.gruender ? '. Als Gründungspartner zahlen Sie die Hälfte.' : '.');
+      var modell = 'Freischaltung nach Budget des Auftraggebers, bei einer Spanne zählt der obere Wert: ' + stufenText(m) + (d.gruender ? '. Als Gründungspartner zahlen Sie die Hälfte.' : '.');
       if (!g.aktiv) $('gebuehr').innerHTML = '<b>In der Startphase kostenlos.</b> Später zahlen Sie nur, wenn der Auftraggeber Ihr Angebot annimmt, einmalig für die Kontaktdaten. ' + modell;
       else $('gebuehr').innerHTML = '<b>Nur wenn Ihr Angebot angenommen wird: einmalig ' + euro(f.preis) + ' für die Kontaktdaten</b>' + (d.gruender ? ' (statt ' + euro(f.grund) + ')' : '') + '. ' + modell;
     }
