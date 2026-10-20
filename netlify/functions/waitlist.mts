@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
 import ical from "node-ical";
+import { empfehlerZuCode } from "../lib/empfehlung.ts";
 
 // Eine Funktion für alles rund um die Warteliste:
 //   GET  /api/waitlist     -> Anzahl bestätigter Anmeldungen
@@ -472,10 +473,13 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     const beschreibung = clip(body.beschreibung, 3000);
     const quelle = QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "direkt";
     const auftraggeber = firma ? `${firma} (${name})` : name;
-    const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, beschreibung, notizen)
+    const empfehler = await empfehlerZuCode(sql, body.empfohlen);
+    const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, beschreibung, notizen, empfohlen_von)
       VALUES (${auftraggeber}, ${kontakt}, 'web', ${leistung}, ${ort}, ${zeitraum}, ${budget}, ${art}, ${beschreibung},
-              ${"Über die Website · " + (firma ? "Firma" : "Privat") + (quelle !== "direkt" ? " · Quelle: " + quelle : "")})
+              ${"Über die Website · " + (firma ? "Firma" : "Privat") + (quelle !== "direkt" ? " · Quelle: " + quelle : "") + (empfehler ? " · Empfohlen von " + empfehler.firma : "")},
+              ${empfehler ? empfehler.id : null})
       RETURNING id, kunde_token`;
+    if (empfehler) await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${empfehler.id}, 'empfehlung', ${"Kunde empfohlen: Anfrage #" + r[0].id + " (" + leistung + ")"})`;
     const nr = r[0].id;
     // Fotos (optional, bis 5): im Browser verkleinert, hier geprüft und gespeichert
     let fotoAnzahl = 0;
@@ -494,7 +498,7 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}${zeile("Fotos", fotoAnzahl ? fotoAnzahl + " angehängt" : null)}</table>`;
     await sendeMail(adminMail(), "Samuel", `Neue Anfrage #${nr}: ${leistung} in ${ort}`, mailLayout(
       `<p style="margin:0 0 12px"><b>Neue Anfrage über die Website</b></p>${tabelle}
-<p style="margin:14px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>${esc(auftraggeber)}</b>${firma ? "" : " (privat)"}<br>${esc(kontakt)}</p>
+<p style="margin:14px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>${esc(auftraggeber)}</b>${firma ? "" : " (privat)"}<br>${esc(kontakt)}</p>${empfehler ? `<p style="margin:12px 0 0"><b>Empfohlen von ${esc(empfehler.firma)}</b>: Diesen Betrieb nicht für die Anfrage anfragen. Bezahlt der gewählte Betrieb die Freischaltung, bekommt ${esc(empfehler.firma)} die Hälfte.</p>` : ""}
 ${knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")}`));
     if (email) await sendeMail(email, name, `Ihre Anfrage ist angekommen: ${leistung}`, mailLayout(
       `<p style="margin:0 0 12px">Hallo ${esc(name)},</p>
@@ -505,6 +509,11 @@ ${knopf(angebotsLink, "Meine Angebotsseite")}
 <p style="margin:0 0 12px;font-size:14px;color:#5B6B65">Bewahren Sie diese E-Mail auf: Der Link ist nur für Sie.</p>
 <p style="margin:0 0 12px">Für Sie ist das kostenlos. Falls Sie noch etwas ergänzen möchten, antworten Sie einfach auf diese E-Mail.</p>
 <p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`));
+    if (empfehler?.email) await sendeMail(empfehler.email, empfehler.ansprechpartner || empfehler.firma, `Danke für Ihre Empfehlung: ${leistung}`, mailLayout(
+      `<p style="margin:0 0 12px">Guten Tag${empfehler.ansprechpartner ? " " + esc(empfehler.ansprechpartner) : ""},</p>
+<p style="margin:0 0 12px">über Ihren Empfehlungslink ist gerade eine Anfrage bei uns eingegangen: <b>${esc(leistung)}</b> in ${esc(ort)}. Vielen Dank!</p>
+<p style="margin:0 0 12px">Wir kümmern uns jetzt darum, passende Betriebe zu finden. Kommt der Auftrag zustande und ist die Freischaltgebühr bezahlt, bekommen Sie die Hälfte davon. Aus Datenschutzgründen nennen wir Ihnen keine Kundendaten; den Stand sehen Sie auf jeder Ihrer Angebotsseiten.</p>
+<p style="margin:0">Viele Grüße<br>Samuel Edele von Abgemacht</p>`));
     return Response.json({ ok: true, nr, mail: !!email });
   }
 

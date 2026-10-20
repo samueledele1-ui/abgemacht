@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
 import { auftragswert, freischaltung, budgetWert, STUFEN, GRUENDER_RABATT } from "../lib/gebuehr.ts";
 import { gebuehrenStand, stripeAktiv, zahlungStarten, zahlungPruefen, webhookPruefen, freigeben } from "../lib/freischalten.ts";
+import { empfehlCode, empfehlLink, empfehlStand, EMPFEHL_ANTEIL } from "../lib/empfehlung.ts";
 import { seite, adminMail, esc, mailLayout, knopf, absatz, gruss, tabelle, sendeMail, ohneKontakt, mailAus } from "../lib/post.ts";
 
 // Öffentliche Angebotsseite ohne Login, nur über persönlichen Link:
@@ -77,7 +78,7 @@ export default async (req: Request, _context: Context) => {
 
   /* ================= Betrieb ================= */
   if (t.startsWith("b_")) {
-    const r = (await sql`SELECT vb.*, k.firma, k.ansprechpartner, k.email AS k_email, k.gebuehren_ok_am, k.gruender_nr,
+    const r = (await sql`SELECT vb.*, k.firma, k.partner AS k_partner, k.ansprechpartner, k.email AS k_email, k.gebuehren_ok_am, k.gruender_nr,
         v.freischalt_stufe, v.freigeschaltet_am, v.gebuehr AS v_gebuehr, v.id AS nr, v.leistung, v.ort, v.zeitraum, v.budget, v.art, v.laufzeit, v.beschreibung, v.status AS v_status, v.created_at AS v_created,
         v.auftraggeber, v.kontakt, v.kunde_token, v.kunde_mail_am
       FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id JOIN vermittlungen v ON v.id = vb.vermittlung_id
@@ -93,7 +94,10 @@ export default async (req: Request, _context: Context) => {
     if (aktion === "ansehen") {
       if (!r.gesehen_am) await sql`UPDATE vermittlung_betriebe SET gesehen_am = now() WHERE id = ${r.id}`;
       const f = fs();
+      const code = r.k_partner && r.k_partner !== "interessiert" ? await empfehlCode(sql, r.kontakt_id) : null;
+      const empfehlung = code ? { link: empfehlLink(code), anteil: EMPFEHL_ANTEIL, ...(await empfehlStand(sql, r.kontakt_id)) } : null;
       return antwort({
+        empfehlung,
         ok: true, rolle: "betrieb", firma: r.firma, status: r.status, offen,
         entschieden: ZU.includes(r.v_status) && !gewaehlt,
         anfrage: { nr: r.nr, leistung: r.leistung, ort: r.ort, zeitraum: r.zeitraum, budget: r.budget, art: r.art, laufzeit: r.laufzeit,

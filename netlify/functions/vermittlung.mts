@@ -4,6 +4,7 @@ import { rechnungPdf, datumDE, euro, type Absender } from "../lib/rechnung.ts";
 import { auftragswert, freischaltung } from "../lib/gebuehr.ts";
 import { freigeben } from "../lib/freischalten.ts";
 import { bewerte, analysiere } from "../lib/passend.ts";
+import { empfehlCode, empfehlLink, EMPFEHL_ANTEIL } from "../lib/empfehlung.ts";
 import { seite, esc as escP, mailLayout, knopf, absatz, gruss, tabelle, sendeMail, ohneKontakt, mailAus } from "../lib/post.ts";
 
 // Vermittlung von Hand (Startphase): Anfragen von Auftraggebern, Partner-Betriebe, Angebote, „Abgemacht“.
@@ -114,13 +115,16 @@ export default async (req: Request, _context: Context) => {
   const id = Number(body.id) || 0;
 
   if (aktion === "liste") {
+    // Empfehlungslinks für Partner ohne Code anlegen
+    for (const o of await sql`SELECT id FROM crm_kontakte WHERE partner IN ('aktiv', 'pausiert') AND empfehl_code IS NULL LIMIT 50`) await empfehlCode(sql, o.id);
     const [vermittlungen, betriebe, partner] = await Promise.all([
-      sql`SELECT v.*, k.firma AS gewaehlt_firma, (SELECT count(*)::int FROM anfrage_fotos f WHERE f.vermittlung_id = v.id) AS fotos FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id ORDER BY
+      sql`SELECT v.*, k.firma AS gewaehlt_firma, (SELECT e.firma FROM crm_kontakte e WHERE e.id = v.empfohlen_von) AS empfohlen_firma, (SELECT count(*)::int FROM anfrage_fotos f WHERE f.vermittlung_id = v.id) AS fotos FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id ORDER BY
             CASE v.status WHEN 'neu' THEN 0 WHEN 'angefragt' THEN 1 WHEN 'angebote' THEN 2 WHEN 'abgemacht' THEN 3 ELSE 4 END, v.created_at DESC`,
       sql`SELECT vb.*, k.firma, k.ansprechpartner, k.telefon, k.email, k.kategorie, k.ort AS k_ort, k.wa_ok_am, k.gruender_nr
             FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id ORDER BY vb.angefragt_am`,
       sql`SELECT k.id, k.firma, k.kategorie, k.leistungen, k.ansprechpartner, k.telefon, k.email, k.website, k.ort, k.region,
-                 k.partner, k.partner_seit, k.wa_ok_am, k.notizen, k.quelle, k.created_at, k.gruender_nr,
+                 k.partner, k.partner_seit, k.wa_ok_am, k.notizen, k.quelle, k.created_at, k.gruender_nr, k.empfehl_code,
+                 (SELECT count(*)::int FROM vermittlungen e WHERE e.empfohlen_von = k.id) AS empfehlungen,
                  count(vb.id)::int AS angefragt,
                  count(vb.id) FILTER (WHERE vb.status IN ('angebot','gewaehlt','nicht_gewaehlt'))::int AS angebote,
                  count(vb.id) FILTER (WHERE vb.status = 'gewaehlt')::int AS zusagen,
@@ -128,6 +132,7 @@ export default async (req: Request, _context: Context) => {
             FROM crm_kontakte k LEFT JOIN vermittlung_betriebe vb ON vb.kontakt_id = k.id
            WHERE k.partner IS NOT NULL GROUP BY k.id ORDER BY k.partner, k.kategorie NULLS LAST, k.firma`,
     ]);
+    for (const p of partner as any[]) p.empfehl_link = p.empfehl_code ? empfehlLink(p.empfehl_code) : null;
     return Response.json({ ok: true, vermittlungen, betriebe, partner }, { headers: { "Cache-Control": "no-store" } });
   }
 
@@ -202,8 +207,9 @@ export default async (req: Request, _context: Context) => {
   }
 
   if (aktion === "anfragen") {
-    const ids = (Array.isArray(body.kontakte) ? body.kontakte : []).map(Number).filter((n) => n > 0).slice(0, 10);
-    if (!ids.length) return fehler("Keine Betriebe ausgewählt.");
+    const emp = (await sql`SELECT empfohlen_von FROM vermittlungen WHERE id = ${id}`)[0]?.empfohlen_von ?? null;
+    const ids = (Array.isArray(body.kontakte) ? body.kontakte : []).map(Number).filter((n) => n > 0 && n !== emp).slice(0, 10);
+    if (!ids.length) return fehler(emp ? "Der empfehlende Betrieb kann für seine eigene Empfehlung nicht angefragt werden." : "Keine Betriebe ausgewählt.");
     for (const k of ids) await sql`INSERT INTO vermittlung_betriebe (vermittlung_id, kontakt_id) VALUES (${id}, ${k}) ON CONFLICT DO NOTHING`;
     await sql`UPDATE vermittlungen SET status = 'angefragt', updated_at = now() WHERE id = ${id} AND status = 'neu'`;
     for (const k of ids) await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${k}, 'vermittlung', ${"Anfrage #" + id + " geschickt"})`;
@@ -262,6 +268,25 @@ export default async (req: Request, _context: Context) => {
       ORDER BY k.firma, v.abgemacht_am`;
     const ein = await einstellungen(sql);
     return Response.json({ ok: true, monat, posten, gebuehren_ab: ein.gebuehren_ab || null, rechnungsdaten_ok: !fehlendeDaten(ein).length }, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  /* Empfehlungen: Partner haben Kunden weitergeleitet, die Hälfte der bezahlten Freischaltgebühr geht an sie */
+  if (aktion === "empfehlungen") {
+    const liste = await sql`SELECT v.id, v.leistung, v.ort, v.status, v.created_at, v.gebuehr, v.bezahlt_am, v.empfehlung_ausgezahlt_am, v.gewaehlt_id,
+        e.id AS empfehler_id, e.firma AS empfehler, e.ansprechpartner, e.email, e.telefon, g.firma AS gewaehlt_firma, r.status AS rechnung_status,
+        (v.gebuehr > 0 AND v.gewaehlt_id IS DISTINCT FROM v.empfohlen_von AND (v.bezahlt_am IS NOT NULL OR r.status = 'bezahlt')) AS verdient,
+        round(coalesce(v.gebuehr, 0) * ${EMPFEHL_ANTEIL}, 2)::float AS anteil
+      FROM vermittlungen v JOIN crm_kontakte e ON e.id = v.empfohlen_von LEFT JOIN crm_kontakte g ON g.id = v.gewaehlt_id LEFT JOIN rechnungen r ON r.id = v.rechnung_id
+      ORDER BY (v.empfehlung_ausgezahlt_am IS NULL) DESC, v.created_at DESC`;
+    return Response.json({ ok: true, liste, anteil: EMPFEHL_ANTEIL }, { headers: { "Cache-Control": "no-store" } });
+  }
+  if (aktion === "empfehlung_ausgezahlt") {
+    const an = body.wert !== false;
+    const r = await sql`UPDATE vermittlungen SET empfehlung_ausgezahlt_am = CASE WHEN ${an} THEN now() ELSE NULL END, updated_at = now()
+      WHERE id = ${id} AND empfohlen_von IS NOT NULL RETURNING empfohlen_von, round(coalesce(gebuehr, 0) * ${EMPFEHL_ANTEIL}, 2)::float AS anteil`;
+    if (!r.length) return fehler("Nicht gefunden.", 404);
+    await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r[0].empfohlen_von}, 'empfehlung', ${(an ? "Empfehlungsanteil ausgezahlt: " : "Auszahlung zurückgenommen: ") + euro(r[0].anteil) + " zu Anfrage #" + id})`;
+    return Response.json({ ok: true });
   }
 
   if (aktion === "waehlen") {
