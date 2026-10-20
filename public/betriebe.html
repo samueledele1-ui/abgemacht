@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Für Betriebe – Aufträge ohne Akquise | Abgemacht</title>
+<meta name="description" content="Partner-Betrieb bei Abgemacht werden: passende Anfragen aus Ihrer Region, Angebot mit einem Klick, keine Grundgebühr und kein Abo. Die ersten 30 Betriebe werden Gründungspartner.">
+<meta property="og:title" content="Abgemacht für Betriebe – Aufträge aus der Region, ohne Akquise">
+<meta property="og:description" content="Passende Anfragen per E-Mail, Angebot mit einem Klick. Kein Abo, keine Grundgebühr. Gründungspartner zahlen dauerhaft 50 %.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/marke.css">
+<style>
+  header{position:relative;z-index:2}
+  /* ---------- Hero ---------- */
+  .hero2{display:grid;grid-template-columns:1fr 1.05fr;gap:44px;align-items:center;padding:28px 0 56px}
+  .hero2 h1{font-size:clamp(40px,5.6vw,68px);line-height:.98;margin:0 0 20px}
+  .hero2 h1 span{display:block;color:var(--gruen)}
+  .hero2 .lead{font-size:18.5px;color:var(--muted);max-width:30em;margin:0}
+  .ort{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;color:var(--tanne);margin-bottom:18px}
+  .ort i{width:9px;height:9px;border-radius:50%;background:var(--gruen);box-shadow:0 0 0 0 rgba(19,138,107,.5);animation:puls 2.4s infinite}
+  @keyframes puls{70%{box-shadow:0 0 0 10px rgba(19,138,107,0)}100%{box-shadow:0 0 0 0 rgba(19,138,107,0)}}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+  .zaehler{margin-top:16px}
+
+  /* Live-Visualisierung: Anfrage -> 5 Betriebe -> Abgemacht */
+  .netz{position:relative;aspect-ratio:1/0.92;border-radius:28px;background:var(--tanne);color:#fff;overflow:hidden;box-shadow:0 40px 80px -40px rgba(13,79,62,.7)}
+  .netz svg.linien{position:absolute;inset:0;width:100%;height:100%}
+  .netz .donau{fill:none;stroke:#2E8C72;stroke-width:14;stroke-linecap:round;opacity:.45}
+  .netz .donau-n{position:absolute;left:40%;bottom:5%;font-size:11px;letter-spacing:.06em;color:#7FC4AE;opacity:.8}
+  .netz .l{fill:none;stroke:#7FE0BD;stroke-width:.45;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .9s ease, opacity .4s, stroke .4s}
+  .netz.s1 .l{stroke-dashoffset:0}
+  .netz.s3 .l{opacity:.18}
+  .netz.s3 .l.wahl1{opacity:1;stroke:var(--sonne);stroke-width:.8}
+  .anf{position:absolute;left:5%;top:50%;transform:translateY(-50%);width:44%;background:#fff;color:var(--ink);border-radius:18px;padding:13px 14px;box-shadow:0 18px 40px -18px rgba(0,0,0,.6);z-index:2}
+  .anf .kopf{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted)}
+  .anf .mic{width:22px;height:22px;border-radius:50%;background:var(--minze);display:grid;place-items:center}
+  .anf .neu{margin-left:auto;font-size:10.5px;color:var(--gruen);font-weight:800;letter-spacing:.04em}
+  .anf .welle{display:flex;gap:2px;align-items:center;height:14px;margin-left:auto}
+  .anf .welle b{width:3px;border-radius:2px;background:var(--gruen);height:30%;animation:welle 1.1s ease-in-out infinite}
+  .anf .welle b:nth-child(2){animation-delay:.15s}.anf .welle b:nth-child(3){animation-delay:.3s}.anf .welle b:nth-child(4){animation-delay:.45s}.anf .welle b:nth-child(5){animation-delay:.6s}
+  @keyframes welle{50%{height:100%}}
+  .anf p{margin:6px 0 8px;font-size:14px;line-height:1.38}
+  .anf .chips{display:flex;flex-wrap:wrap;gap:4px}
+  .anf .chips span{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--minze);color:var(--tanne)}
+  .b{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;z-index:2}
+  .b i{flex:none;width:38px;height:38px;border-radius:50%;background:#16614D;border:2px solid #2E8C72;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:13px;font-family:var(--disp);transition:background .4s,border-color .4s,transform .4s}
+  .b .t{font-size:11.5px;line-height:1.25;color:#BFE5D7;white-space:nowrap}
+  .b .t em{display:block;font-style:normal;font-weight:700;font-size:13px;color:#fff;opacity:0;transform:translateY(4px);transition:opacity .4s,transform .4s}
+  .netz.s1 .b i{background:var(--gruen);border-color:#7FE0BD}
+  .netz.s2 .b .t em{opacity:1;transform:none}
+  .netz.s2 .b:nth-of-type(2) .t em{transition-delay:.15s}.netz.s2 .b:nth-of-type(3) .t em{transition-delay:.3s}.netz.s2 .b:nth-of-type(4) .t em{transition-delay:.45s}.netz.s2 .b:nth-of-type(5) .t em{transition-delay:.6s}
+  .netz.s3 .b{opacity:.45;transition:opacity .4s}
+  .netz.s3 .b.wahl1{opacity:1}
+  .netz.s3 .b.wahl1 i{background:var(--sonne);border-color:#fff;color:var(--tanne-2);transform:scale(1.15)}
+  .netz .stempel{position:absolute;left:12%;top:70%;font-size:22px;opacity:0;color:var(--sonne);background:transparent;border-color:var(--sonne)}
+  .netz.s3 .stempel{animation:stempeln .55s .35s cubic-bezier(.2,1.6,.4,1) both}
+  .netz .status{position:absolute;left:5%;top:6%;font-size:12.5px;font-weight:600;color:#BFE5D7;display:flex;gap:8px;align-items:center}
+  .netz .status b{color:#fff}
+
+  /* ---------- Abschnitte ---------- */
+  .abschnitt{padding:64px 0}
+  .abschnitt h2{font-size:clamp(30px,4.2vw,46px);line-height:1.05;margin:0 0 12px;max-width:16em}
+  .abschnitt .sub{font-size:17px;max-width:38em;margin:0 0 34px}
+  .ablauf{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;position:relative;counter-reset:s}
+  .ablauf::before{content:"";position:absolute;left:24px;right:24px;top:24px;height:2px;background:repeating-linear-gradient(90deg,var(--gruen) 0 8px,transparent 8px 14px)}
+  .ablauf div{position:relative}
+  .ablauf div::before{counter-increment:s;content:counter(s);position:relative;z-index:1;width:50px;height:50px;border-radius:50%;background:var(--tanne);color:#fff;font-family:var(--disp);font-weight:800;font-size:22px;display:grid;place-items:center;margin-bottom:18px;box-shadow:0 0 0 8px var(--nebel)}
+  .ablauf div:last-child::before{background:var(--sonne);color:var(--tanne-2)}
+  .ablauf h3{margin:0 0 6px;font-size:21px}.ablauf p{margin:0;color:var(--muted)}
+
+  .zwei-seiten{display:grid;grid-template-columns:1fr 1fr;border-radius:28px;overflow:hidden;box-shadow:0 30px 70px -45px rgba(13,79,62,.6)}
+  .zwei-seiten > div{padding:34px 32px}
+  .zwei-seiten .hell{background:#fff}
+  .zwei-seiten .dunkel{background:var(--tanne);color:#fff}
+  .zwei-seiten h3{font-size:26px;margin:0 0 4px}
+  .zwei-seiten .wer{margin:0 0 18px;font-size:14.5px;color:var(--muted)}
+  .zwei-seiten .dunkel .wer{color:#A9D9C7}
+  .zwei-seiten ul{list-style:none;padding:0;margin:0}
+  .zwei-seiten li{padding:10px 0 10px 30px;border-top:1px solid var(--line);position:relative}
+  .zwei-seiten .dunkel li{border-color:rgba(255,255,255,.14)}
+  .zwei-seiten li::before{content:"";position:absolute;left:2px;top:15px;width:14px;height:8px;border-left:2.5px solid var(--gruen);border-bottom:2.5px solid var(--gruen);transform:rotate(-45deg)}
+  .zwei-seiten .dunkel li::before{border-color:var(--sonne)}
+
+  /* Zeitachse: Einmalig / Projekt / Langzeit */
+  .zeit{background:#fff;border-radius:28px;padding:30px 30px 22px;box-shadow:0 30px 70px -50px rgba(13,79,62,.6)}
+  .achse{position:relative;height:28px;border-bottom:2px solid var(--ink);margin:0 0 6px}
+  .achse span{position:absolute;top:36px;transform:translateX(-50%);font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .achse span::before{content:"";position:absolute;left:50%;top:-14px;width:2px;height:8px;background:var(--ink)}
+  .spur{position:relative;height:58px;margin-top:14px}
+  .spur:first-of-type{margin-top:0}
+  .spur .bsp{position:absolute;left:128px;top:19px;font-size:14px;color:var(--muted)}
+  .achse{margin:18px 0 34px}
+  .spur .balken{position:absolute;top:8px;height:42px;border-radius:999px;display:flex;align-items:center;padding:0 16px;font-weight:700;font-size:15px;white-space:nowrap}
+  .spur .balken small{font-weight:500;margin-left:10px;opacity:.85}
+  .spur.e .balken{left:0;min-width:42px;background:var(--minze);color:var(--tanne)}
+  .spur.p .balken{left:22%;width:34%;background:var(--sonne-l);color:#7A4A04}
+  .spur.l .balken{left:48%;width:52%;background:var(--tanne);color:#fff}
+  .spur.l .balken::after{content:"";position:absolute;right:-2px;top:50%;width:0;height:0;border:10px solid transparent;border-left-color:var(--tanne);transform:translate(100%,-50%)}
+
+  /* Preise */
+  .preis-grid{display:grid;grid-template-columns:1fr 2fr;gap:18px}
+  .karte{background:#fff;border-radius:24px;padding:26px}
+  .karte .gross{font-family:var(--disp);font-weight:800;font-size:56px;line-height:1;color:var(--gruen);margin:8px 0}
+  .karte p{margin:0;color:var(--muted)}
+  .staffel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:18px 0 8px}
+  .staffel .st{border-radius:12px;padding:12px 12px 10px;background:var(--minze)}
+  .staffel .st.b2{background:#BFE5D7}.staffel .st.b3{background:var(--tanne);color:#fff}
+  .staffel .st b{font-family:var(--disp);font-size:28px;display:block;line-height:1}
+  .staffel .st small{font-size:12.5px;opacity:.85;display:block;line-height:1.3;margin-top:4px}
+  .staffel .st.b4{background:#0A3A2C;color:#fff}
+  .extras{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .extras span{background:var(--nebel);border-radius:12px;padding:9px 12px;font-size:14px}
+  .extras b{font-family:var(--disp)}
+  .hinweis{font-size:13.5px;color:var(--muted);margin-top:14px}
+
+  /* Anfrage- und Partner-Formular */
+  .formband{background:var(--tanne);color:#fff;border-radius:36px;padding:56px 24px;margin:20px 0 10px}
+  .formband .innen{display:grid;grid-template-columns:.85fr 1.15fr;gap:40px;align-items:start;max-width:1000px;margin:0 auto}
+  .formband h2{font-size:clamp(32px,4.4vw,50px);line-height:1.02;margin:0 0 14px}
+  .formband .intro p{color:#BFE5D7;font-size:17px;margin:0 0 18px}
+  .formband .intro ul{list-style:none;padding:0;margin:0;color:#E5F5EE}
+  .formband .intro li{padding:6px 0 6px 26px;position:relative}
+  .formband .intro li::before{content:"";position:absolute;left:0;top:13px;width:12px;height:12px;border-radius:50%;background:var(--sonne)}
+  .formband.hellband{background:#fff;color:var(--ink);box-shadow:0 30px 70px -50px rgba(13,79,62,.6)}
+  .formband.hellband .intro p{color:var(--muted)}.formband.hellband .intro ul{color:var(--ink)}
+  .formbox{max-width:none;margin:0;border:0;color:var(--ink);border-radius:26px;box-shadow:0 40px 80px -40px rgba(0,0,0,.6)}
+  .hellband .formbox{background:var(--nebel);box-shadow:none}
+  .formbox h3{font-size:22px;margin:0 0 4px}
+  .formbox .klein{font-size:13.5px;color:var(--muted);margin:2px 0 0}
+  .kacheln.zwei{grid-template-columns:1fr 1fr}
+  textarea{width:100%;font:inherit;padding:12px 14px;min-height:92px;resize:vertical;color:var(--ink)}
+  .foto-feld{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .foto-liste{display:contents}
+  .foto-mini{position:relative;width:76px;height:76px;border-radius:12px;overflow:hidden;background:#F1F5F3;border:1px solid #DCE5E1}
+  .foto-mini img{width:100%;height:100%;object-fit:cover;display:block}
+  .foto-mini button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(18,32,27,.75);color:#fff;font-size:15px;line-height:24px;padding:0;cursor:pointer}
+  .foto-plus{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:76px;height:76px;margin:0;border:1.5px dashed #9DB8AE;border-radius:12px;color:#138A6B;font-size:11px;font-weight:700;text-align:center;cursor:pointer;line-height:1.1}
+  .foto-plus:hover{background:#F1F5F3}
+  .foto-plus[hidden]{display:none}
+  .sprach-feld{position:relative}
+  .sprach-feld textarea{padding-bottom:52px;min-height:120px}
+  .sprach-btn{position:absolute;right:10px;bottom:12px;display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:#fff;color:var(--tanne);font:inherit;font-weight:700;font-size:14px;padding:7px 14px;border-radius:999px;cursor:pointer}
+  .sprach-btn:hover{border-color:var(--gruen)}
+  .sprach-btn.an{background:#C0392B;border-color:#C0392B;color:#fff;animation:sprachPuls 1.4s infinite}
+  @keyframes sprachPuls{0%{box-shadow:0 0 0 0 rgba(192,57,43,.45)}70%{box-shadow:0 0 0 10px rgba(192,57,43,0)}100%{box-shadow:0 0 0 0 rgba(192,57,43,0)}}
+  @media (prefers-reduced-motion:reduce){.sprach-btn.an{animation:none}}
+  label .opt{font-weight:500;color:var(--muted);font-size:13px}
+  .danke .stempel{font-size:30px;margin:10px 0 18px}
+  .direkt{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .direkt a{color:#fff;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,.35);border-radius:999px;padding:10px 16px}
+  .direkt a:hover{border-color:#fff}
+
+  /* Beispiele */
+  .beispiele{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .beispiele a{display:block;background:#fff;border-radius:18px;padding:16px;text-decoration:none;color:var(--ink);border:1.5px solid transparent;transition:border-color .15s,transform .15s}
+  .beispiele a:hover{border-color:var(--gruen);transform:translateY(-2px)}
+  .beispiele b{display:block;font-size:16px;margin:6px 0 2px}
+  .beispiele small{color:var(--muted);font-size:13.5px;line-height:1.35;display:block}
+  .beispiele .ico{font-size:22px}
+  .wer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+  .wer-grid div{background:var(--minze);border-radius:18px;padding:16px}
+  .wer-grid b{display:block;font-family:var(--disp);font-size:17px;margin-bottom:4px;color:var(--tanne)}
+  .wer-grid span{font-size:14px;color:var(--ink)}
+
+  /* FAQ */
+  .faq details{background:#fff;border-radius:16px;padding:14px 18px;margin:0 0 10px}
+  .faq summary{font-weight:700;cursor:pointer;font-size:16.5px}
+  .faq p{margin:8px 0 0;color:var(--muted)}
+
+  @media (max-width:900px){
+    .hero2{grid-template-columns:1fr;gap:28px}
+    .netz{aspect-ratio:auto;height:430px}
+    .ablauf,.zwei-seiten,.preis-grid,.formband .innen{grid-template-columns:1fr}
+    .ablauf::before{display:none}
+    .beispiele,.wer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .beispiele a,.wer-grid div{min-width:0;overflow-wrap:anywhere;hyphens:auto}
+  }
+  @media (max-width:560px){
+    .netz{height:400px}.netz .status{display:none}.anf{width:56%;left:4%}.b .t{display:none}.netz.s2 .b .t{display:block}.b .t{font-size:10.5px}
+    .zeit{padding:22px 16px}.spur .balken small{display:none}.achse span{font-size:11px}
+    .staffel{grid-template-columns:1fr 1fr}
+    .formband{border-radius:24px;padding:36px 16px}
+    .kacheln.zwei{grid-template-columns:1fr 1fr}.kacheln.zwei label{flex-direction:column;align-items:flex-start}
+    header .btn.ghost{display:none}
+  }
+  .gp{background:#fff;border-radius:28px;padding:30px;box-shadow:0 40px 80px -40px rgba(13,79,62,.45)}
+  .gp .stern{display:inline-block;background:#FCEFD2;color:#7A4E00;font-weight:800;font-size:14px;border-radius:999px;padding:6px 14px;margin-bottom:14px}
+  .gp h3{font-size:26px;margin:0 0 10px}
+  .gp ul{list-style:none;padding:0;margin:0}
+  .gp li{padding:8px 0 8px 30px;position:relative;border-top:1px solid #E6EEEA}
+  .gp li:first-child{border-top:0}
+  .gp li::before{content:"✓";position:absolute;left:4px;top:8px;color:var(--gruen);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="/"><span class="mark"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5.5 12.5l4.2 4.2L18.5 7.8" fill="none" stroke="#F2B33D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Abgemacht</a>
+    <span style="display:flex;gap:10px"><a class="btn ghost" href="/">Für Auftraggeber</a><a class="btn" href="#partner">Partner werden</a></span>
+  </header>
+
+  <div class="hero2">
+    <div>
+      <div class="ort"><i></i>Für Betriebe und Dienstleister</div>
+      <h1>Aufträge aus der Region. <span>Ohne Akquise.</span></h1>
+      <p class="lead">Firmen, Hausverwaltungen und Privatleute schildern uns, was sie brauchen. Passt eine Anfrage zu Ihnen, bekommen Sie sie per E-Mail und geben mit einem Klick Ihr Angebot ab. Sie entscheiden jedes Mal selbst.</p>
+      <div class="cta">
+        <a class="btn" href="#partner">Partner-Betrieb werden</a>
+        <a class="btn ghost" href="#so-gehts">So funktioniert's</a>
+      </div>
+    </div>
+    <div class="gp">
+      <span class="stern">★ Gründungspartner</span>
+      <h3>Die ersten 30 Betriebe bekommen das Gründer-Paket</h3>
+      <ul>
+        <li>Dauerhaft 50 % auf jede Freischaltung</li>
+        <li>Bevorzugt angefragt bei passenden Aufträgen</li>
+        <li>Abzeichen „Gründungspartner“ bei Ihren Angeboten</li>
+        <li>In der Startphase komplett kostenlos</li>
+      </ul>
+    </div>
+  </div>
+
+  <section class="abschnitt" id="so-gehts">
+    <h2>So bekommen Sie Aufträge</h2>
+    <p class="sub">Kein Profil pflegen, keine App, keine Bieterschlacht. Sie bekommen nur Anfragen, die zu Ihren Leistungen und Ihrem Einsatzgebiet passen.</p>
+    <div class="ablauf">
+      <div><h3>Anfrage per E-Mail</h3><p>Leistung, Ort, Zeitraum, Budget und Beschreibung, oft mit Fotos. Name und Kontaktdaten des Auftraggebers sehen Sie erst nach der Annahme.</p></div>
+      <div><h3>Angebot mit einem Klick</h3><p>Über den Link in der E-Mail nennen Sie Preis und eine kurze Nachricht. Kein Interesse? Dann sagen Sie auf derselben Seite kurz ab.</p></div>
+      <div><h3>Abgemacht</h3><p>Nimmt der Auftraggeber Ihr Angebot an, bestätigen Sie und bekommen gegenseitig die Kontaktdaten. Den Vertrag machen Sie direkt miteinander aus.</p></div>
+    </div>
+  </section>
+
+  <section class="abschnitt" id="betriebe">
+    <h2>Was kostet das?</h2>
+    <p class="sub">Keine Grundgebühr, kein Abo, keine Kosten pro Anfrage. Sie zahlen nur, wenn ein Auftraggeber Ihr Angebot angenommen hat.</p>
+    <div class="preis-grid">
+      <div class="karte"><b>Startphase</b><div class="gross">0 €</div><p>Bis auf Weiteres kostenlos. Gebühren kommen erst nach Ankündigung mit 4 Wochen Vorlauf und nur mit Ihrer Zustimmung.</p></div>
+      <div class="karte"><b>Danach: nur zahlen, wenn ein Kunde Sie gewählt hat</b>
+        <p style="margin:6px 0 10px">Einmalig für die Kontaktdaten, gestaffelt nach Budget des Auftraggebers. Keine Grundgebühr, kein Abo.</p>
+        <div class="staffel" role="img" aria-label="Freischaltung: 9 Euro bis 500 Euro Budget, 29 Euro bis 2.000 Euro, 69 Euro bis 10.000 Euro, 129 Euro darüber oder bei großen Daueraufträgen.">
+          <div class="st"><b>9 €</b><small>bis 500 €</small></div>
+          <div class="st b2"><b>29 €</b><small>bis 2.000 €</small></div>
+          <div class="st b3"><b>69 €</b><small>bis 10.000 €</small></div>
+          <div class="st b4"><b>129 €</b><small>über 10.000 €</small></div>
+        </div>
+        <div class="extras"><span><b>★ Gründungspartner:</b> Die ersten 30 Partner-Betriebe zahlen dauerhaft 50 % und werden bei passenden Anfragen bevorzugt angefragt.</span><span><b>Bezahlt wird online</b> per Karte oder Lastschrift, die Kontaktdaten kommen sofort.</span></div>
+        <p class="hinweis">Geplante Preise, Änderungen vorbehalten. Einzelheiten in den <a href="/bedingungen">Bedingungen</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="partner" class="formband hellband">
+    <div class="innen">
+      <div class="intro">
+        <h2>Partner-Betrieb werden</h2>
+        <p>Tragen Sie sich ein. Nach einer kurzen Abstimmung zu Leistungen und Einsatzgebiet bekommen Sie passende Anfragen.</p>
+        <ul><li>Nur Anfragen, die zu Ihnen passen</li><li>Keine Grundgebühr, kein Abo</li><li>★ Gründungspartner: die ersten 30 Betriebe dauerhaft 50 % günstiger</li><li>Angebot mit einem Klick über den Link in der E-Mail</li><li>Jederzeit ohne Frist beenden</li></ul>
+      </div>
+      <div class="formbox">
+        <div id="partnerTeil">
+          <form id="partnerForm" novalidate>
+            <div class="row">
+              <div><label for="p_firma">Betrieb *</label><input id="p_firma" name="firma" maxlength="120" autocomplete="organization" required></div>
+              <div><label for="p_name">Ansprechpartner</label><input id="p_name" name="name" maxlength="80" autocomplete="name"></div>
+            </div>
+            <label for="p_leistungen">Was bieten Sie an? *</label>
+            <input id="p_leistungen" name="leistungen" maxlength="300" required placeholder="z. B. Elektroinstallation, E-Check, Kleinreparaturen">
+            <label for="p_ort">Einsatzgebiet</label>
+            <input id="p_ort" name="ort" maxlength="120" placeholder="z. B. Ulm + 30 km Umkreis oder deutschlandweit">
+            <div class="row">
+              <div><label for="p_tel">Telefon</label><input id="p_tel" name="telefon" type="tel" maxlength="40" autocomplete="tel"></div>
+              <div><label for="p_mail">E-Mail</label><input id="p_mail" name="email" type="email" maxlength="254" autocomplete="email"></div>
+            </div>
+            <p class="klein">Telefon oder E-Mail reicht.</p>
+            <div class="hp" aria-hidden="true"><label for="p_website">Website</label><input id="p_website" name="website" tabindex="-1" autocomplete="off"></div>
+            <label class="check"><input type="checkbox" id="p_wa"> <span>Ich möchte Anfragen gern per WhatsApp bekommen. <span class="opt">(Widerruf jederzeit mit „Stopp“)</span></span></label>
+            <label class="check"><input type="checkbox" id="p_consent"> <span>Ich habe die <a href="/bedingungen" target="_blank">Bedingungen</a> und <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</span></label>
+            <button class="btn" id="partnerBtn" type="submit" style="width:100%;margin-top:18px">Partner-Betrieb werden</button>
+            <div class="msg" id="partnerMsg" role="status"></div>
+          </form>
+        </div>
+        <div class="danke" id="partnerDanke" hidden>
+          <span class="stempel" id="partnerStempel">✓ Abgemacht</span>
+          <h2>Danke!</h2>
+          <p class="sub">Wir melden uns in den nächsten Tagen, um Leistungen und Einsatzgebiet abzustimmen.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="abschnitt faq">
+    <h2>Häufige Fragen von Betrieben</h2>
+    <details><summary>Was kostet Abgemacht für Betriebe, auch bei großen Aufträgen?</summary><p>Betriebe zahlen nach der Startphase nur, wenn ein Auftraggeber ihr Angebot angenommen hat: einmalig für die Kontaktdaten, gestaffelt nach seinem Budget. Bis 500 € 9 €, bis 2.000 € 29 €, bis 10.000 € 69 €, darüber und bei großen Daueraufträgen, etwa einem Reinigungsvertrag über zwei Jahre, 129 €. Danach kosten Auftrag, Laufzeit und Verlängerungen nichts mehr. Die ersten 30 Partner-Betriebe zahlen als Gründungspartner dauerhaft die Hälfte. In der Startphase ist alles kostenlos.</p></details>
+    <details><summary>Muss ich jede Anfrage annehmen?</summary><p>Nein. Sie entscheiden bei jeder Anfrage selbst, ob Sie ein Angebot machen. Absagen kostet nichts.</p></details>
+    <details><summary>Wie viele Betriebe bekommen dieselbe Anfrage?</summary><p>Nur wenige passende Betriebe, damit sich ein Angebot für Sie lohnt. Gründungspartner werden bevorzugt angefragt.</p></details>
+    <details><summary>Gibt es eine Mindestlaufzeit?</summary><p>Nein. Kein Abo, kein Vertrag, Sie können jederzeit ohne Frist aufhören.</p></details>
+    <details><summary>Ich bin Selbstständiger oder Freelancer. Passt das auch?</summary><p>Ja. Abgemacht vermittelt Aufträge aus allen Branchen, vom Handwerk über Reinigung bis zu IT, Marketing, Sport und Büroservice.</p></details>
+  </section>
+
+  <footer>
+    <span>© 2026 Abgemacht · <a href="/finden">Branchen und Orte</a></span>
+    <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/bedingungen">Bedingungen</a></span>
+  </footer>
+</div>
+<script>
+(function(){
+  var p = new URLSearchParams(location.search);
+  var quelle = p.get('quelle') || 'direkt';
+  try { if (p.get('quelle')) sessionStorage.setItem('hs_quelle', quelle); else quelle = sessionStorage.getItem('hs_quelle') || 'direkt'; } catch(e) {}
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  function $(id){ return document.getElementById(id); }
+
+  function senden(opt){
+    var msg = $(opt.msg), btn = $(opt.btn), text = btn.textContent;
+    function zeige(t){ msg.textContent = t; msg.className = 'msg err'; }
+    var fehler = opt.pruefen();
+    if (fehler) { zeige(fehler[0]); if (fehler[1]) $(fehler[1]).focus(); return; }
+    btn.disabled = true; btn.textContent = 'Wird gesendet …'; msg.textContent = '';
+    fetch(opt.url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(opt.daten()) })
+      .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
+      .then(function(res){
+        if (!res.ok || !res.d.ok) throw new Error(res.d && res.d.error || 'Fehler');
+        $(opt.teil).hidden = true; $(opt.danke).hidden = false; $(opt.stempel).classList.add('drauf');
+        if (opt.fertig) opt.fertig(res.d);
+      })
+      .catch(function(err){ zeige(err.message && err.message !== 'Failed to fetch' && err.message !== 'Fehler' ? err.message : 'Das hat nicht geklappt. Bitte versuchen Sie es gleich noch einmal oder schreiben Sie an hallo@ab-gemacht.info.'); })
+      .finally(function(){ btn.disabled = false; btn.textContent = text; });
+  }
+
+  var pf = $('partnerForm');
+  pf.addEventListener('submit', function(e){
+    e.preventDefault();
+    senden({
+      url: '/api/partner', msg: 'partnerMsg', btn: 'partnerBtn', teil: 'partnerTeil', danke: 'partnerDanke', stempel: 'partnerStempel',
+      pruefen: function(){
+        if (!pf.firma.value.trim()) return ['Bitte geben Sie den Namen Ihres Betriebs an.', 'p_firma'];
+        if (!pf.leistungen.value.trim()) return ['Bitte schreiben Sie kurz, was Sie anbieten.', 'p_leistungen'];
+        var m = pf.email.value.trim(), t = pf.telefon.value.trim();
+        if (!m && !t) return ['Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.', 'p_tel'];
+        if (m && !EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'p_mail'];
+        if (!$('p_consent').checked) return ['Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.'];
+      },
+      daten: function(){
+        return { firma: pf.firma.value, name: pf.name.value, leistungen: pf.leistungen.value, ort: pf.ort.value, telefon: pf.telefon.value,
+          email: pf.email.value, wa: $('p_wa').checked, website: pf.website.value, consent: true, quelle: quelle };
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

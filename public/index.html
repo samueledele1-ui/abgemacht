@@ -187,10 +187,11 @@
 </style>
 </head>
 <body>
+<script>if(/^#(partner|betriebe)$/.test(location.hash))location.replace('/betriebe'+location.search+location.hash);</script>
 <div class="wrap">
   <header>
     <a class="logo" href="/"><span class="mark"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5.5 12.5l4.2 4.2L18.5 7.8" fill="none" stroke="#F2B33D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Abgemacht</a>
-    <span style="display:flex;gap:10px"><a class="btn ghost" href="#betriebe">Für Betriebe</a><a class="btn" href="#anfrage">Anfrage stellen</a></span>
+    <span style="display:flex;gap:10px"><a class="btn ghost" href="/betriebe">Für Betriebe</a><a class="btn" href="#anfrage">Anfrage stellen</a></span>
   </header>
 
   <div class="hero2">
@@ -349,77 +350,18 @@
   </section>
 
 
-  <section class="abschnitt" id="betriebe">
-    <h2>Für Betriebe: Aufträge aus der Region, ohne Akquise</h2>
-    <p class="sub">Handwerk, Reinigung, Hausmeister, Garten und mehr: Als Partner-Betrieb bekommen Sie passende Anfragen mit Ort, Zeitraum und Budget. Sie entscheiden, ob Sie ein Angebot machen.</p>
-    <div class="preis-grid">
-      <div class="karte"><b>Startphase</b><div class="gross">0 €</div><p>Bis auf Weiteres kostenlos. Gebühren kommen erst nach Ankündigung mit 4 Wochen Vorlauf und nur mit Ihrer Zustimmung.</p></div>
-      <div class="karte"><b>Danach: nur zahlen, wenn ein Kunde Sie gewählt hat</b>
-        <p style="margin:6px 0 10px">Einmalig für die Kontaktdaten, gestaffelt nach Budget des Auftraggebers. Keine Grundgebühr, kein Abo.</p>
-        <div class="staffel" role="img" aria-label="Freischaltung: 9 Euro bis 500 Euro Budget, 29 Euro bis 2.000 Euro, 69 Euro bis 10.000 Euro, 129 Euro darüber oder bei großen Daueraufträgen.">
-          <div class="st"><b>9 €</b><small>bis 500 €</small></div>
-          <div class="st b2"><b>29 €</b><small>bis 2.000 €</small></div>
-          <div class="st b3"><b>69 €</b><small>bis 10.000 €</small></div>
-          <div class="st b4"><b>129 €</b><small>über 10.000 €</small></div>
-        </div>
-        <div class="extras"><span><b>★ Gründungspartner:</b> Die ersten 30 Partner-Betriebe zahlen dauerhaft 50 % und werden bei passenden Anfragen bevorzugt angefragt.</span><span><b>Bezahlt wird online</b> per Karte oder Lastschrift, die Kontaktdaten kommen sofort.</span></div>
-        <p class="hinweis">Geplante Preise, Änderungen vorbehalten. Einzelheiten in den <a href="/bedingungen">Bedingungen</a>.</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="partner" class="formband hellband">
-    <div class="innen">
-      <div class="intro">
-        <h2>Partner-Betrieb werden</h2>
-        <p>Tragen Sie sich ein. Nach einer kurzen Abstimmung zu Leistungen und Einsatzgebiet bekommen Sie passende Anfragen.</p>
-        <ul><li>Nur Anfragen, die zu Ihnen passen</li><li>Keine Grundgebühr, kein Abo</li><li>★ Gründungspartner: die ersten 30 Betriebe dauerhaft 50 % günstiger</li><li>Angebot mit einem Klick über den Link in der E-Mail</li><li>Jederzeit ohne Frist beenden</li></ul>
-      </div>
-      <div class="formbox">
-        <div id="partnerTeil">
-          <form id="partnerForm" novalidate>
-            <div class="row">
-              <div><label for="p_firma">Betrieb *</label><input id="p_firma" name="firma" maxlength="120" autocomplete="organization" required></div>
-              <div><label for="p_name">Ansprechpartner</label><input id="p_name" name="name" maxlength="80" autocomplete="name"></div>
-            </div>
-            <label for="p_leistungen">Was bieten Sie an? *</label>
-            <input id="p_leistungen" name="leistungen" maxlength="300" required placeholder="z. B. Elektroinstallation, E-Check, Kleinreparaturen">
-            <label for="p_ort">Einsatzgebiet</label>
-            <input id="p_ort" name="ort" maxlength="120" placeholder="z. B. Ulm + 30 km Umkreis oder deutschlandweit">
-            <div class="row">
-              <div><label for="p_tel">Telefon</label><input id="p_tel" name="telefon" type="tel" maxlength="40" autocomplete="tel"></div>
-              <div><label for="p_mail">E-Mail</label><input id="p_mail" name="email" type="email" maxlength="254" autocomplete="email"></div>
-            </div>
-            <p class="klein">Telefon oder E-Mail reicht.</p>
-            <div class="hp" aria-hidden="true"><label for="p_website">Website</label><input id="p_website" name="website" tabindex="-1" autocomplete="off"></div>
-            <label class="check"><input type="checkbox" id="p_wa"> <span>Ich möchte Anfragen gern per WhatsApp bekommen. <span class="opt">(Widerruf jederzeit mit „Stopp“)</span></span></label>
-            <label class="check"><input type="checkbox" id="p_consent"> <span>Ich habe die <a href="/bedingungen" target="_blank">Bedingungen</a> und <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</span></label>
-            <button class="btn" id="partnerBtn" type="submit" style="width:100%;margin-top:18px">Partner-Betrieb werden</button>
-            <div class="msg" id="partnerMsg" role="status"></div>
-          </form>
-        </div>
-        <div class="danke" id="partnerDanke" hidden>
-          <span class="stempel" id="partnerStempel">✓ Abgemacht</span>
-          <h2>Danke!</h2>
-          <p class="sub">Wir melden uns in den nächsten Tagen, um Leistungen und Einsatzgebiet abzustimmen.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section class="abschnitt faq">
     <h2>Häufige Fragen</h2>
     <details><summary>Was kostet mich das als Auftraggeber?</summary><p>Nichts. Anfragen sind für Auftraggeber kostenlos und unverbindlich, auch wenn Sie sich am Ende für keines der Angebote entscheiden.</p></details>
     <details><summary>Mit wem schließe ich den Vertrag?</summary><p>Direkt mit dem Betrieb, den Sie wählen. Abgemacht vermittelt nur. Preis, Termin und Ausführung vereinbaren Sie mit dem Betrieb.</p></details>
     <details><summary>Wer sieht meine Daten?</summary><p>Die angefragten Betriebe sehen zunächst nur Leistung, Ort, Zeitraum, Budget und Ihre Beschreibung. Name und Kontaktdaten gibt es erst für den Betrieb, dessen Angebot Sie annehmen.</p></details>
     <details><summary>Wie schnell bekomme ich Angebote?</summary><p>Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe. Wie schnell die Angebote kommen, hängt vom Auftrag ab, bei kleineren Arbeiten oft nach ein, zwei Tagen. Beim ersten Angebot bekommen Sie eine E-Mail, weitere erscheinen automatisch auf Ihrer Angebotsseite.</p></details>
-    <details><summary>Was kostet Abgemacht für Betriebe, auch bei großen Aufträgen?</summary><p>Betriebe zahlen nach der Startphase nur, wenn ein Auftraggeber ihr Angebot angenommen hat: einmalig für die Kontaktdaten, gestaffelt nach seinem Budget. Bis 500 € 9 €, bis 2.000 € 29 €, bis 10.000 € 69 €, darüber und bei großen Daueraufträgen, etwa einem Reinigungsvertrag über zwei Jahre, 129 €. Danach kosten Auftrag, Laufzeit und Verlängerungen nichts mehr. Die ersten 30 Partner-Betriebe zahlen als Gründungspartner dauerhaft die Hälfte. In der Startphase ist alles kostenlos.</p></details>
     <details><summary>In welchen Regionen sind Sie aktiv?</summary><p>Gestartet sind wir in Ulm, Neu-Ulm und Umgebung, unser Netz an Partnerbetrieben wächst aber laufend in weitere Regionen. Schicken Sie Ihre Anfrage einfach ab, egal wo Sie sind. Wir suchen passende Betriebe für Sie und melden uns, falls wir in Ihrer Gegend noch niemanden finden.</p></details>
     <details><summary>Ich habe eine Hausverwaltung und regelmäßig Aufträge. Geht das auch?</summary><p>Genau dafür ist Abgemacht gemacht. Schicken Sie einfach die erste Anfrage. Für mehrere Objekte oder feste Rahmenaufträge schreiben Sie an <a href="mailto:hallo@ab-gemacht.info">hallo@ab-gemacht.info</a>.</p></details>
   </section>
 
   <footer>
-    <span>© 2026 Abgemacht · <a href="/finden">Branchen und Orte</a></span>
+    <span>© 2026 Abgemacht · <a href="/finden">Branchen und Orte</a> · <a href="/betriebe">Für Betriebe</a></span>
     <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/bedingungen">Bedingungen</a></span>
   </footer>
 </div>
@@ -564,25 +506,6 @@
     $('anfrageDanke').hidden = true; $('anfrageTeil').hidden = false; $('anfrageStempel').classList.remove('drauf'); $('leistung').focus();
   });
 
-  var pf = $('partnerForm');
-  pf.addEventListener('submit', function(e){
-    e.preventDefault();
-    senden({
-      url: '/api/partner', msg: 'partnerMsg', btn: 'partnerBtn', teil: 'partnerTeil', danke: 'partnerDanke', stempel: 'partnerStempel',
-      pruefen: function(){
-        if (!pf.firma.value.trim()) return ['Bitte geben Sie den Namen Ihres Betriebs an.', 'p_firma'];
-        if (!pf.leistungen.value.trim()) return ['Bitte schreiben Sie kurz, was Sie anbieten.', 'p_leistungen'];
-        var m = pf.email.value.trim(), t = pf.telefon.value.trim();
-        if (!m && !t) return ['Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.', 'p_tel'];
-        if (m && !EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'p_mail'];
-        if (!$('p_consent').checked) return ['Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.'];
-      },
-      daten: function(){
-        return { firma: pf.firma.value, name: pf.name.value, leistungen: pf.leistungen.value, ort: pf.ort.value, telefon: pf.telefon.value,
-          email: pf.email.value, wa: $('p_wa').checked, website: pf.website.value, consent: true, quelle: quelle };
-      }
-    });
-  });
 })();
 </script>
 </body>
