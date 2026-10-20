@@ -308,7 +308,6 @@
 (function(){
   var p = new URLSearchParams(location.search);
   var quelle = p.get('quelle') || 'direkt';
-  try { if (p.get('quelle')) sessionStorage.setItem('hs_quelle', quelle); else quelle = sessionStorage.getItem('hs_quelle') || 'direkt'; } catch(e) {}
   var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   function $(id){ return document.getElementById(id); }
 
