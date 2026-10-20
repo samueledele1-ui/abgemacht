@@ -23,6 +23,13 @@ const clip = (v: unknown, n = 300): string | null => {
   const s = String(v).trim().slice(0, n);
   return s.length ? s : null;
 };
+// Preis aus freiem Text: „480 €“ → 480, „1.250,50 €“ → 1250.5, „400 bis 500 €“ → 500
+const preisZahl = (t: string) => {
+  const z = (t.match(/\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d{1,2})?/g) || [])
+    .map((x) => Number(/\.\d{3}/.test(x) ? x.replace(/\./g, "").replace(",", ".") : x.replace(",", ".")))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return z.length ? Math.max(...z) : null;
+};
 const zahl = (v: unknown) => {
   const n = Number(String(v ?? "").replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3})/g, "").replace(",", "."));
   return Number.isFinite(n) && n > 0 ? n : null;
@@ -235,13 +242,30 @@ export default async (req: Request, _context: Context) => {
     const vbid = Number(body.vb) || 0;
     const status = String(body.status);
     if (!VB_STATUS.includes(status)) return fehler("Unbekannter Status.");
+    const preisT = clip(body.preis, 80);
+    // Zahl aus dem Preistext übernehmen (bei „400–500 €“ der obere Wert), damit Kunde und Gebührenstufe damit rechnen können
+    const betrag = preisT ? preisZahl(preisT) : null;
     const r = await sql`UPDATE vermittlung_betriebe SET status = ${status}, angebot = COALESCE(${clip(body.angebot, 2000)}, angebot),
-        preis = COALESCE(${clip(body.preis, 80)}, preis),
+        preis = COALESCE(${preisT}, preis), preis_betrag = CASE WHEN ${preisT}::text IS NOT NULL THEN ${betrag}::numeric ELSE preis_betrag END,
         geantwortet_am = CASE WHEN geantwortet_am IS NULL AND ${status}::text IN ('angebot', 'abgesagt') THEN now() ELSE geantwortet_am END
       WHERE id = ${vbid} RETURNING vermittlung_id, kontakt_id`;
     if (!r.length) return fehler("Nicht gefunden.", 404);
-    if (status === "angebot") await sql`UPDATE vermittlungen SET status = 'angebote', updated_at = now() WHERE id = ${r[0].vermittlung_id} AND status IN ('neu', 'angefragt')`;
-    return Response.json({ ok: true });
+    let kundeGemailt = false;
+    if (status === "angebot") {
+      await sql`UPDATE vermittlungen SET status = 'angebote', updated_at = now() WHERE id = ${r[0].vermittlung_id} AND status IN ('neu', 'angefragt')`;
+      // Auftraggeber beim ersten Angebot automatisch benachrichtigen (wie bei selbst abgegebenen Angeboten)
+      const v = (await sql`SELECT id, leistung, ort, kontakt, kunde_token, kunde_mail_am FROM vermittlungen WHERE id = ${r[0].vermittlung_id}`)[0];
+      const kmail = mailAus(v?.kontakt);
+      if (v && kmail && !v.kunde_mail_am && body.kunde_mail !== false) {
+        kundeGemailt = await sendeMail(kmail, null, `Ihr erstes Angebot ist da: ${v.leistung || "Ihre Anfrage"}`, mailLayout(
+          absatz("Guten Tag,") +
+          absatz(`für Ihre Anfrage „${escP(v.leistung || "")}“${v.ort ? " in " + escP(v.ort) : ""} ist das erste Angebot eingegangen. Weitere können noch folgen.`) +
+          absatz("Über den Knopf sehen Sie jederzeit alle Angebote auf einen Blick und nehmen das passende mit einem Klick an. Erst dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten.") +
+          knopf(`${seite()}/angebot?t=${v.kunde_token}`, "Angebote ansehen") + gruss));
+        if (kundeGemailt) await sql`UPDATE vermittlungen SET kunde_mail_am = now() WHERE id = ${v.id} AND kunde_mail_am IS NULL`;
+      }
+    }
+    return Response.json({ ok: true, kundeGemailt, betrag });
   }
 
   /* Monatsabrechnung: alle abgemachten Vermittlungen eines Monats, gruppiert nach Betrieb */
