@@ -200,7 +200,8 @@
     }
     var liste = d.angebote.map(function (o) {
       var bew = o.bewertungen ? '<span class="sterne">★ ' + String(o.sterne).replace('.', ',') + '</span> aus ' + o.bewertungen + ' Bewertung' + (o.bewertungen > 1 ? 'en' : '') : (o.auftraege ? o.auftraege + ' Auftrag' + (o.auftraege > 1 ? 'e' : '') + ' über Abgemacht' : '<span class="marke grau">Neu bei Abgemacht</span>');
-      var preis = o.betrag != null ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
+      var spanne = o.preis && /\d\s*(bis|-|–)\s*\d/.test(o.preis);
+      var preis = o.betrag != null && !spanne ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
       var cls = o.status === 'gewaehlt' ? ' gewaehlt' : o.status === 'nicht_gewaehlt' ? ' aus' : '';
       var knopf = d.offen && o.status === 'angebot' ? '<div class="aktion" data-o="' + o.id + '"><button class="btn" type="button" data-an="' + o.id + '">Dieses Angebot annehmen</button></div>' : '';
       return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + (o.gruender ? ' <span class="marke gold" title="Einer der ersten 30 Partner-Betriebe von Abgemacht">★ Gründungspartner</span>' : '') + '</div>' +

@@ -572,11 +572,11 @@
     if (kl) kl.onclick = async () => { kl.disabled = true; try { const r = await api({ aktion: "kunde_link_senden", id }); toast("Link gesendet an " + r.an); await laden(); oeffneV(id); } catch (e) { toast(e.message); kl.disabled = false; } };
     p.querySelectorAll("[data-sp]").forEach((b) => b.onclick = async () => {
       const box = b.closest("[data-vb]"); const g = (n) => box.querySelector(`[data-g="${n}"]`).value;
-      try { await api({ aktion: "vb", vb: +b.dataset.sp, status: g("status"), preis: g("preis"), angebot: g("angebot") }); await laden(); oeffneV(id); toast("Gespeichert"); } catch (e) { toast(e.message); }
+      try { const r = await api({ aktion: "vb", vb: +b.dataset.sp, status: g("status"), preis: g("preis"), angebot: g("angebot") }); await laden(); oeffneV(id); toast(r.kundeGemailt ? "Gespeichert. Der Kunde wurde per Mail benachrichtigt und sieht das Angebot auf seiner Angebotsseite." : g("status") === "angebot" ? "Gespeichert. Das Angebot steht auf der Angebotsseite des Kunden." : "Gespeichert"); } catch (e) { toast(e.message); }
     });
     p.querySelectorAll("[data-wahl]").forEach((b) => b.onclick = async () => {
       const box = b.closest("[data-vb]"); const preis = box.querySelector('[data-g="preis"]').value;
-      try { await api({ aktion: "vb", vb: +b.dataset.wahl, status: "angebot", preis, angebot: box.querySelector('[data-g="angebot"]').value }); const d = await api({ aktion: "waehlen", vb: +b.dataset.wahl, auftragswert: preis }); await laden(); oeffneV(id); toast("Abgemacht!" + (d.gebuehr ? " Gebühr nach Modell: " + d.gebuehr + " €" : "")); } catch (e) { toast(e.message); }
+      try { await api({ aktion: "vb", vb: +b.dataset.wahl, status: "angebot", preis, angebot: box.querySelector('[data-g="angebot"]').value, kunde_mail: false }); const d = await api({ aktion: "waehlen", vb: +b.dataset.wahl, auftragswert: preis }); await laden(); oeffneV(id); toast("Abgemacht!" + (d.gebuehr ? " Gebühr nach Modell: " + d.gebuehr + " €" : "")); } catch (e) { toast(e.message); }
     });
     const suchen = async () => {
       const q = p.querySelector("#kSuch").value.trim(), ort = p.querySelector("#kOrt").value.trim(), max = +p.querySelector("#kKm").value;
