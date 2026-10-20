@@ -231,6 +231,7 @@
     zusage: (v, b) => `Abgemacht ✅ Der Kunde hat Ihr Angebot angenommen${b.preis ? ": " + b.preis : ""}.\nKontakt: ${v.auftraggeber || "[Name]"}, ${v.kontakt || "[Telefon]"}${v.ort ? ", " + v.ort : ""}.\nBitte melden Sie sich kurz zur Bestätigung. Vielen Dank!`,
     absage: () => `Vielen Dank für Ihr Angebot! Diesmal hat sich der Kunde für einen anderen Betrieb entschieden. Bei der nächsten passenden Anfrage melde ich mich wieder.`,
     gepasst: (v) => `Hat mit ${v.gewaehlt_firma || "dem Betrieb"} alles gepasst? Antworten Sie mit 1 bis 5 Sternen – das hilft anderen bei der Auswahl. Danke!`,
+    empfehlung: (k) => `Hallo${k.ansprechpartner ? " " + k.ansprechpartner : ""}, kurze Info von Abgemacht: Wenn Sie mal einen Auftrag nicht annehmen können, weil Sie voll sind oder es nicht Ihr Gebiet ist, schicken Sie dem Kunden einfach Ihren persönlichen Link. Er stellt die Anfrage dann bei uns, für ihn kostenlos. Kommt der Auftrag mit einem anderen Betrieb zustande, bekommen Sie die Hälfte unserer Freischaltgebühr. Ihr Link: ${k.empfehl_link}\n\nViele Grüße\nSamuel Edele`,
     anmeldung: (k) => `Guten Tag${k.ansprechpartner ? " " + k.ansprechpartner : ""}, hier ist Samuel Edele von Abgemacht. Ich vermittle Aufträge aus allen Branchen an geprüfte Betriebe – in der Startphase kostenlos, ohne Abo und ohne Vertrag.\nDarf ich Ihnen passende Anfragen hier per WhatsApp schicken? Sie entscheiden bei jeder Anfrage selbst, ob Sie ein Angebot machen. Ein kurzes „Ja“ reicht. Abmelden geht jederzeit mit „Stopp“.`,
   };
   const nummer = (t) => { let n = String(t || "").replace(/\(0\)/g, "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "49" + n.slice(1); return n.length >= 8 ? n : ""; };
@@ -264,7 +265,7 @@
     const bs = B.filter((b) => b.vermittlung_id === v.id);
     const ang = bs.filter((b) => ["angebot", "gewaehlt", "nicht_gewaehlt"].includes(b.status)).length;
     return `<div class="karte" data-v="${v.id}"><div class="m"><b>${esc(v.leistung || "Anfrage")}${v.ort ? " · " + esc(v.ort) : ""}${artTag(v)}</b>
-      <small>${esc(v.auftraggeber || "Unbekannt")}${v.zeitraum ? " · " + esc(v.zeitraum) : ""}${v.budget ? " · " + esc(v.budget) : ""}${v.gewaehlt_firma ? " · mit " + esc(v.gewaehlt_firma) : ""}</small></div>
+      <small>${esc(v.auftraggeber || "Unbekannt")}${v.zeitraum ? " · " + esc(v.zeitraum) : ""}${v.budget ? " · " + esc(v.budget) : ""}${v.gewaehlt_firma ? " · mit " + esc(v.gewaehlt_firma) : ""}${v.empfohlen_firma ? " · empfohlen von " + esc(v.empfohlen_firma) : ""}</small></div>
       <div class="rechts"><span class="st v-${v.status}">${VS[v.status]}</span><br><small style="color:var(--muted)">${bs.length} angefragt · ${ang} Angebote</small></div></div>`;
   }
   function zeichne() {
@@ -321,7 +322,7 @@
   const RS = { offen: ["Offen", "t-proj"], bezahlt: ["Bezahlt", "t-wa"], storniert: ["Storniert", "v-verloren"], storno: ["Storno", "v-verloren"] };
 
   async function abrechnung(el) {
-    const kopf = `<div class="tabs" style="margin-bottom:12px">${[["monat", "Monat abrechnen"], ["rechnungen", "Rechnungen"], ["daten", "Rechnungsdaten"]]
+    const kopf = `<div class="tabs" style="margin-bottom:12px">${[["monat", "Monat abrechnen"], ["rechnungen", "Rechnungen"], ["empfehlungen", "Empfehlungen"], ["daten", "Rechnungsdaten"]]
       .map(([k, l]) => `<button type="button" data-am="${k}" aria-pressed="${abrModus === k}">${l}</button>`).join("")}</div><div id="abrInhalt"><div class="leer">Lade …</div></div>`;
     el.innerHTML = kopf;
     el.querySelectorAll("[data-am]").forEach((b) => b.onclick = () => { abrModus = b.dataset.am; abrechnung(el); });
@@ -329,6 +330,7 @@
     try {
       if (abrModus === "monat") await abrMonat(ziel, el);
       else if (abrModus === "rechnungen") await abrRechnungen(ziel, el);
+      else if (abrModus === "empfehlungen") await abrEmpfehlungen(ziel, el);
       else await abrDaten(ziel, el);
     } catch (e) { ziel.innerHTML = `<div class="leer">${esc(e.message)}</div>`; }
   }
@@ -442,6 +444,25 @@
     };
   }
 
+  async function abrEmpfehlungen(ziel, el) {
+    const d = await api({ aktion: "empfehlungen" });
+    const offen = d.liste.filter((x) => x.verdient && !x.empfehlung_ausgezahlt_am);
+    const summe = offen.reduce((a, x) => a + x.anteil, 0);
+    const zust = (x) => x.empfehlung_ausgezahlt_am ? `<span class="tag2 t-wa">ausgezahlt ${tag(x.empfehlung_ausgezahlt_am)}</span>`
+      : x.verdient ? `<span class="tag2 t-gold">auszahlen</span>` : ["abgemacht", "erledigt"].includes(x.status) ? `<span class="tag2 t-proj">Gebühr noch nicht bezahlt</span>` : `<span class="tag2 t-p">${esc(VS[x.status] || x.status)}</span>`;
+    ziel.innerHTML = `<div class="box"><b>${offen.length ? offen.length + " Auszahlung" + (offen.length === 1 ? "" : "en") + " offen: " + eur(summe) : "Keine offenen Auszahlungen"}</b>
+      <p style="margin:6px 0 0;color:var(--muted);font-size:14px">Partner leiten Kunden über ihren Empfehlungslink weiter. Sobald der gewählte Betrieb die Freischaltgebühr bezahlt hat, bekommt der empfehlende Betrieb die Hälfte. Überweisen, dann „Ausgezahlt“ drücken. Bitte eine Gutschrift oder Rechnung des Betriebs für deine Buchhaltung aufheben.</p></div>
+      ${d.liste.length ? `<div class="tabelle"><table><thead><tr><th>Anfrage</th><th>Empfohlen von</th><th>Gewählt</th><th>Gebühr</th><th>Anteil</th><th>Stand</th><th></th></tr></thead><tbody>${d.liste.map((x) => `<tr>
+        <td>#${x.id} ${esc(x.leistung || "")}<br><small style="color:var(--muted)">${esc(x.ort || "")} · ${tag(x.created_at)}</small></td>
+        <td><b>${esc(x.empfehler)}</b><br><small style="color:var(--muted)">${esc([x.ansprechpartner, x.telefon, x.email].filter(Boolean).join(" · "))}</small></td>
+        <td>${esc(x.gewaehlt_firma || "–")}</td><td>${x.gebuehr ? eur(x.gebuehr) : "–"}</td><td>${x.verdient ? "<b>" + eur(x.anteil) + "</b>" : "–"}</td><td>${zust(x)}</td>
+        <td>${x.verdient ? `<button class="btn ${x.empfehlung_ausgezahlt_am ? "ghost " : ""}klein" type="button" data-ausz="${x.id}" data-an="${x.empfehlung_ausgezahlt_am ? "0" : "1"}">${x.empfehlung_ausgezahlt_am ? "Zurücknehmen" : "Ausgezahlt"}</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+      : '<div class="leer">Noch keine Empfehlungen. Jeder Partner findet seinen Link auf seinen Angebotsseiten, du findest ihn im Partner-Profil.</div>'}`;
+    ziel.querySelectorAll("[data-ausz]").forEach((b) => b.onclick = async () => {
+      try { await api({ aktion: "empfehlung_ausgezahlt", id: +b.dataset.ausz, wert: b.dataset.an === "1" }); toast(b.dataset.an === "1" ? "Als ausgezahlt markiert" : "Zurückgenommen"); abrechnung(el); } catch (e) { toast(e.message); }
+    });
+  }
+
   async function abrDaten(ziel, el) {
     const d = await api({ aktion: "einstellungen" });
     const e = d.einstellungen;
@@ -529,6 +550,7 @@
     ].join("");
     const p = panel(`<div class="kopf"><div><h2>${esc(v.leistung || "Anfrage")}${artTag(v)}</h2><small style="color:var(--muted)">#${v.id} · ${dt(v.created_at)} · ${esc(KANL[v.kanal] || "")}</small></div><button class="zu" aria-label="Schließen">×</button></div>
       <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Freischaltung: ${esc(String(v.gebuehr).replace(".", ","))} €${v.bezahlt_am ? " · bezahlt " + dt(v.bezahlt_am) : ""}</span>` : ""}</div>
+      ${v.empfohlen_firma ? `<div class="vb" style="margin-top:10px;background:#F2FAF7"><b>Empfohlen von ${esc(v.empfohlen_firma)}</b><small style="color:var(--muted);display:block">Diesen Betrieb nicht anfragen. Wird die Freischaltgebühr bezahlt, bekommt er die Hälfte${v.gebuehr ? " (" + esc(String(Math.round(v.gebuehr * 50) / 100).replace(".", ",")) + " €)" : ""}. Auszahlen unter Abrechnung → Empfehlungen.</small></div>` : ""}
       ${v.status === "abgemacht" && !v.freigeschaltet_am ? `<div class="vb" style="border-color:#F2B33D;background:#FFF8E8;margin-top:10px"><b>Wartet auf Freischaltung</b><small style="color:var(--muted);display:block">Kunde hat ${v.angenommen_am ? "am " + dt(v.angenommen_am) : ""} angenommen. Der Betrieb hat den Freischalt-Link per Mail, die Kontaktdaten gehen raus, sobald er bezahlt.</small>
         <div class="knopfreihe"><button class="btn ghost klein" type="button" id="vFrei">Von Hand freischalten</button><button class="btn ghost klein" type="button" id="vReset">Zurücksetzen, Kunde wählt neu</button></div></div>` : ""}
       ${["neu", "angefragt", "angebote"].includes(v.status) || (v.status === "abgemacht" && !v.freigeschaltet_am) ? `<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">Freischaltstufe: <select id="vStufe" style="width:auto;display:inline-block;padding:4px 8px;font-size:13.5px"><option value="">automatisch nach Budget</option><option value="1" ${v.freischalt_stufe == 1 ? "selected" : ""}>bis 500 € · 9 €</option><option value="2" ${v.freischalt_stufe == 2 ? "selected" : ""}>bis 2.000 € · 29 €</option><option value="3" ${v.freischalt_stufe == 3 ? "selected" : ""}>bis 10.000 € · 69 €</option><option value="4" ${v.freischalt_stufe == 4 ? "selected" : ""}>darüber · 129 €</option></select></div>` : ""}
@@ -562,7 +584,7 @@
       if (!q && !ort) return toast("Bitte Branche oder Ort eingeben.");
       p.querySelector("#kListe").innerHTML = '<p style="color:var(--muted)">Suche …</p>';
       const d = await api({ aktion: "kandidaten", q, ort });
-      const schon = new Set(bs.map((b) => b.kontakt_id));
+      const schon = new Set(bs.map((b) => b.kontakt_id)); if (v.empfohlen_von) schon.add(v.empfohlen_von);
       const { liste, zielGefunden } = await nachNaehe(d.kandidaten.filter((k) => !schon.has(k.id)), ort);
       // Gründungspartner im Umkreis zuerst (Vorrang bei Aufträgen), sonst nach Entfernung
       const nah = liste.filter((k) => !max || !zielGefunden || (k.km != null && k.km <= max)).sort((a, b) => (b.gruender_nr ? 1 : 0) - (a.gruender_nr ? 1 : 0)).slice(0, 30);
@@ -606,6 +628,8 @@
         <label class="check" style="margin-top:12px"><input type="checkbox" id="pWa" ${k.wa_ok_am ? "checked" : ""}> <span>Hat Okay gegeben, Anfragen per WhatsApp zu bekommen${k.wa_ok_am ? " (seit " + dt(k.wa_ok_am) + ")" : ""}</span></label>
         <label for="pSt">Status</label><select id="pSt"><option value="aktiv" ${k.partner === "aktiv" ? "selected" : ""}>Aktiver Partner</option><option value="pausiert" ${k.partner === "pausiert" ? "selected" : ""}>Pausiert (gerade keine Kapazität)</option><option value="interessiert" ${k.partner === "interessiert" ? "selected" : ""}>Interessiert (noch nicht aufgenommen)</option><option value="">Kein Partner mehr</option></select>
         <button class="btn klein" id="pSpeichern" type="button" style="margin-top:12px">Speichern</button></div>
+      ${k.empfehl_link ? `<div class="unter"><b style="display:block;margin-bottom:4px">Empfehlungslink${k.empfehlungen ? " · " + k.empfehlungen + (k.empfehlungen === 1 ? " Empfehlung" : " Empfehlungen") : ""}</b><small style="color:var(--muted);display:block;margin-bottom:8px">Kunden, die der Betrieb nicht selbst bedienen kann, schickt er über diesen Link. Er bekommt die Hälfte der bezahlten Freischaltgebühr. Der Link steht auch auf jeder seiner Angebotsseiten.</small><code style="word-break:break-all;font-size:13px">${esc(k.empfehl_link)}</code><div class="knopfreihe"><button class="btn ghost klein" type="button" data-kopie="${esc(k.empfehl_link)}">Link kopieren</button></div></div>
+      ${vorlageHtml("Text: Empfehlungslink an den Betrieb", T.empfehlung(k), k.telefon, k.wa_ok_am)}` : ""}
       ${vorlageHtml("Text: Anmeldung mit WhatsApp-Okay", T.anmeldung(k), k.telefon, true)}`);
     p.querySelector("#pSpeichern").onclick = async () => {
       try { await api({ aktion: "partner", kontakt: kid, partner: p.querySelector("#pSt").value || null, wa_ok: p.querySelector("#pWa").checked, leistungen: p.querySelector("#pLeist").value }); await laden(); schliessen(); toast("Gespeichert"); } catch (e) { toast(e.message); }

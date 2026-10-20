@@ -228,6 +228,21 @@
     });
   }
 
+  // Empfehlungslink: Kunden weiterleiten, die der Betrieb selbst nicht bedienen kann
+  function empfehlBox(e) {
+    var box = document.createElement('details'); box.className = 'box';
+    var stand = e.anzahl ? '<p class="klein" style="margin:10px 0 0">Bisher ' + e.anzahl + (e.anzahl === 1 ? ' Empfehlung' : ' Empfehlungen') + (e.verdient ? ', davon verdient: <b>' + euro(e.verdient) + '</b>' + (e.verdient > e.ausgezahlt ? ' (' + euro(e.verdient - e.ausgezahlt) + ' noch offen)' : ' (ausgezahlt)') : '') + '.</p>' : '';
+    var text = 'Ich schaffe es gerade leider nicht. Über Abgemacht bekommen Sie kostenlos Angebote von geprüften Betrieben aus der Region: ' + e.link;
+    box.innerHTML = '<summary style="cursor:pointer;font-weight:700">Zu viele Anfragen? Kunden weiterleiten und mitverdienen</summary>' +
+      '<p style="margin:12px 0 10px">Wenn Sie einen Auftrag selbst nicht annehmen können, schicken Sie dem Kunden Ihren persönlichen Link. Er stellt seine Anfrage dann bei uns, für ihn kostenlos. Kommt der Auftrag mit einem anderen Betrieb zustande, bekommen Sie <b>die Hälfte der Freischaltgebühr</b>, die dieser Betrieb bezahlt.</p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><input readonly value="' + esc(e.link) + '" style="flex:1;min-width:200px;font-size:14px" onclick="this.select()">' +
+      '<button class="btn ghost" type="button" id="empKopie" style="padding:8px 16px;font-size:14px">Link kopieren</button>' +
+      '<a class="btn" style="padding:8px 16px;font-size:14px" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(text) + '">Per WhatsApp teilen</a></div>' +
+      '<p class="klein" style="margin:10px 0 0">Geben Sie bitte keine Kundendaten an uns weiter, der Kunde meldet sich selbst. Ausgezahlt wird, sobald die Gebühr bezahlt ist; in der Startphase sammeln wir Ihre Empfehlungen schon und zahlen aus, sobald Gebühren gelten.</p>' + stand;
+    main.appendChild(box);
+    $('empKopie').onclick = function(){ try { navigator.clipboard.writeText(e.link); this.textContent = 'Kopiert ✓'; } catch (x) {} };
+  }
+
   function alertBox(t) { var m = document.createElement('p'); m.className = 'msg err'; m.textContent = t; main.prepend(m); }
 
   async function laden() {
@@ -236,6 +251,7 @@
       var d = await api();
       document.title = (d.rolle === 'betrieb' ? 'Anfrage' : 'Ihre Angebote') + ' – Abgemacht';
       (d.rolle === 'betrieb' ? betrieb : kunde)(d);
+      if (d.rolle === 'betrieb' && d.empfehlung) empfehlBox(d.empfehlung);
     } catch (e) { fehlerSeite(e.message); }
   }
   laden();

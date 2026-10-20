@@ -408,6 +408,7 @@
 (function(){
   var p = new URLSearchParams(location.search);
   var quelle = p.get('quelle') || 'direkt';
+  var empfohlen = (p.get('empfohlen') || '').slice(0, 40);
   var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   function $(id){ return document.getElementById(id); }
 
@@ -493,7 +494,7 @@
       daten: function(){
         return { typ: af.querySelector('input[name=typ]:checked').value, leistung: af.leistung.value, beschreibung: af.beschreibung.value, ort: af.ort.value,
           zeitraum: af.zeitraum.value, art: af.querySelector('input[name=art]:checked').value, budget: af.budget.value, name: af.name.value,
-          firma: af.firma.value, telefon: af.telefon.value, email: af.email.value, website: af.website.value, consent: true, quelle: quelle, fotos: fotos };
+          firma: af.firma.value, telefon: af.telefon.value, email: af.email.value, website: af.website.value, consent: true, quelle: quelle, empfohlen: empfohlen, fotos: fotos };
       },
       fertig: function(d){
         fotos = []; fotoZeigen();
