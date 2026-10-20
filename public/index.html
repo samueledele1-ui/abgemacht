@@ -182,8 +182,9 @@
     .staffel{grid-template-columns:1fr 1fr}
     .formband{border-radius:24px;padding:36px 16px}
     .kacheln.zwei{grid-template-columns:1fr 1fr}.kacheln.zwei label{flex-direction:column;align-items:flex-start}
-    header .btn.ghost{display:none}
+    header .btn{padding:9px 14px;font-size:14px;white-space:nowrap}header .btn:not(.ghost){display:none}
   }
+  .betrieb-hinweis{margin:18px 0 0;font-size:15px;color:var(--muted)}.betrieb-hinweis a{color:var(--gruen);font-weight:700}
 </style>
 </head>
 <body>
@@ -203,6 +204,7 @@
         <a class="btn" href="#anfrage">Anfrage stellen</a>
         <a class="btn ghost" href="#so-gehts">So funktioniert's</a>
       </div>
+      <p class="betrieb-hinweis">Sie sind ein Betrieb und möchten Aufträge bekommen? <a href="/betriebe">Partner-Betrieb werden →</a></p>
     </div>
 
     <div class="netz muster" id="netz" role="img" aria-label="Eine Anfrage geht an fünf passende Betriebe, vier schicken ein Angebot, eins wird abgemacht.">
