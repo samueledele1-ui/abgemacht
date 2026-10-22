@@ -286,6 +286,7 @@ export default async (req: Request, _context: Context) => {
     const betrag = preisT ? preisZahl(preisT) : null;
     const r = await sql`UPDATE vermittlung_betriebe SET status = ${status}, angebot = COALESCE(${clip(body.angebot, 2000)}, angebot),
         preis = COALESCE(${preisT}, preis), preis_betrag = CASE WHEN ${preisT}::text IS NOT NULL THEN ${betrag}::numeric ELSE preis_betrag END,
+        preis_bis = CASE WHEN ${preisT}::text IS NOT NULL THEN NULL ELSE preis_bis END,
         geantwortet_am = CASE WHEN geantwortet_am IS NULL AND ${status}::text IN ('angebot', 'abgesagt') THEN now() ELSE geantwortet_am END
       WHERE id = ${vbid} RETURNING vermittlung_id, kontakt_id`;
     if (!r.length) return fehler("Nicht gefunden.", 404);
@@ -354,12 +355,13 @@ export default async (req: Request, _context: Context) => {
 
   if (aktion === "waehlen") {
     const vbid = Number(body.vb) || 0;
-    const r = await sql`SELECT vb.vermittlung_id, vb.kontakt_id, vb.preis, vb.preis_betrag, v.art, v.budget, v.freischalt_stufe, k.gruender_nr
+    const r = await sql`SELECT vb.vermittlung_id, vb.kontakt_id, vb.preis, vb.preis_betrag, vb.preis_bis, v.art, v.budget, v.freischalt_stufe, k.gruender_nr
       FROM vermittlung_betriebe vb JOIN vermittlungen v ON v.id = vb.vermittlung_id JOIN crm_kontakte k ON k.id = vb.kontakt_id WHERE vb.id = ${vbid}`;
     if (!r.length) return fehler("Nicht gefunden.", 404);
-    const { vermittlung_id, kontakt_id, preis, preis_betrag, art, budget, freischalt_stufe, gruender_nr } = r[0];
+    const { vermittlung_id, kontakt_id, preis, preis_betrag, preis_bis, art, budget, freischalt_stufe, gruender_nr } = r[0];
     // Bei regelmäßigen Aufträgen zählt der Wert des ersten Vertragsjahres (Monatspreis × 12)
-    const roh = zahl(body.auftragswert) ?? zahl(preis) ?? (preis_betrag === null ? null : Number(preis_betrag));
+    // Bei einer Preisspanne zählt der obere Wert
+    const roh = zahl(body.auftragswert) ?? (preis_bis !== null ? Number(preis_bis) : null) ?? zahl(preis) ?? (preis_betrag === null ? null : Number(preis_betrag));
     const proMonat = art === "langzeit" && (preis_betrag !== null || /monat|mtl|monatl/i.test(String(body.auftragswert || preis || "")));
     const wert = proMonat ? auftragswert("langzeit", roh) : roh;
     await sql`UPDATE vermittlung_betriebe SET status = CASE WHEN id = ${vbid} THEN 'gewaehlt' WHEN status = 'angebot' THEN 'nicht_gewaehlt' ELSE status END

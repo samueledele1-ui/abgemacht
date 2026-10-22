@@ -27,7 +27,11 @@ const zahl = (v: unknown) => {
   return Number.isFinite(n) && n > 0 && n < 10_000_000 ? Math.round(n * 100) / 100 : null;
 };
 const euro = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
-const preisText = (betrag: number, art: string) => euro(betrag) + (art === "langzeit" ? " pro Monat" : "");
+// Festpreis („2.400 €“) oder Preisspanne („2.400 – 2.900 €“), bei regelmäßigen Aufträgen pro Monat
+const preisText = (betrag: number, art: string, bis?: number | null) =>
+  (bis ? euro(betrag).replace(" €", "") + " – " + euro(bis) : euro(betrag)) + (art === "langzeit" ? " pro Monat" : "");
+// Für Gebühr und Auftragswert zählt bei einer Spanne der obere Wert (wie beim Budget des Auftraggebers)
+const oben = (x: any): number | null => x.preis_bis != null ? Number(x.preis_bis) : x.preis_betrag != null ? Number(x.preis_betrag) : null;
 
 
 function anfrageZeilen(v: any, anonym: boolean): [string, string | null][] {
@@ -90,7 +94,7 @@ export default async (req: Request, _context: Context) => {
 
     const gewaehlt = r.status === "gewaehlt";
     const frei = gewaehlt && !!r.freigeschaltet_am;
-    const fs = () => freischaltung({ art: r.art || "einmalig", budget: r.budget, betrag: r.preis_betrag === null ? null : Number(r.preis_betrag), stufe: r.freischalt_stufe, gruender: !!r.gruender_nr });
+    const fs = () => freischaltung({ art: r.art || "einmalig", budget: r.budget, betrag: oben(r), stufe: r.freischalt_stufe, gruender: !!r.gruender_nr });
 
     if (aktion === "ansehen") {
       if (!r.gesehen_am) await sql`UPDATE vermittlung_betriebe SET gesehen_am = now() WHERE id = ${r.id}`;
@@ -103,7 +107,7 @@ export default async (req: Request, _context: Context) => {
         entschieden: ZU.includes(r.v_status) && !gewaehlt,
         anfrage: { nr: r.nr, leistung: r.leistung, ort: r.ort, zeitraum: r.zeitraum, budget: r.budget, art: r.art, laufzeit: r.laufzeit,
           beschreibung: frei ? r.beschreibung : ohneKontakt(r.beschreibung), erstellt: r.v_created, fotos: await fotoZahl(r.nr) },
-        angebot: r.preis_betrag ? { betrag: Number(r.preis_betrag), nachricht: r.angebot } : null,
+        angebot: r.preis_betrag ? { betrag: Number(r.preis_betrag), bis: r.preis_bis != null ? Number(r.preis_bis) : null, nachricht: r.angebot } : null,
         kunde: frei ? { name: r.auftraggeber, kontakt: r.kontakt } : null,
         freischalten: gewaehlt && !frei ? { preis: geb.aktiv ? (r.v_gebuehr !== null ? Number(r.v_gebuehr) : f.preis) : 0, grundpreis: f.grundpreis, rabatt: f.rabatt, online: geb.aktiv && stripeAktiv() } : null,
         gruender: r.gruender_nr || null,
@@ -137,16 +141,19 @@ export default async (req: Request, _context: Context) => {
 
     if (aktion === "angebot") {
       if (!offen) return fehler(r.status === "abgesagt" ? "Sie haben diese Anfrage bereits abgesagt." : "Für diese Anfrage ist bereits entschieden.", 409);
-      const betrag = zahl(body.betrag);
+      let betrag = zahl(body.betrag), bis = zahl(body.bis);
       if (!betrag) return fehler(r.art === "langzeit" ? "Bitte geben Sie Ihren Preis pro Monat an." : "Bitte geben Sie Ihren Preis an.");
+      if (bis !== null && bis < betrag) [betrag, bis] = [bis, betrag];
+      if (bis === betrag) bis = null;
+      const ptext = preisText(betrag, r.art, bis);
       const nachricht = ohneKontakt(clip(body.nachricht, 2000));
       if (body.bedingungen !== true) return fehler("Bitte bestätigen Sie die Bedingungen.");
       const neu = !r.preis_betrag;
-      await sql`UPDATE vermittlung_betriebe SET status = 'angebot', preis_betrag = ${betrag}, preis = ${preisText(betrag, r.art)},
+      await sql`UPDATE vermittlung_betriebe SET status = 'angebot', preis_betrag = ${betrag}, preis_bis = ${bis}, preis = ${ptext},
           angebot = ${nachricht || null}, geantwortet_am = COALESCE(geantwortet_am, now()) WHERE id = ${r.id}`;
       await sql`UPDATE vermittlungen SET status = 'angebote', updated_at = now() WHERE id = ${r.nr} AND status IN ('neu', 'angefragt')`;
       if (geb.aktiv) await sql`UPDATE crm_kontakte SET gebuehren_ok_am = COALESCE(gebuehren_ok_am, now()) WHERE id = ${r.kontakt_id}`;
-      await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r.kontakt_id}, 'vermittlung', ${(neu ? "Angebot abgegeben" : "Angebot geändert") + " zu Anfrage #" + r.nr + ": " + preisText(betrag, r.art)})`;
+      await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r.kontakt_id}, 'vermittlung', ${(neu ? "Angebot abgegeben" : "Angebot geändert") + " zu Anfrage #" + r.nr + ": " + ptext})`;
       // Auftraggeber beim ersten Angebot automatisch benachrichtigen
       const kmail = mailAus(r.kontakt);
       if (kmail && !r.kunde_mail_am) {
@@ -157,8 +164,8 @@ export default async (req: Request, _context: Context) => {
           knopf(`${seite()}/angebot?t=${r.kunde_token}`, "Angebote ansehen") + gruss));
         if (ok) await sql`UPDATE vermittlungen SET kunde_mail_am = now() WHERE id = ${r.nr} AND kunde_mail_am IS NULL`;
       }
-      if (neu) await sendeMail(adminMail(), "Samuel", `Angebot zu #${r.nr}: ${r.firma} – ${preisText(betrag, r.art)}`, mailLayout(
-        absatz(`<b>${esc(r.firma)}</b> hat ein Angebot zu Anfrage #${r.nr} (${esc(r.leistung || "")}, ${esc(r.ort || "")}) abgegeben: <b>${esc(preisText(betrag, r.art))}</b>`) +
+      if (neu) await sendeMail(adminMail(), "Samuel", `Angebot zu #${r.nr}: ${r.firma} – ${ptext}`, mailLayout(
+        absatz(`<b>${esc(r.firma)}</b> hat ein Angebot zu Anfrage #${r.nr} (${esc(r.leistung || "")}, ${esc(r.ort || "")}) abgegeben: <b>${esc(ptext)}</b>`) +
         (nachricht ? absatz(esc(nachricht)) : "") + absatz(kmail ? (r.kunde_mail_am ? "Der Auftraggeber sieht es auf seiner Angebotsseite." : "Der Auftraggeber wurde per Mail benachrichtigt.") : "Der Auftraggeber hat keine E-Mail-Adresse hinterlegt: bitte den Kunden-Link selbst schicken.") +
         knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")));
       return antwort({ ok: true });
@@ -178,7 +185,7 @@ export default async (req: Request, _context: Context) => {
       FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id WHERE v.kunde_token = ${t}`)[0];
   if (!v) return fehler("Diesen Link gibt es nicht (mehr).", 404);
 
-  const ladeAngebote = () => sql`SELECT vb.id, vb.status, vb.preis_betrag, vb.preis, vb.angebot, vb.geantwortet_am, vb.kontakt_id,
+  const ladeAngebote = () => sql`SELECT vb.id, vb.status, vb.preis_betrag, vb.preis_bis, vb.preis, vb.angebot, vb.geantwortet_am, vb.kontakt_id,
         k.kategorie, k.ort AS k_ort, k.firma, k.ansprechpartner, k.email, k.gruender_nr, k.gewerbe_geprueft_am, k.hwk_status,
         (SELECT round(avg(x.bewertung)::numeric, 1) FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.bewertung IS NOT NULL) AS sterne,
         (SELECT count(*)::int FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.bewertung IS NOT NULL) AS bewertungen,
@@ -206,7 +213,7 @@ export default async (req: Request, _context: Context) => {
       anfrage: { nr: v.id, leistung: v.leistung, ort: v.ort, zeitraum: v.zeitraum, budget: v.budget, art: v.art, laufzeit: v.laufzeit, beschreibung: v.beschreibung, erstellt: v.created_at, fotos: await fotoZahl(v.id) },
       angebote: liste.map((a: any, i: number) => ({
         id: a.id, label: "Angebot " + String.fromCharCode(65 + i), status: a.status, kategorie: a.kategorie, ort: a.k_ort,
-        betrag: a.preis_betrag === null ? null : Number(a.preis_betrag), preis: a.preis, nachricht: ohneKontakt(a.angebot), am: a.geantwortet_am,
+        betrag: a.preis_betrag === null ? null : Number(a.preis_betrag), bis: a.preis_bis === null ? null : Number(a.preis_bis), preis: a.preis, nachricht: ohneKontakt(a.angebot), am: a.geantwortet_am,
         sterne: a.sterne === null ? null : Number(a.sterne), bewertungen: a.bewertungen, auftraege: a.auftraege, gruender: !!a.gruender_nr, geprueft: istGeprueft(a),
         ...(a.status === "gewaehlt" && gew ? { firma: a.firma } : {}),
       })),
@@ -219,9 +226,9 @@ export default async (req: Request, _context: Context) => {
     const liste = await ladeAngebote();
     const a = liste.find((x: any) => x.id === vbid);
     if (!a || a.status !== "angebot") return fehler("Dieses Angebot ist nicht mehr verfügbar.", 409);
-    const wert = auftragswert(v.art || "einmalig", a.preis_betrag === null ? null : Number(a.preis_betrag));
+    const wert = auftragswert(v.art || "einmalig", oben(a));
     const gk = (await sql`SELECT firma, ansprechpartner, email, gruender_nr FROM crm_kontakte WHERE id = ${a.kontakt_id}`)[0];
-    const f = freischaltung({ art: v.art || "einmalig", budget: v.budget, betrag: a.preis_betrag === null ? null : Number(a.preis_betrag), stufe: v.freischalt_stufe, gruender: !!gk.gruender_nr });
+    const f = freischaltung({ art: v.art || "einmalig", budget: v.budget, betrag: oben(a), stufe: v.freischalt_stufe, gruender: !!gk.gruender_nr });
     const stand = await gebuehrenStand(sql);
     const zahlen = stand.aktiv && stripeAktiv();
     // Atomar: nur wenn noch nicht entschieden (verhindert doppeltes Annehmen)
