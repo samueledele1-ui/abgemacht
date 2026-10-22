@@ -191,6 +191,7 @@
   .gp li{padding:8px 0 8px 30px;position:relative;border-top:1px solid #E6EEEA}
   .gp li:first-child{border-top:0}
   .gp li::before{content:"✓";position:absolute;left:4px;top:8px;color:var(--gruen);font-weight:800}
+.nachweis-feld{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 4px}.nachweis-feld .btn{padding:10px 18px;font-size:15px}
 </style>
 </head>
 <body>
@@ -283,8 +284,14 @@
               <div><label for="p_mail">E-Mail</label><input id="p_mail" name="email" type="email" maxlength="254" autocomplete="email"></div>
             </div>
             <p class="klein">Telefon oder E-Mail reicht.</p>
+            <label for="p_nachweis">Nachweis <span class="opt">(freiwillig, für „Geprüfter Betrieb“)</span></label>
+            <div class="nachweis-feld"><label class="btn ghost" for="p_nachweis" id="p_nachweisKnopf" style="cursor:pointer;margin:0">Foto oder PDF hochladen</label><span class="klein" id="p_nachweisName" style="margin:0">Noch keine Datei</span></div>
+            <input type="file" id="p_nachweis" accept="image/*,application/pdf" hidden>
+            <p class="klein">Gewerbeanmeldung oder, wenn Sie freiberuflich arbeiten, ein Schreiben des Finanzamts mit Ihrer Steuernummer. Ein Handyfoto reicht, Sie können den Nachweis auch später schicken. Geprüfte Betriebe erscheinen bei Auftraggebern mit „✓ Geprüfter Betrieb“ und werden bevorzugt angefragt. Bei Handwerksbetrieben prüfen wir zusätzlich selbst den Eintrag bei der Handwerkskammer.</p>
             <div class="hp" aria-hidden="true"><label for="p_website">Website</label><input id="p_website" name="website" tabindex="-1" autocomplete="off"></div>
             <label class="check"><input type="checkbox" id="p_wa"> <span>Ich möchte Anfragen gern per WhatsApp bekommen. <span class="opt">(Widerruf jederzeit mit „Stopp“)</span></span></label>
+            <label class="check"><input type="checkbox" id="p_anruf"> <span>Sie dürfen mich zu neuen Anfragen auch anrufen, künftig auch durch den digitalen KI-Assistenten von Abgemacht. <span class="opt">(Für später geplant, noch nicht aktiv. Wir sagen Ihnen vorher Bescheid. Widerruf jederzeit.)</span></span></label>
+            <label class="check"><input type="checkbox" id="p_taetig"> <span>Ich bin gewerblich oder freiberuflich tätig und, falls mein Handwerk zulassungspflichtig ist, in der Handwerksrolle eingetragen.</span></label>
             <label class="check"><input type="checkbox" id="p_consent"> <span>Ich habe die <a href="/bedingungen" target="_blank">Bedingungen</a> und <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</span></label>
             <button class="btn" id="partnerBtn" type="submit" style="width:100%;margin-top:18px">Partner-Betrieb werden</button>
             <div class="msg" id="partnerMsg" role="status"></div>
@@ -293,7 +300,7 @@
         <div class="danke" id="partnerDanke" hidden>
           <span class="stempel" id="partnerStempel">✓ Abgemacht</span>
           <h2>Danke!</h2>
-          <p class="sub">Wir melden uns in den nächsten Tagen, um Leistungen und Einsatzgebiet abzustimmen.</p>
+          <p class="sub">Ihre Gewerbeanmeldung ist angekommen. Wir prüfen sie und melden uns in den nächsten Tagen, um Leistungen und Einsatzgebiet abzustimmen.</p>
         </div>
       </div>
     </div>
@@ -303,6 +310,8 @@
     <h2>Häufige Fragen von Betrieben</h2>
     <details><summary>Was kostet Abgemacht für Betriebe, auch bei großen Aufträgen?</summary><p>Betriebe zahlen nach der Startphase nur, wenn ein Auftraggeber ihr Angebot angenommen hat: einmalig für die Kontaktdaten, gestaffelt nach seinem Budget. Bis 500 € 9 €, bis 2.000 € 29 €, bis 10.000 € 69 €, darüber und bei großen Daueraufträgen, etwa einem Reinigungsvertrag über zwei Jahre, 129 €. Danach kosten Auftrag, Laufzeit und Verlängerungen nichts mehr. Die ersten 30 Partner-Betriebe zahlen als Gründungspartner dauerhaft die Hälfte. In der Startphase ist alles kostenlos.</p></details>
     <details><summary>Wie wird die Gebühr berechnet, wenn der Auftraggeber eine Spanne angibt?</summary><p>Dann zählt der obere Wert. Schreibt ein Auftraggeber zum Beispiel „300 bis 600 €“, gilt die Stufe bis 2.000 €, also 29 € (als Gründungspartner 14,50 €). Gibt er kein Budget an, zählt der Preis Ihres Angebots, bei Monatspreisen das Zwölffache. Die genaue Gebühr sehen Sie immer auf der Angebotsseite, bevor Sie Ihr Angebot abgeben. Sie fällt nur an, wenn der Auftraggeber Ihr Angebot annimmt, und gilt einmalig für diesen Auftrag, auch wenn der Endpreis höher oder niedriger ausfällt.</p></details>
+    <details><summary>Muss ich eine Gewerbeanmeldung hochladen?</summary><p>Nein, mitmachen können Sie auch ohne. Mit Nachweis lohnt es sich aber: Laden Sie Ihre Gewerbeanmeldung hoch oder, wenn Sie freiberuflich arbeiten, ein Schreiben des Finanzamts mit Ihrer Steuernummer, prüfen wir es und Ihre Angebote erscheinen mit „✓ Geprüfter Betrieb“. Geprüfte Betriebe werden bevorzugt angefragt. Bei zulassungspflichtigem Handwerk, etwa Elektro, Sanitär/Heizung oder Dach, prüfen wir den Eintrag bei der Handwerkskammer, bevor wir Ihnen Anfragen weitergeben. Den Nachweis sieht nur Abgemacht, er wird nicht an Auftraggeber weitergegeben.</p></details>
+    <details><summary>Woher weiß ich, dass die Anfragen echt sind?</summary><p>Jeder Auftraggeber muss seine Anfrage per E-Mail bestätigen, bevor wir sie weitergeben, und wir sehen uns jede Anfrage an. Außerdem zahlen Sie nur, wenn ein Auftraggeber Ihr Angebot tatsächlich annimmt. Stellt sich eine Anfrage nach der Freischaltung als offensichtlich unecht heraus, schreiben wir die Gebühr gut.</p></details>
     <details><summary>Was ist der Empfehlungslink?</summary><p>Ihr persönlicher Link, mit dem Sie Kunden an Abgemacht weiterleiten können, die Sie selbst nicht bedienen. Der Kunde stellt die Anfrage selbst, Sie geben keine Daten weiter. Kommt der Auftrag mit einem anderen Betrieb zustande und ist die Freischaltgebühr bezahlt, bekommen Sie die Hälfte davon per Überweisung. Für Ihre eigene Empfehlung werden Sie nicht als Anbieter angefragt. In der Startphase sammeln wir Ihre Empfehlungen schon und zahlen aus, sobald Gebühren gelten. Den Link finden Sie auf jeder Ihrer Angebotsseiten.</p></details>
     <details><summary>Muss ich jede Anfrage annehmen?</summary><p>Nein. Sie entscheiden bei jeder Anfrage selbst, ob Sie ein Angebot machen. Absagen kostet nichts.</p></details>
     <details><summary>Wie viele Betriebe bekommen dieselbe Anfrage?</summary><p>Nur wenige passende Betriebe, damit sich ein Angebot für Sie lohnt. Gründungspartner werden bevorzugt angefragt.</p></details>
@@ -339,6 +348,26 @@
       .finally(function(){ btn.disabled = false; btn.textContent = text; });
   }
 
+  // Gewerbeanmeldung: Fotos werden verkleinert, PDFs bis 4 MB unverändert hochgeladen
+  var nachweis = null, nachweisName = '';
+  $('p_nachweis').addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    var anzeige = $('p_nachweisName'); anzeige.textContent = 'Wird vorbereitet …'; nachweis = null;
+    if (f.type === 'application/pdf') {
+      if (f.size > 4 * 1024 * 1024) { anzeige.textContent = 'Die PDF ist zu groß (höchstens 4 MB). Ein Handyfoto geht auch.'; return; }
+      var r = new FileReader(); r.onload = function(){ nachweis = r.result; nachweisName = f.name; anzeige.textContent = '✓ ' + f.name; }; r.readAsDataURL(f); return;
+    }
+    if (!/^image\//.test(f.type)) { anzeige.textContent = 'Bitte ein Foto oder eine PDF wählen.'; return; }
+    var img = new Image(), url = URL.createObjectURL(f);
+    img.onload = function(){
+      var g = Math.min(1, 2000 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * g); c.height = Math.round(img.height * g); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      nachweis = c.toDataURL('image/jpeg', 0.85); nachweisName = f.name; anzeige.textContent = '✓ ' + f.name; URL.revokeObjectURL(url);
+    };
+    img.onerror = function(){ anzeige.textContent = 'Das Bild konnte nicht gelesen werden. Bitte ein anderes Foto oder eine PDF wählen.'; };
+    img.src = url;
+  });
+
   var pf = $('partnerForm');
   pf.addEventListener('submit', function(e){
     e.preventDefault();
@@ -350,11 +379,12 @@
         var m = pf.email.value.trim(), t = pf.telefon.value.trim();
         if (!m && !t) return ['Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.', 'p_tel'];
         if (m && !EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'p_mail'];
+        if (!$('p_taetig').checked) return ['Bitte bestätigen Sie kurz, dass Sie gewerblich oder freiberuflich tätig sind.', 'p_taetig'];
         if (!$('p_consent').checked) return ['Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.'];
       },
       daten: function(){
         return { firma: pf.firma.value, name: pf.name.value, leistungen: pf.leistungen.value, ort: pf.ort.value, telefon: pf.telefon.value,
-          email: pf.email.value, wa: $('p_wa').checked, website: pf.website.value, consent: true, quelle: quelle };
+          email: pf.email.value, wa: $('p_wa').checked, anruf: $('p_anruf').checked, website: pf.website.value, consent: true, taetig: true, quelle: quelle, nachweis: nachweis, nachweis_name: nachweisName };
       }
     });
   });

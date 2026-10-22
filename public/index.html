@@ -357,6 +357,7 @@
     <details><summary>Was kostet mich das als Auftraggeber?</summary><p>Nichts. Anfragen sind für Auftraggeber kostenlos und unverbindlich, auch wenn Sie sich am Ende für keines der Angebote entscheiden.</p></details>
     <details><summary>Mit wem schließe ich den Vertrag?</summary><p>Direkt mit dem Betrieb, den Sie wählen. Abgemacht vermittelt nur. Preis, Termin und Ausführung vereinbaren Sie mit dem Betrieb.</p></details>
     <details><summary>Wer sieht meine Daten?</summary><p>Die angefragten Betriebe sehen zunächst nur Leistung, Ort, Zeitraum, Budget und Ihre Beschreibung. Name und Kontaktdaten gibt es erst für den Betrieb, dessen Angebot Sie annehmen.</p></details>
+    <details><summary>Wie prüfen Sie die Betriebe?</summary><p>Partner-Betriebe können ihre Gewerbeanmeldung bei uns hinterlegen, Freiberufler einen Nachweis des Finanzamts. Wir prüfen ihn und fragen geprüfte Betriebe bevorzugt an. Bei zulassungspflichtigem Handwerk wie Elektro oder Sanitär schauen wir immer nach, ob der Betrieb bei der Handwerkskammer eingetragen ist, bevor er Ihre Anfrage bekommt. Geprüfte Betriebe erkennen Sie auf Ihrer Angebotsseite am Hinweis „Geprüfter Betrieb“. Er bedeutet: Gewerbeanmeldung bzw. Nachweis des Finanzamts und, wo vorgeschrieben, Handwerkskammer-Eintrag liegen uns vor. Die Qualität der Arbeit können wir damit nicht garantieren, deshalb fragen wir Sie nach jedem Auftrag, ob alles gepasst hat.</p></details>
     <details><summary>Wie schnell bekomme ich Angebote?</summary><p>Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe. Wie schnell die Angebote kommen, hängt vom Auftrag ab, bei kleineren Arbeiten oft nach ein, zwei Tagen. Beim ersten Angebot bekommen Sie eine E-Mail, weitere erscheinen automatisch auf Ihrer Angebotsseite.</p></details>
     <details><summary>In welchen Regionen sind Sie aktiv?</summary><p>Gestartet sind wir in Ulm, Neu-Ulm und Umgebung, unser Netz an Partnerbetrieben wächst aber laufend in weitere Regionen. Schicken Sie Ihre Anfrage einfach ab, egal wo Sie sind. Wir suchen passende Betriebe für Sie und melden uns, falls wir in Ihrer Gegend noch niemanden finden.</p></details>
     <details><summary>Ich habe eine Hausverwaltung und regelmäßig Aufträge. Geht das auch?</summary><p>Genau dafür ist Abgemacht gemacht. Schicken Sie einfach die erste Anfrage. Für mehrere Objekte oder feste Rahmenaufträge schreiben Sie an <a href="mailto:hallo@ab-gemacht.info">hallo@ab-gemacht.info</a>.</p></details>
@@ -498,7 +499,7 @@
       },
       fertig: function(d){
         fotos = []; fotoZeigen();
-        if (d.mail) $('anfrageDankeText').textContent = 'Eine Bestätigung mit dem Link zu Ihrer persönlichen Angebotsseite ist per E-Mail unterwegs. Spätestens am nächsten Werktag geht Ihre Anfrage an passende Betriebe.';
+        if (d.mail) $('anfrageDankeText').innerHTML = '<b>Bitte bestätigen Sie Ihre Anfrage</b> über den Link in der E-Mail, die gerade zu Ihnen unterwegs ist. Erst dann geben wir sie an passende, geprüfte Betriebe weiter. Kein Mail bekommen? Schauen Sie bitte auch im Spam-Ordner nach.';
         $('anfrage').scrollIntoView({behavior: 'smooth', block: 'start'});
       }
     });

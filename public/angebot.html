@@ -187,7 +187,7 @@
   function kunde(d) {
     var a = d.anfrage, lang = a.art === 'langzeit';
     var kopf = '<h1>' + (d.betrieb ? 'Abgemacht!' : 'Ihre Angebote') + '</h1><p class="unterzeile">' + esc(a.leistung || 'Anfrage') + (a.ort ? ' in ' + esc(a.ort) : '') + ' · Anfrage #' + a.nr + ' vom ' + datum(a.erstellt) + '</p>';
-    var oben = '';
+    var oben = d.gerade_bestaetigt ? '<div class="box abgemacht"><span class="stempel-gross">Bestätigt</span><h2>Danke, Ihre Anfrage ist bestätigt</h2><p style="margin:0">Spätestens am nächsten Werktag geht sie ohne Ihren Namen und Ihre Kontaktdaten an passende, geprüfte Betriebe. Sobald das erste Angebot da ist, bekommen Sie eine E-Mail. Diese Seite zeigt immer den aktuellen Stand, speichern Sie sich den Link am besten.</p></div>' : '';
     if (d.betrieb) {
       var b = d.betrieb;
       oben = '<div class="box abgemacht"><span class="stempel-gross">Abgemacht</span><h2>' + esc(b.firma) + '</h2><p>Der Betrieb hat Ihre Kontaktdaten bekommen und meldet sich bei Ihnen. Sie können sich auch direkt melden:</p>' +
@@ -204,7 +204,7 @@
       var preis = o.betrag != null && !spanne ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
       var cls = o.status === 'gewaehlt' ? ' gewaehlt' : o.status === 'nicht_gewaehlt' ? ' aus' : '';
       var knopf = d.offen && o.status === 'angebot' ? '<div class="aktion" data-o="' + o.id + '"><button class="btn" type="button" data-an="' + o.id + '">Dieses Angebot annehmen</button></div>' : '';
-      return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + (o.gruender ? ' <span class="marke gold" title="Einer der ersten 30 Partner-Betriebe von Abgemacht">★ Gründungspartner</span>' : '') + '</div>' +
+      return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + (o.geprueft ? ' <span class="marke" title="Gewerbeanmeldung bzw. Nachweis des Finanzamts liegt vor, bei Handwerksbetrieben auch der Eintrag bei der Handwerkskammer. Die Qualität der Arbeit wird nicht geprüft.">✓ Geprüfter Betrieb</span>' : '') + (o.gruender ? ' <span class="marke gold" title="Einer der ersten 30 Partner-Betriebe von Abgemacht">★ Gründungspartner</span>' : '') + '</div>' +
         '<div class="wer">' + esc([o.kategorie, o.ort].filter(Boolean).join(' · ') || 'Betrieb aus der Region') + '</div><div class="wer">' + bew + '</div></div>' +
         '<div class="betrag">' + preis + '</div></div>' + (o.nachricht ? '<p class="text">' + esc(o.nachricht) + '</p>' : '') +
         '<p class="klein" style="margin:10px 0 0">Eingegangen am ' + datum(o.am) + '</p>' + knopf + '</div>';

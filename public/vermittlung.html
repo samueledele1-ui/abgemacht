@@ -260,11 +260,13 @@
       [aktiv.filter((p) => p.wa_ok_am).length, "mit WhatsApp-Okay", ""],
     ].map(([z, t, c]) => `<div class="kpi ${c}"><div class="z">${z}</div><div class="t">${t}</div></div>`).join("");
   }
+  const geprueft = (k) => !!k.gewerbe_geprueft_am && (k.hwk_status === "eingetragen" || k.hwk_status === "nicht_noetig");
+  const pruefTag = (k) => geprueft(k) ? '<span class="tag2 t-wa" title="Gewerbeanmeldung und ggf. Handwerkskammer geprüft">✓ geprüft</span>' : '<span class="tag2 t-proj" title="Gewerbeanmeldung oder Handwerkskammer noch nicht geprüft">Prüfung offen</span>';
   const artTag = (v) => v.art === "langzeit" ? `<span class="tag2 t-lang">Langzeit${v.laufzeit ? " · " + esc(v.laufzeit) : ""}</span>` : v.art === "projekt" ? `<span class="tag2 t-proj">Projekt${v.laufzeit ? " · " + esc(v.laufzeit) : ""}</span>` : "";
   function vKarte(v) {
     const bs = B.filter((b) => b.vermittlung_id === v.id);
     const ang = bs.filter((b) => ["angebot", "gewaehlt", "nicht_gewaehlt"].includes(b.status)).length;
-    return `<div class="karte" data-v="${v.id}"><div class="m"><b>${esc(v.leistung || "Anfrage")}${v.ort ? " · " + esc(v.ort) : ""}${artTag(v)}</b>
+    return `<div class="karte" data-v="${v.id}"><div class="m"><b>${esc(v.leistung || "Anfrage")}${v.ort ? " · " + esc(v.ort) : ""}${artTag(v)}${v.bestaetigt_am ? "" : '<span class="tag2 t-proj" title="Kunde hat die Anfrage noch nicht per E-Mail bestätigt">unbestätigt</span>'}</b>
       <small>${esc(v.auftraggeber || "Unbekannt")}${v.zeitraum ? " · " + esc(v.zeitraum) : ""}${v.budget ? " · " + esc(v.budget) : ""}${v.gewaehlt_firma ? " · mit " + esc(v.gewaehlt_firma) : ""}${v.empfohlen_firma ? " · empfohlen von " + esc(v.empfohlen_firma) : ""}</small></div>
       <div class="rechts"><span class="st v-${v.status}">${VS[v.status]}</span><br><small style="color:var(--muted)">${bs.length} angefragt · ${ang} Angebote</small></div></div>`;
   }
@@ -277,11 +279,11 @@
         : `<div class="leer">Noch keine Anfragen. Leg die erste mit „+ Anfrage“ an, sobald jemand schreibt oder anruft.</div>`;
       el.querySelectorAll("[data-v]").forEach((k) => k.onclick = () => oeffneV(+k.dataset.v));
     } else if (ansicht === "partner") {
-      const zeile = (p) => `<tr data-p="${p.id}"><td><b>${esc(p.firma)}</b>${p.gruender_nr ? `<span class="tag2 t-gold" title="Gründungspartner: dauerhaft 50 % auf Freischaltungen, Vorrang bei Anfragen">★ Gründer ${p.gruender_nr}</span>` : ""}${p.partner === "pausiert" ? '<span class="tag2 t-proj">pausiert</span>' : ""}</td><td>${esc(p.leistungen || p.kategorie || "")}</td><td>${esc(p.ort || p.region || "")}</td>
+      const zeile = (p) => `<tr data-p="${p.id}"><td><b>${esc(p.firma)}</b>${p.gruender_nr ? `<span class="tag2 t-gold" title="Gründungspartner: dauerhaft 50 % auf Freischaltungen, Vorrang bei Anfragen">★ Gründer ${p.gruender_nr}</span>` : ""}${p.partner === "pausiert" ? '<span class="tag2 t-proj">pausiert</span>' : ""}${pruefTag(p)}</td><td>${esc(p.leistungen || p.kategorie || "")}</td><td>${esc(p.ort || p.region || "")}</td>
         <td>${p.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : "–"}</td><td>${p.angefragt}</td><td>${p.angebote}</td><td>${p.zusagen}</td><td>${p.antwort_h != null ? esc(String(p.antwort_h).replace(".", ",")) + " Std." : "–"}</td></tr>`;
       const INT = P.filter((p) => p.partner === "interessiert");
       const PP = P.filter((p) => p.partner !== "interessiert");
-      const intKarte = (p) => `<div class="karte" data-p="${p.id}"><div class="m"><b>${esc(p.firma)}${p.quelle ? `<span class="tag2 t-p">${esc(p.quelle === "warteliste" ? "Warteliste" : p.quelle === "umfrage" ? "Umfrage" : p.quelle)}</span>` : ""}</b>
+      const intKarte = (p) => `<div class="karte" data-p="${p.id}"><div class="m"><b>${esc(p.firma)}${p.nachweise ? '<span class="tag2 t-wa">📎 Gewerbeanmeldung</span>' : '<span class="tag2 t-proj">ohne Nachweis</span>'}${p.quelle ? `<span class="tag2 t-p">${esc(p.quelle === "warteliste" ? "Warteliste" : p.quelle === "umfrage" ? "Umfrage" : p.quelle)}</span>` : ""}</b>
         <small>${esc([p.kategorie, p.ort || p.region, p.email, p.telefon].filter(Boolean).join(" · "))}</small>${p.notizen ? `<small>${esc(String(p.notizen).split("\n").slice(-2).join(" · "))}</small>` : ""}</div>
         ${p.telefon ? `<a class="anruf" href="tel:${esc(String(p.telefon).replace(/[^\d+]/g, ""))}" title="Anrufen" onclick="event.stopPropagation()">📞</a>` : ""}
         <button class="btn klein" data-auf="${p.id}" type="button">Als Partner</button></div>`;
@@ -549,6 +551,7 @@
     ].join("");
     const p = panel(`<div class="kopf"><div><h2>${esc(v.leistung || "Anfrage")}${artTag(v)}</h2><small style="color:var(--muted)">#${v.id} · ${dt(v.created_at)} · ${esc(KANL[v.kanal] || "")}</small></div><button class="zu" aria-label="Schließen">×</button></div>
       <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Freischaltung: ${esc(String(v.gebuehr).replace(".", ","))} €${v.bezahlt_am ? " · bezahlt " + dt(v.bezahlt_am) : ""}</span>` : ""}</div>
+      ${v.bestaetigt_am ? "" : `<div class="vb" style="border-color:#F2B33D;background:#FFF8E8;margin-top:10px"><b>Noch nicht per E-Mail bestätigt</b><small style="color:var(--muted);display:block">Der Kunde hat die Bestätigungsmail bekommen. Erst nach der Bestätigung kannst du Betriebe anfragen. Hast du ihn angerufen und alles passt, kannst du es hier von Hand bestätigen.</small><div class="knopfreihe"><button class="btn ghost klein" type="button" id="vBest">Telefonisch bestätigt</button></div></div>`}
       ${v.empfohlen_firma ? `<div class="vb" style="margin-top:10px;background:#F2FAF7"><b>Empfohlen von ${esc(v.empfohlen_firma)}</b><small style="color:var(--muted);display:block">Diesen Betrieb nicht anfragen. Wird die Freischaltgebühr bezahlt, bekommt er die Hälfte${v.gebuehr ? " (" + esc(eur(Math.round(v.gebuehr * 50) / 100)) + ")" : ""}. Auszahlen unter Abrechnung → Empfehlungen.</small></div>` : ""}
       ${v.status === "abgemacht" && !v.freigeschaltet_am ? `<div class="vb" style="border-color:#F2B33D;background:#FFF8E8;margin-top:10px"><b>Wartet auf Freischaltung</b><small style="color:var(--muted);display:block">Kunde hat ${v.angenommen_am ? "am " + dt(v.angenommen_am) : ""} angenommen. Der Betrieb hat den Freischalt-Link per Mail, die Kontaktdaten gehen raus, sobald er bezahlt.</small>
         <div class="knopfreihe"><button class="btn ghost klein" type="button" id="vFrei">Von Hand freischalten</button><button class="btn ghost klein" type="button" id="vReset">Zurücksetzen, Kunde wählt neu</button></div></div>` : ""}
@@ -568,6 +571,7 @@
         <small style="color:var(--muted);display:block;margin-top:6px">Kein passender Betrieb dabei? Über Google Maps suchen, anrufen und mit „+ Partner“ anlegen.</small></div>
       <details class="unter" id="vEdit"><summary style="cursor:pointer;font-weight:700">Anfrage bearbeiten</summary>${vForm(v)}
         <div class="knopfreihe"><button class="btn klein" id="vSpeichern" type="button">Speichern</button><button class="btn ghost klein" id="vLoeschen" type="button">Löschen</button></div><div class="msg" id="vmsg"></div></details>`);
+    const vb2 = p.querySelector("#vBest"); if (vb2) vb2.onclick = async () => { try { await api({ aktion: "bestaetigen", id }); await laden(); oeffneV(id); toast("Anfrage bestätigt"); } catch (e) { toast(e.message); } };
     const kl = p.querySelector("#kLink");
     if (kl) kl.onclick = async () => { kl.disabled = true; try { const r = await api({ aktion: "kunde_link_senden", id }); toast("Link gesendet an " + r.an); await laden(); oeffneV(id); } catch (e) { toast(e.message); kl.disabled = false; } };
     p.querySelectorAll("[data-sp]").forEach((b) => b.onclick = async () => {
@@ -588,7 +592,7 @@
       // Gründungspartner im Umkreis zuerst (Vorrang bei Aufträgen), sonst nach Entfernung
       const nah = liste.filter((k) => !max || !zielGefunden || (k.km != null && k.km <= max)).sort((a, b) => (b.gruender_nr ? 1 : 0) - (a.gruender_nr ? 1 : 0)).slice(0, 30);
       const weiter = zielGefunden && max ? liste.filter((k) => k.km == null || k.km > max) : [];
-      const zeile = (k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}${esc(k.firma)}${k.gruender_nr ? '<span class="tag2 t-gold">★ Gründer</span>' : ""}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`;
+      const zeile = (k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}${esc(k.firma)}${k.gruender_nr ? '<span class="tag2 t-gold">★ Gründer</span>' : ""}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}${k.partner && geprueft(k) ? '<span class="tag2 t-wa">✓ geprüft</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`;
       const hinweis = ort && !zielGefunden ? `<p class="msg err" style="margin:6px 0">Ort „${esc(ort)}“ nicht erkannt, Treffer daher ohne Entfernung. Am besten die PLZ eingeben.</p>` : "";
       p.querySelector("#kListe").innerHTML = hinweis + (nah.map(zeile).join("") || (d.kandidaten.length && !liste.length ? '<p style="color:var(--muted)">Alle passenden Betriebe sind schon angefragt.</p>' : `<p style="color:var(--muted)">Keine passenden Betriebe${max && zielGefunden ? " im Umkreis von " + max + " km" : ""}${d.gruppen && d.gruppen.length ? " (gesucht in: " + esc(d.gruppen.join(", ")) + ")" : ""}. Umkreis vergrößern oder über Google Maps suchen und mit „+ Partner“ anlegen.</p>`))
         + (weiter.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">${weiter.length} weitere weiter weg oder ohne Ortsangabe</summary>${weiter.slice(0, 30).map(zeile).join("")}</details>` : "");
@@ -625,13 +629,39 @@
         ${k.notizen ? `<span>Notizen</span><b style="white-space:pre-wrap;font-weight:500">${esc(k.notizen)}</b>` : ""}<span>Anfragen</span><b>${k.angefragt} angefragt · ${k.angebote} Angebote · ${k.zusagen} Zusagen</b></div>
       <div class="unter"><label for="pLeist">Leistungen (für die Suche)</label><input id="pLeist" value="${esc(k.leistungen || "")}" placeholder="z. B. Elektro, E-Check, Wallbox">
         <label class="check" style="margin-top:12px"><input type="checkbox" id="pWa" ${k.wa_ok_am ? "checked" : ""}> <span>Hat Okay gegeben, Anfragen per WhatsApp zu bekommen${k.wa_ok_am ? " (seit " + dt(k.wa_ok_am) + ")" : ""}</span></label>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="pAnruf" ${k.anruf_ok_am ? "checked" : ""}> <span>Darf zu Anfragen angerufen werden, auch vom KI-Assistenten${k.anruf_ok_am ? " (seit " + dt(k.anruf_ok_am) + ")" : ""} <small style="color:var(--muted)">· KI-Anrufe sind für später geplant (ab ca. 20 bis 30 Aufträgen am Tag)</small></span></label>
         <label for="pSt">Status</label><select id="pSt"><option value="aktiv" ${k.partner === "aktiv" ? "selected" : ""}>Aktiver Partner</option><option value="pausiert" ${k.partner === "pausiert" ? "selected" : ""}>Pausiert (gerade keine Kapazität)</option><option value="interessiert" ${k.partner === "interessiert" ? "selected" : ""}>Interessiert (noch nicht aufgenommen)</option><option value="">Kein Partner mehr</option></select>
         <button class="btn klein" id="pSpeichern" type="button" style="margin-top:12px">Speichern</button></div>
+      <div class="unter" id="pPruef"><b style="display:block;margin-bottom:4px">Prüfung ${pruefTag(k)}</b>
+        <small style="color:var(--muted);display:block;margin-bottom:8px">Gewerbeanmeldung (bei Freiberuflern: Schreiben des Finanzamts mit Steuernummer) ansehen und abhaken. Bei zulassungspflichtigem Handwerk (z. B. Elektro, Sanitär/Heizung, Dach, Maurer, Maler) den Eintrag in der Handwerksrolle bei der zuständigen Handwerkskammer prüfen. Erst wenn beides passt, sieht der Kunde „✓ Geprüfter Betrieb“.</small>
+        <div id="pNachw"><small style="color:var(--muted)">Lädt …</small></div>
+        <label class="btn ghost klein" style="margin-top:8px;display:inline-block;cursor:pointer">Gewerbeanmeldung hochladen<input type="file" id="pNachwDatei" accept="image/*,application/pdf" hidden></label>
+        <label class="check" style="margin-top:12px"><input type="checkbox" id="pGew" ${k.gewerbe_geprueft_am ? "checked" : ""}> <span>Gewerbeanmeldung bzw. Freiberufler-Nachweis geprüft${k.gewerbe_geprueft_am ? " (" + dt(k.gewerbe_geprueft_am) + ")" : ""}</span></label>
+        <label for="pHwk">Handwerkskammer</label><select id="pHwk"><option value="">noch offen</option><option value="eingetragen" ${k.hwk_status === "eingetragen" ? "selected" : ""}>Geprüft: in der Handwerksrolle eingetragen</option><option value="nicht_noetig" ${k.hwk_status === "nicht_noetig" ? "selected" : ""}>Nicht nötig (kein zulassungspflichtiges Handwerk)</option></select>
+        <button class="btn klein" id="pPruefSp" type="button" style="margin-top:10px">Prüfung speichern</button></div>
       ${k.empfehl_link ? `<div class="unter"><b style="display:block;margin-bottom:4px">Empfehlungslink${k.empfehlungen ? " · " + k.empfehlungen + (k.empfehlungen === 1 ? " Empfehlung" : " Empfehlungen") : ""}</b><small style="color:var(--muted);display:block;margin-bottom:8px">Kunden, die der Betrieb nicht selbst bedienen kann, schickt er über diesen Link. Er bekommt die Hälfte der bezahlten Freischaltgebühr. Der Link steht auch auf jeder seiner Angebotsseiten.</small><code style="word-break:break-all;font-size:13px">${esc(k.empfehl_link)}</code><div class="knopfreihe"><button class="btn ghost klein" type="button" data-kopie="${esc(k.empfehl_link)}">Link kopieren</button></div></div>
       ${vorlageHtml("Text: Empfehlungslink an den Betrieb", T.empfehlung(k), k.telefon, k.wa_ok_am)}` : ""}
       ${vorlageHtml("Text: Anmeldung mit WhatsApp-Okay", T.anmeldung(k), k.telefon, true)}`);
+    const nachwLaden = async () => {
+      const d = await api({ aktion: "nachweise", kontakt: kid });
+      p.querySelector("#pNachw").innerHTML = d.liste.length ? d.liste.map((n) => `<div class="kand"><span style="flex:1">📎 <b>${esc(n.dateiname || (n.mime === "application/pdf" ? "Gewerbeanmeldung.pdf" : "Gewerbeanmeldung (Foto)"))}</b><small>${dt(n.created_at)} · ${Math.round(n.bytes / 1024)} KB</small></span><button class="btn ghost klein" type="button" data-nw="${n.id}">Ansehen</button></div>`).join("") : '<small style="color:#A3480A">Noch keine Gewerbeanmeldung hinterlegt.</small>';
+      p.querySelectorAll("[data-nw]").forEach((b) => b.onclick = async () => {
+        const fenster = window.open("", "_blank");
+        try { const n = await api({ aktion: "nachweis", nachweis: +b.dataset.nw }); const bin = atob(n.src.split(",")[1]); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          fenster.location = URL.createObjectURL(new Blob([arr], { type: n.mime })); } catch (e) { fenster && fenster.close(); toast(e.message); }
+      });
+    };
+    nachwLaden().catch((e) => { p.querySelector("#pNachw").textContent = e.message; });
+    p.querySelector("#pNachwDatei").onchange = (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      if (f.size > 4 * 1024 * 1024) return toast("Die Datei ist zu groß (höchstens 4 MB).");
+      const r = new FileReader(); r.onload = async () => { try { await api({ aktion: "nachweis_hochladen", kontakt: kid, datei: r.result, name: f.name }); toast("Hochgeladen"); await laden(); nachwLaden(); } catch (er) { toast(er.message); } }; r.readAsDataURL(f);
+    };
+    p.querySelector("#pPruefSp").onclick = async () => {
+      try { await api({ aktion: "pruefung", kontakt: kid, gewerbe: p.querySelector("#pGew").checked, hwk: p.querySelector("#pHwk").value }); await laden(); oeffneP(kid); toast("Prüfung gespeichert"); } catch (e) { toast(e.message); }
+    };
     p.querySelector("#pSpeichern").onclick = async () => {
-      try { await api({ aktion: "partner", kontakt: kid, partner: p.querySelector("#pSt").value || null, wa_ok: p.querySelector("#pWa").checked, leistungen: p.querySelector("#pLeist").value }); await laden(); schliessen(); toast("Gespeichert"); } catch (e) { toast(e.message); }
+      try { await api({ aktion: "partner", kontakt: kid, partner: p.querySelector("#pSt").value || null, wa_ok: p.querySelector("#pWa").checked, anruf_ok: p.querySelector("#pAnruf").checked, leistungen: p.querySelector("#pLeist").value }); await laden(); schliessen(); toast("Gespeichert"); } catch (e) { toast(e.message); }
     };
   }
 
