@@ -84,6 +84,8 @@ export function bewerte<T extends Kontakt>(kontakte: T[], anfrage: string, ort?:
     if (!p) continue;
     if (k.partner === "aktiv") p += 2; else if (k.partner === "interessiert") p += 1;
     if (k.wa_ok_am) p += 0.5;
+    // Geprüfte Betriebe (Nachweis und ggf. Handwerkskammer geprüft) werden bevorzugt
+    if (k.gewerbe_geprueft_am && (k.hwk_status === "eingetragen" || k.hwk_status === "nicht_noetig")) p += 1.5;
     const kOrt = norm([k.ort, k.region].filter(Boolean).join(" "));
     if (ortN && kOrt && (kOrt.includes(ortN) || ortN.includes(kOrt.trim()) || (plz && kOrt.includes(plz)))) p += 1;
     out.push({ ...k, punkte: p, grund: [...new Set(gruende)].join(", ") });
