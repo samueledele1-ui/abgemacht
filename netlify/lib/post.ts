@@ -31,6 +31,22 @@ export function tabelle(zeilen: [string, string | null | undefined][]) {
     .join("")}</table>`;
 }
 
+// Klartext-Fassung einer HTML-Mail (Mails nur mit HTML landen öfter im Spam)
+export function alsText(html: string): string {
+  return html
+    .replace(/<(style|head)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href, t) => {
+      const txt = t.replace(/<[^>]+>/g, "").trim();
+      return href.startsWith("mailto:") || txt === href ? txt : `${txt}: ${href}`;
+    })
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|tr|li|table)>/gi, "\n\n")
+    .replace(/<\/td>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+    .replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 // Sendet eine Mail über Brevo. Gibt false zurück, wenn kein Schlüssel gesetzt ist oder Brevo ablehnt (wirft nie).
 export async function sendeMail(an: string, name: string | null, betreff: string, html: string): Promise<boolean> {
   const key = Netlify.env.get("BREVO_API_KEY");
@@ -45,6 +61,7 @@ export async function sendeMail(an: string, name: string | null, betreff: string
         to: [name ? { email: an, name } : { email: an }],
         subject: betreff,
         htmlContent: html,
+        textContent: alsText(html),
       }),
     });
     if (!res.ok) console.error("Brevo", res.status, await res.text());
