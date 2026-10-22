@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
 import { auftragswert, freischaltung, budgetWert, STUFEN, GRUENDER_RABATT } from "../lib/gebuehr.ts";
 import { gebuehrenStand, stripeAktiv, zahlungStarten, zahlungPruefen, webhookPruefen, freigeben } from "../lib/freischalten.ts";
+import { istGeprueft } from "../lib/nachweis.ts";
 import { empfehlCode, empfehlLink, empfehlStand, EMPFEHL_ANTEIL } from "../lib/empfehlung.ts";
 import { seite, adminMail, esc, mailLayout, knopf, absatz, gruss, tabelle, sendeMail, ohneKontakt, mailAus } from "../lib/post.ts";
 
@@ -178,7 +179,7 @@ export default async (req: Request, _context: Context) => {
   if (!v) return fehler("Diesen Link gibt es nicht (mehr).", 404);
 
   const ladeAngebote = () => sql`SELECT vb.id, vb.status, vb.preis_betrag, vb.preis, vb.angebot, vb.geantwortet_am, vb.kontakt_id,
-        k.kategorie, k.ort AS k_ort, k.firma, k.ansprechpartner, k.email, k.gruender_nr,
+        k.kategorie, k.ort AS k_ort, k.firma, k.ansprechpartner, k.email, k.gruender_nr, k.gewerbe_geprueft_am, k.hwk_status,
         (SELECT round(avg(x.bewertung)::numeric, 1) FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.bewertung IS NOT NULL) AS sterne,
         (SELECT count(*)::int FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.bewertung IS NOT NULL) AS bewertungen,
         (SELECT count(*)::int FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.status IN ('abgemacht', 'erledigt')) AS auftraege
@@ -187,17 +188,26 @@ export default async (req: Request, _context: Context) => {
       ORDER BY vb.geantwortet_am NULLS LAST, vb.id`;
 
   if (aktion === "ansehen") {
+    // Erster Aufruf über den Link aus der E-Mail bestätigt die Anfrage (E-Mail-Adresse ist damit echt)
+    let gerade = false;
+    if (!v.bestaetigt_am) {
+      const b = await sql`UPDATE vermittlungen SET bestaetigt_am = now(), updated_at = now() WHERE id = ${v.id} AND bestaetigt_am IS NULL RETURNING id`;
+      gerade = b.length > 0;
+      if (gerade) await sendeMail(adminMail(), "Samuel", `Bestätigt: Anfrage #${v.id} ${v.leistung || ""}`, mailLayout(
+        absatz(`Der Auftraggeber hat Anfrage #${v.id} (${esc(v.leistung || "")}${v.ort ? ", " + esc(v.ort) : ""}) per E-Mail bestätigt. Sie kann jetzt an Betriebe gehen.`) +
+        knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")));
+    }
     const liste = await ladeAngebote();
     const angefragt = (await sql`SELECT count(*)::int AS n FROM vermittlung_betriebe WHERE vermittlung_id = ${v.id} AND status NOT IN ('abgesagt')`)[0].n;
     const gew = ["abgemacht", "erledigt"].includes(v.status) && v.gewaehlt_id && v.freigeschaltet_am;
     const wartet = ["abgemacht", "erledigt"].includes(v.status) && v.gewaehlt_id && !v.freigeschaltet_am;
     return antwort({
-      ok: true, rolle: "kunde", status: v.status, offen: !ZU.includes(v.status), angefragt, wartet: !!wartet,
+      ok: true, rolle: "kunde", status: v.status, gerade_bestaetigt: gerade, offen: !ZU.includes(v.status), angefragt, wartet: !!wartet,
       anfrage: { nr: v.id, leistung: v.leistung, ort: v.ort, zeitraum: v.zeitraum, budget: v.budget, art: v.art, laufzeit: v.laufzeit, beschreibung: v.beschreibung, erstellt: v.created_at, fotos: await fotoZahl(v.id) },
       angebote: liste.map((a: any, i: number) => ({
         id: a.id, label: "Angebot " + String.fromCharCode(65 + i), status: a.status, kategorie: a.kategorie, ort: a.k_ort,
         betrag: a.preis_betrag === null ? null : Number(a.preis_betrag), preis: a.preis, nachricht: ohneKontakt(a.angebot), am: a.geantwortet_am,
-        sterne: a.sterne === null ? null : Number(a.sterne), bewertungen: a.bewertungen, auftraege: a.auftraege, gruender: !!a.gruender_nr,
+        sterne: a.sterne === null ? null : Number(a.sterne), bewertungen: a.bewertungen, auftraege: a.auftraege, gruender: !!a.gruender_nr, geprueft: istGeprueft(a),
         ...(a.status === "gewaehlt" && gew ? { firma: a.firma } : {}),
       })),
       betrieb: gew ? { firma: v.g_firma, ansprechpartner: v.g_ansprech, telefon: v.g_tel, email: v.g_mail, website: v.g_web } : null,

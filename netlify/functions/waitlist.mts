@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
 import ical from "node-ical";
 import { empfehlerZuCode } from "../lib/empfehlung.ts";
+import { nachweisPruefen } from "../lib/nachweis.ts";
 
 // Eine Funktion für alles rund um die Warteliste:
 //   GET  /api/waitlist     -> Anzahl bestätigter Anmeldungen
@@ -94,12 +95,12 @@ ${knopf(`${seite()}/wa`, "Abgemacht weiterempfehlen")}
 
 
 /* ---------- Interessierte Betriebe automatisch ins CRM (Vermittlung → Partner-Betriebe → Interessenten) ---------- */
-async function crmInteressent(sql: any, d: { email?: string | null; telefon?: string | null; name?: string | null; firma?: string | null; leistungen?: string | null; branche?: string | null; ort?: string | null; typ?: string | null; quelle: string; notiz: string }) {
-  if (!["anbieter", "beides"].includes(String(d.typ))) return;
+async function crmInteressent(sql: any, d: { email?: string | null; telefon?: string | null; name?: string | null; firma?: string | null; leistungen?: string | null; branche?: string | null; ort?: string | null; typ?: string | null; quelle: string; notiz: string }): Promise<number | null> {
+  if (!["anbieter", "beides"].includes(String(d.typ))) return null;
   try {
     const email = d.email ? d.email.toLowerCase() : null;
     const ziffern = d.telefon ? d.telefon.replace(/\D/g, "") : null;
-    if (!email && !ziffern) return;
+    if (!email && !ziffern) return null;
     const vorh = await sql`SELECT id FROM crm_kontakte
       WHERE (${email}::text IS NOT NULL AND (lower(email) = ${email}::text OR lower(warteliste_email) = ${email}::text))
          OR (${ziffern}::text IS NOT NULL AND length(${ziffern}::text) >= 6 AND regexp_replace(coalesce(telefon, ''), '\D', '', 'g') = ${ziffern}::text)
@@ -112,15 +113,18 @@ async function crmInteressent(sql: any, d: { email?: string | null; telefon?: st
         leistungen = COALESCE(leistungen, ${d.leistungen ?? null}), ansprechpartner = COALESCE(ansprechpartner, ${d.firma ? d.name ?? null : null}),
         notizen = CASE WHEN notizen IS NULL OR notizen = '' THEN ${notiz} ELSE notizen || E'\n' || ${notiz} END, updated_at = now() WHERE id = ${id}`;
       await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${id}, 'partner', ${d.notiz})`;
+      return id;
     } else {
       const r = await sql`INSERT INTO crm_kontakte (firma, kategorie, ansprechpartner, telefon, email, ort, notizen, warteliste_email, quelle, status, partner, naechster_kontakt, leistungen)
         VALUES (${d.firma || d.name || email || d.telefon}, ${d.branche ?? null}, ${d.name ?? null}, ${d.telefon ?? null}, ${email}, ${d.ort ?? null}, ${notiz}, ${email},
                 ${d.quelle}, 'neu', 'interessiert', now(), ${d.leistungen ?? null}) RETURNING id`;
       await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${r[0].id}, 'partner', ${d.notiz})`;
+      return r[0].id;
     }
   } catch (e) {
     console.error("crmInteressent", e);
   }
+  return null;
 }
 
 /* ---------- Termine (Zeitzone Berlin) ---------- */
@@ -493,19 +497,21 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
       await sql`INSERT INTO anfrage_fotos (vermittlung_id, nr, mime, daten, bytes) VALUES (${nr}, ${fotoAnzahl}, ${"image/" + m[1]}, ${m[2]}, ${Math.floor(m[2].length * 3 / 4)})`;
     }
     const angebotsLink = `${seite()}/angebot?t=${r[0].kunde_token}`;
+    const bestaetigLink = `${angebotsLink}&bestaetigen=1`;
     const ART: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
     const zeile = (k: string, w: string | null) => w ? `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:5px 0">${esc(w)}</td></tr>` : "";
     const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}${zeile("Fotos", fotoAnzahl ? fotoAnzahl + " angehängt" : null)}</table>`;
     await sendeMail(adminMail(), "Samuel", `Neue Anfrage #${nr}: ${leistung} in ${ort}`, mailLayout(
-      `<p style="margin:0 0 12px"><b>Neue Anfrage über die Website</b></p>${tabelle}
+      `<p style="margin:0 0 12px"><b>Neue Anfrage über die Website</b> <span style="color:#A3480A">(noch nicht per E-Mail bestätigt, du bekommst Bescheid, sobald der Kunde bestätigt)</span></p>${tabelle}
 <p style="margin:14px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>${esc(auftraggeber)}</b>${firma ? "" : " (privat)"}<br>${esc(kontakt)}</p>${empfehler ? `<p style="margin:12px 0 0"><b>Empfohlen von ${esc(empfehler.firma)}</b>: Diesen Betrieb nicht für die Anfrage anfragen. Bezahlt der gewählte Betrieb die Freischaltung, bekommt ${esc(empfehler.firma)} die Hälfte.</p>` : ""}
 ${knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")}`));
-    if (email) await sendeMail(email, name, `Ihre Anfrage ist angekommen: ${leistung}`, mailLayout(
+    if (email) await sendeMail(email, name, `Bitte bestätigen: Ihre Anfrage „${leistung}“`, mailLayout(
       `<p style="margin:0 0 12px">Hallo ${esc(name)},</p>
 <p style="margin:0 0 12px">vielen Dank, Ihre Anfrage ist bei uns angekommen:</p>${tabelle}
-<p style="margin:14px 0 12px">So geht es weiter: Spätestens am nächsten Werktag geht Ihre Anfrage ohne Ihren Namen und Ihre Kontaktdaten an passende Betriebe aus der Region. Sobald das erste Angebot da ist, bekommen Sie eine E-Mail. Auf Ihrer Angebotsseite sehen Sie alle Angebote und nehmen das passende mit einem Klick an. Erst dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten.</p>
-${knopf(angebotsLink, "Meine Angebotsseite")}
-<p style="margin:-14px 0 20px;font-size:13px;line-height:1.4;color:#5B6B65;word-break:break-all">Falls der Knopf nicht reagiert: <a href="${angebotsLink}" style="color:#138A6B">${angebotsLink}</a></p>
+<p style="margin:14px 0 12px"><b>Bitte bestätigen Sie kurz Ihre Anfrage.</b> Erst dann geben wir sie an Betriebe weiter. So stellen wir sicher, dass nur echte Anfragen bei den Betrieben landen.</p>
+${knopf(bestaetigLink, "Anfrage bestätigen")}
+<p style="margin:-14px 0 20px;font-size:13px;line-height:1.4;color:#5B6B65;word-break:break-all">Falls der Knopf nicht reagiert: <a href="${bestaetigLink}" style="color:#138A6B">${bestaetigLink}</a></p>
+<p style="margin:0 0 12px">So geht es weiter: Spätestens am nächsten Werktag nach Ihrer Bestätigung geht Ihre Anfrage ohne Ihren Namen und Ihre Kontaktdaten an passende, von uns geprüfte Betriebe aus der Region. Sobald das erste Angebot da ist, bekommen Sie eine E-Mail. Über denselben Link sehen Sie alle Angebote und nehmen das passende mit einem Klick an. Erst dann bekommen Sie und der Betrieb gegenseitig die Kontaktdaten.</p>
 <p style="margin:0 0 12px;font-size:14px;color:#5B6B65">Bewahren Sie diese E-Mail auf: Der Link ist nur für Sie.</p>
 <p style="margin:0 0 12px">Für Sie ist das kostenlos. Falls Sie noch etwas ergänzen möchten, antworten Sie einfach auf diese E-Mail.</p>
 <p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`));
@@ -529,12 +535,20 @@ ${knopf(angebotsLink, "Meine Angebotsseite")}
     if (!telefon && !email) return fehler("Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.");
     if (email && !EMAIL_RE.test(email)) return fehler("Bitte prüfen Sie die E-Mail-Adresse.");
     if (body.consent !== true) return fehler("Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.");
+    if (body.taetig !== true) return fehler("Bitte bestätigen Sie kurz, dass Sie gewerblich oder freiberuflich tätig sind.");
+    // Nachweis ist freiwillig; wenn einer mitkommt, muss er gültig sein
+    const nachweis = body.nachweis ? nachweisPruefen(body.nachweis) : null;
+    if (body.nachweis && !nachweis) return fehler("Der Nachweis konnte nicht gelesen werden. Bitte ein Foto oder eine PDF bis 4 MB wählen, oder ihn später schicken.");
     const name = clip(body.name, 80);
     const gebiet = clip(body.ort, 120);
     const wa = body.wa === true;
+    const anruf = body.anruf === true;
     const quelle = QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "direkt";
-    await crmInteressent(sql, { email, telefon, name, firma, leistungen, ort: gebiet, branche: clip(body.branche, 60), typ: "anbieter", quelle: "website",
-      notiz: `Partner-Anfrage über die Website: ${leistungen}${gebiet ? ", Gebiet: " + gebiet : ""}${wa ? ", wünscht Anfragen per WhatsApp" : ""}${quelle !== "direkt" ? " (Quelle: " + quelle + ")" : ""}` });
+    const kid = await crmInteressent(sql, { email, telefon, name, firma, leistungen, ort: gebiet, branche: clip(body.branche, 60), typ: "anbieter", quelle: "website",
+      notiz: `Partner-Anfrage über die Website: ${leistungen}${gebiet ? ", Gebiet: " + gebiet : ""}${wa ? ", wünscht Anfragen per WhatsApp" : ""}${anruf ? ", Anruf-Okay (auch KI-Assistent, geplant)" : ""}${nachweis ? "" : ", noch kein Nachweis"}${quelle !== "direkt" ? " (Quelle: " + quelle + ")" : ""}` });
+    // Einwilligung für Anrufe (auch durch den späteren KI-Assistenten) mit Zeitpunkt festhalten
+    if (kid && anruf) await sql`UPDATE crm_kontakte SET anruf_ok_am = COALESCE(anruf_ok_am, now()) WHERE id = ${kid}`;
+    if (kid && nachweis) await sql`INSERT INTO betrieb_nachweise (kontakt_id, art, dateiname, mime, daten, bytes) VALUES (${kid}, 'gewerbe', ${clip(body.nachweis_name, 120)}, ${nachweis.mime}, ${nachweis.daten}, ${nachweis.bytes})`;
     await sendeMail(adminMail(), "Samuel", `Neuer Partner-Interessent: ${firma}`, mailLayout(
       `<p style="margin:0 0 12px"><b>Ein Betrieb möchte Partner werden</b></p>
 <p style="margin:0 0 6px"><b>${esc(firma)}</b>${name ? " · " + esc(name) : ""}</p>
@@ -542,10 +556,13 @@ ${knopf(angebotsLink, "Meine Angebotsseite")}
 ${gebiet ? `<p style="margin:0 0 6px">Gebiet: ${esc(gebiet)}</p>` : ""}
 <p style="margin:0 0 6px">${esc([telefon, email].filter(Boolean).join(" · "))}</p>
 <p style="margin:0 0 6px">WhatsApp-Anfragen: ${wa ? "gewünscht (beim Freigabe-Gespräch bestätigen)" : "nein"}</p>
+<p style="margin:0 0 6px">Anrufe, auch durch den KI-Assistenten (für später geplant): ${anruf ? "erlaubt" : "nein"}</p>
+<p style="margin:0 0 6px">Nachweis: ${nachweis ? `hochgeladen (${nachweis.mime === "application/pdf" ? "PDF" : "Foto"}), bitte im Büro prüfen` : "noch keiner (Gewerbeanmeldung oder Steuernummer-Schreiben nachfordern)"}. Bei zulassungspflichtigem Handwerk vor der ersten Anfrage die Handwerksrolle prüfen.</p>
 ${knopf(`${seite()}/vermittlung`, "In Vermittlung → Partner öffnen")}`));
     if (email) await sendeMail(email, name, "Danke für Ihr Interesse an Abgemacht", mailLayout(
       `<p style="margin:0 0 12px">Hallo${name ? " " + esc(name) : ""},</p>
 <p style="margin:0 0 12px">vielen Dank für Ihr Interesse, mit ${esc(firma)} Partner-Betrieb bei Abgemacht zu werden.</p>
+${nachweis ? `<p style="margin:0 0 12px">Ihr Nachweis ist angekommen, wir prüfen ihn kurz. Bei Handwerksbetrieben schauen wir zusätzlich, ob Sie bei der Handwerkskammer eingetragen sind. Danach erscheinen Ihre Angebote bei Auftraggebern mit dem Hinweis „Geprüfter Betrieb“.</p>` : `<p style="margin:0 0 12px">Tipp: Antworten Sie einfach auf diese E-Mail mit einem Foto Ihrer Gewerbeanmeldung oder, wenn Sie freiberuflich arbeiten, einem Schreiben des Finanzamts mit Ihrer Steuernummer. Dann erscheinen Ihre Angebote mit dem Hinweis „Geprüfter Betrieb“ und Sie werden bevorzugt angefragt.</p>`}
 <p style="margin:0 0 12px">Wir melden uns in den nächsten Tagen, um Leistungen und Einsatzgebiet abzustimmen. Danach bekommen Sie passende Anfragen aus der Region. In der Startphase ist das für Sie kostenlos, die Bedingungen finden Sie unter <a href="${seite()}/bedingungen">${seite().replace(/^https?:\/\//, "")}/bedingungen</a>.</p>
 <p style="margin:0">Viele Grüße<br>Ihr Team von Abgemacht</p>`));
     return Response.json({ ok: true });

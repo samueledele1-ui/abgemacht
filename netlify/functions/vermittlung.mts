@@ -5,6 +5,7 @@ import { auftragswert, freischaltung } from "../lib/gebuehr.ts";
 import { freigeben } from "../lib/freischalten.ts";
 import { bewerte, analysiere } from "../lib/passend.ts";
 import { empfehlCode, empfehlLink, EMPFEHL_ANTEIL } from "../lib/empfehlung.ts";
+import { nachweisPruefen } from "../lib/nachweis.ts";
 import { seite, esc as escP, mailLayout, knopf, absatz, gruss, tabelle, sendeMail, ohneKontakt, mailAus } from "../lib/post.ts";
 
 // Vermittlung von Hand (Startphase): Anfragen von Auftraggebern, Partner-Betriebe, Angebote, „Abgemacht“.
@@ -130,7 +131,8 @@ export default async (req: Request, _context: Context) => {
       sql`SELECT vb.*, k.firma, k.ansprechpartner, k.telefon, k.email, k.kategorie, k.ort AS k_ort, k.wa_ok_am, k.gruender_nr
             FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id ORDER BY vb.angefragt_am`,
       sql`SELECT k.id, k.firma, k.kategorie, k.leistungen, k.ansprechpartner, k.telefon, k.email, k.website, k.ort, k.region,
-                 k.partner, k.partner_seit, k.wa_ok_am, k.notizen, k.quelle, k.created_at, k.gruender_nr, k.empfehl_code,
+                 k.partner, k.partner_seit, k.wa_ok_am, k.anruf_ok_am, k.notizen, k.quelle, k.created_at, k.gruender_nr, k.empfehl_code,
+                 k.gewerbe_geprueft_am, k.hwk_status, k.hwk_geprueft_am, (SELECT count(*)::int FROM betrieb_nachweise n WHERE n.kontakt_id = k.id) AS nachweise,
                  (SELECT count(*)::int FROM vermittlungen e WHERE e.empfohlen_von = k.id) AS empfehlungen,
                  count(vb.id)::int AS angefragt,
                  count(vb.id) FILTER (WHERE vb.status IN ('angebot','gewaehlt','nicht_gewaehlt'))::int AS angebote,
@@ -150,8 +152,9 @@ export default async (req: Request, _context: Context) => {
     if (w.kanal && !KANAELE.includes(w.kanal)) w.kanal = null;
     if (aktion === "neu") {
       if (!w.leistung && !w.beschreibung) return fehler("Bitte mindestens Leistung oder Beschreibung angeben.");
-      const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, laufzeit, beschreibung, notizen)
-        VALUES (${w.auftraggeber}, ${w.kontakt}, ${w.kanal}, ${w.leistung}, ${w.ort}, ${w.zeitraum}, ${w.budget}, ${w.art || "einmalig"}, ${w.laufzeit}, ${w.beschreibung}, ${w.notizen})
+      // Selbst angelegte Anfragen (Telefon, WhatsApp) gelten als bestätigt
+      const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, laufzeit, beschreibung, notizen, bestaetigt_am)
+        VALUES (${w.auftraggeber}, ${w.kontakt}, ${w.kanal}, ${w.leistung}, ${w.ort}, ${w.zeitraum}, ${w.budget}, ${w.art || "einmalig"}, ${w.laufzeit}, ${w.beschreibung}, ${w.notizen}, now())
         RETURNING id`;
       return Response.json({ ok: true, id: r[0].id });
     }
@@ -167,6 +170,40 @@ export default async (req: Request, _context: Context) => {
         auftragswert = ${wert}, bewertung = ${bew}, gebuehr = ${alt.bezahlt_am ? alt.gebuehr : freischaltung({ art: w.art || "einmalig", budget: w.budget, wert, stufe: alt.freischalt_stufe, gruender: !!(await sql`SELECT gruender_nr FROM crm_kontakte WHERE id = ${alt.gewaehlt_id ?? 0}`)[0]?.gruender_nr }).preis}, updated_at = now(),
         abgemacht_am = CASE WHEN ${status}::text IN ('abgemacht', 'erledigt') THEN COALESCE(abgemacht_am, now()) ELSE abgemacht_am END
       WHERE id = ${id}`;
+    return Response.json({ ok: true });
+  }
+
+  if (aktion === "bestaetigen") {
+    const r = await sql`UPDATE vermittlungen SET bestaetigt_am = COALESCE(bestaetigt_am, now()), updated_at = now() WHERE id = ${id} RETURNING id`;
+    return r.length ? Response.json({ ok: true }) : fehler("Nicht gefunden.", 404);
+  }
+
+  /* ---------- Prüfung der Betriebe: Gewerbeanmeldung und Handwerkskammer ---------- */
+  if (aktion === "nachweise") {
+    const kid = Number(body.kontakt) || 0;
+    const liste = await sql`SELECT id, art, dateiname, mime, bytes, created_at FROM betrieb_nachweise WHERE kontakt_id = ${kid} ORDER BY created_at DESC`;
+    return Response.json({ ok: true, liste });
+  }
+  if (aktion === "nachweis") {
+    const n = (await sql`SELECT mime, daten, dateiname FROM betrieb_nachweise WHERE id = ${Number(body.nachweis) || 0}`)[0];
+    return n ? Response.json({ ok: true, src: `data:${n.mime};base64,${n.daten}`, mime: n.mime, name: n.dateiname }) : fehler("Nicht gefunden.", 404);
+  }
+  if (aktion === "nachweis_hochladen") {
+    const kid = Number(body.kontakt) || 0;
+    const n = nachweisPruefen(body.datei);
+    if (!n) return fehler("Bitte ein Foto (JPG, PNG, WebP) oder eine PDF bis 4 MB wählen.");
+    await sql`INSERT INTO betrieb_nachweise (kontakt_id, art, dateiname, mime, daten, bytes) VALUES (${kid}, 'gewerbe', ${clip(body.name, 120)}, ${n.mime}, ${n.daten}, ${n.bytes})`;
+    await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'pruefung', 'Gewerbeanmeldung im Büro hochgeladen')`;
+    return Response.json({ ok: true });
+  }
+  if (aktion === "pruefung") {
+    const kid = Number(body.kontakt) || 0;
+    const gewerbe = body.gewerbe === true;
+    const hwk = ["eingetragen", "nicht_noetig"].includes(String(body.hwk)) ? String(body.hwk) : null;
+    await sql`UPDATE crm_kontakte SET gewerbe_geprueft_am = CASE WHEN ${gewerbe} THEN COALESCE(gewerbe_geprueft_am, now()) ELSE NULL END,
+        hwk_status = ${hwk}, hwk_geprueft_am = CASE WHEN ${hwk}::text IS NULL THEN NULL WHEN hwk_status IS DISTINCT FROM ${hwk}::text THEN now() ELSE hwk_geprueft_am END, updated_at = now()
+      WHERE id = ${kid}`;
+    await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'pruefung', ${"Prüfung: Gewerbeanmeldung " + (gewerbe ? "geprüft" : "offen") + ", Handwerkskammer " + (hwk === "eingetragen" ? "eingetragen" : hwk === "nicht_noetig" ? "nicht nötig" : "offen")})`;
     return Response.json({ ok: true });
   }
 
@@ -206,7 +243,7 @@ export default async (req: Request, _context: Context) => {
     const q = clip(body.q, 200) || "";
     const ort = clip(body.ort, 80) || "";
     if (!q && !ort) return Response.json({ ok: true, kandidaten: [], gruppen: [] });
-    const alle = (await sql`SELECT id, firma, kategorie, leistungen, ort, region, telefon, email, partner, wa_ok_am, status, gruender_nr FROM crm_kontakte
+    const alle = (await sql`SELECT id, firma, kategorie, leistungen, ort, region, telefon, email, partner, wa_ok_am, status, gruender_nr, gewerbe_geprueft_am, hwk_status FROM crm_kontakte
       WHERE (status IS NULL OR status NOT IN ('kein_interesse', 'keine_anrufe'))
         AND coalesce(kategorie, '') NOT ILIKE 'Auftraggeber%'`) as any[];
     const treffer = q ? bewerte(alle, q, ort) : alle.map((k) => ({ ...k, punkte: 0, grund: "" }));
@@ -214,7 +251,9 @@ export default async (req: Request, _context: Context) => {
   }
 
   if (aktion === "anfragen") {
-    const emp = (await sql`SELECT empfohlen_von FROM vermittlungen WHERE id = ${id}`)[0]?.empfohlen_von ?? null;
+    const vv = (await sql`SELECT empfohlen_von, bestaetigt_am FROM vermittlungen WHERE id = ${id}`)[0];
+    if (vv && !vv.bestaetigt_am && body.trotzdem !== true) return fehler("Diese Anfrage ist noch nicht per E-Mail bestätigt. Warte auf die Bestätigung oder ruf den Kunden kurz an und klick dann auf „Telefonisch bestätigt“.", 409);
+    const emp = vv?.empfohlen_von ?? null;
     const ids = (Array.isArray(body.kontakte) ? body.kontakte : []).map(Number).filter((n) => n > 0 && n !== emp).slice(0, 10);
     if (!ids.length) return fehler(emp ? "Der empfehlende Betrieb kann für seine eigene Empfehlung nicht angefragt werden." : "Keine Betriebe ausgewählt.");
     for (const k of ids) await sql`INSERT INTO vermittlung_betriebe (vermittlung_id, kontakt_id) VALUES (${id}, ${k}) ON CONFLICT DO NOTHING`;
@@ -337,8 +376,10 @@ export default async (req: Request, _context: Context) => {
     const kid = Number(body.kontakt) || 0;
     const partner = ["aktiv", "pausiert", "interessiert"].includes(String(body.partner)) ? String(body.partner) : null;
     const wa = body.wa_ok === true ? "ja" : body.wa_ok === false ? "nein" : "gleich";
+    const anruf = body.anruf_ok === true ? "ja" : body.anruf_ok === false ? "nein" : "gleich";
     await sql`UPDATE crm_kontakte SET partner = ${partner}, partner_seit = CASE WHEN ${partner}::text IS NULL OR ${partner}::text = 'interessiert' THEN NULL ELSE COALESCE(partner_seit, now()) END,
         wa_ok_am = CASE WHEN ${wa}::text = 'ja' THEN COALESCE(wa_ok_am, now()) WHEN ${wa}::text = 'nein' THEN NULL ELSE wa_ok_am END,
+        anruf_ok_am = CASE WHEN ${anruf}::text = 'ja' THEN COALESCE(anruf_ok_am, now()) WHEN ${anruf}::text = 'nein' THEN NULL ELSE anruf_ok_am END,
         leistungen = COALESCE(${clip(body.leistungen, 300)}, leistungen), updated_at = now()
       WHERE id = ${kid}`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'partner', ${partner ? "Partner: " + partner + (wa === "ja" ? ", WhatsApp-Okay" : "") : "Kein Partner mehr"})`;
