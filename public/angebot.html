@@ -43,6 +43,13 @@
   .euro{position:relative}
   .euro input{padding-right:44px;font-size:20px;font-weight:700}
   .euro span{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+  .preisart{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .preisart label{margin:0;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--line,#d9e2dd);border-radius:999px;font-weight:600;font-size:14px;cursor:pointer}
+  .preisart input{width:auto;margin:0;accent-color:var(--tanne)}
+  .preisart label:has(input:checked){border-color:var(--tanne);background:#E8F3EE;color:var(--tanne)}
+  .spanne{display:flex;align-items:center;gap:10px}
+  .spanne .euro{flex:1}
+  .spanne .strich{font-weight:700;color:var(--muted)}
   .gebuehr{margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--gruen-l);font-size:14.5px}
   .klein{font-size:14px;color:var(--muted)}
   .linkknopf{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:14px}
@@ -139,14 +146,17 @@
     if (d.status === 'abgesagt') { main.innerHTML = kopf + '<div class="box"><h2>Sie haben abgesagt</h2><p style="margin:0">Danke für die Rückmeldung. Bei der nächsten passenden Anfrage melden wir uns wieder.</p></div>' + details; return; }
     if (!d.offen) { main.innerHTML = kopf + '<div class="box"><h2>Entscheidung gefallen</h2><p style="margin:0">Der Auftraggeber hat sich für ein anderes Angebot entschieden. Danke für Ihr Angebot! Bei der nächsten passenden Anfrage melden wir uns wieder.</p></div>' + details; return; }
 
-    var hatAngebot = !!d.angebot;
+    var hatAngebot = !!d.angebot, hatSpanne = hatAngebot && d.angebot.bis != null;
     var g = d.gebuehren, m = d.modell;
     main.innerHTML = kopf + details +
       '<div class="box" id="formBox"><h2>' + (hatAngebot ? 'Ihr Angebot (Sie können es noch ändern)' : 'Ihr Angebot') + '</h2>' +
       (hatAngebot ? '<p class="marke" style="margin:0 0 12px">✓ Liegt beim Auftraggeber</p>' : '') +
       '<form id="aForm" novalidate>' +
       '<label for="betrag">' + (lang ? 'Ihr Preis pro Monat *' : 'Ihr Preis (Gesamtbetrag) *') + '</label>' +
-      '<div class="euro"><input id="betrag" inputmode="decimal" autocomplete="off" placeholder="' + (lang ? 'z. B. 380' : 'z. B. 450') + '" value="' + (hatAngebot ? esc(String(d.angebot.betrag).replace('.', ',')) : '') + '"><span>€' + (lang ? ' / Monat' : '') + '</span></div>' +
+      '<div class="preisart" role="radiogroup" aria-label="Art des Preises"><label><input type="radio" name="pa" value="fest"' + (hatSpanne ? '' : ' checked') + '> Festpreis</label><label><input type="radio" name="pa" value="spanne"' + (hatSpanne ? ' checked' : '') + '> Preisspanne (von – bis)</label></div>' +
+      '<div class="spanne"><div class="euro"><input id="betrag" inputmode="decimal" autocomplete="off" aria-label="' + (hatSpanne ? 'Preis von' : 'Preis') + '" placeholder="' + (lang ? 'z. B. 380' : 'z. B. 450') + '" value="' + (hatAngebot ? esc(String(d.angebot.betrag).replace('.', ',')) : '') + '"><span>€' + (lang ? ' / Monat' : '') + '</span></div>' +
+      '<span class="strich" id="bisStrich"' + (hatSpanne ? '' : ' hidden') + '>–</span><div class="euro" id="bisFeld"' + (hatSpanne ? '' : ' hidden') + '><input id="bis" inputmode="decimal" autocomplete="off" aria-label="Preis bis" placeholder="' + (lang ? 'z. B. 450' : 'z. B. 600') + '" value="' + (hatSpanne ? esc(String(d.angebot.bis).replace('.', ',')) : '') + '"><span>€</span></div></div>' +
+      '<p class="klein" id="spanneHinweis" style="margin:6px 0 0"' + (hatSpanne ? '' : ' hidden') + '>Gut, wenn der genaue Preis erst nach einer Besichtigung feststeht. Der Auftraggeber sieht die ganze Spanne.</p>' +
       '<label for="nachricht" style="margin-top:14px">Was ist enthalten, wann können Sie?</label>' +
       '<textarea id="nachricht" maxlength="2000" placeholder="z. B. Termin ab KW 46 möglich, inkl. Material und Anfahrt. Telefonnummern, E-Mail- und Web-Adressen werden ausgeblendet, die Kontaktdaten gibt es nach der Zusage.">' + (hatAngebot ? esc(d.angebot.nachricht || '') : '') + '</textarea>' +
       '<div class="gebuehr" id="gebuehr"></div>' +
@@ -156,21 +166,33 @@
       '<p style="margin:16px 0 0;text-align:center"><button class="linkknopf" id="absagen" type="button">Keine Zeit oder kein Interesse? Kurz absagen</button></p></div>';
 
     function gebuehrText() {
-      var b = zahl($('betrag').value), f = gebuehrBerechnen(m, a.art, b, !!d.gruender);
+      var b = zahl($('betrag').value), bb = spanneAn() ? zahl($('bis').value) : null, f = gebuehrBerechnen(m, a.art, bb && b ? Math.max(b, bb) : (bb || b), !!d.gruender);
       var modell = 'Freischaltung nach Budget des Auftraggebers, bei einer Spanne zählt der obere Wert: ' + stufenText(m) + (d.gruender ? '. Als Gründungspartner zahlen Sie die Hälfte.' : '.');
       if (!g.aktiv) $('gebuehr').innerHTML = '<b>In der Startphase kostenlos.</b> Später zahlen Sie nur, wenn der Auftraggeber Ihr Angebot annimmt, einmalig für die Kontaktdaten. ' + modell;
       else $('gebuehr').innerHTML = '<b>Nur wenn Ihr Angebot angenommen wird: einmalig ' + euro(f.preis) + ' für die Kontaktdaten</b>' + (d.gruender ? ' (statt ' + euro(f.grund) + ')' : '') + '. ' + modell;
     }
+    function spanneAn() { return main.querySelector('input[name="pa"]:checked').value === 'spanne'; }
+    main.querySelectorAll('input[name="pa"]').forEach(function (x) {
+      x.addEventListener('change', function () {
+        var an = spanneAn();
+        $('bisFeld').hidden = $('bisStrich').hidden = $('spanneHinweis').hidden = !an;
+        $('betrag').setAttribute('aria-label', an ? 'Preis von' : 'Preis');
+        if (an) $('bis').focus();
+        gebuehrText();
+      });
+    });
     gebuehrText();
     $('betrag').addEventListener('input', gebuehrText);
+    $('bis').addEventListener('input', gebuehrText);
     $('aForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var msg = $('msg'), btn = $('senden');
       if (!zahl($('betrag').value)) { msg.textContent = 'Bitte geben Sie Ihren Preis an.'; msg.className = 'msg err'; $('betrag').focus(); return; }
+      if (spanneAn() && !zahl($('bis').value)) { msg.textContent = 'Bitte geben Sie an, bis zu welchem Preis die Spanne geht, oder wählen Sie Festpreis.'; msg.className = 'msg err'; $('bis').focus(); return; }
       if (!$('bed').checked) { msg.textContent = 'Bitte bestätigen Sie die Bedingungen.'; msg.className = 'msg err'; return; }
       btn.disabled = true; msg.textContent = ''; msg.className = 'msg';
       try {
-        await api({ aktion: 'angebot', betrag: $('betrag').value, nachricht: $('nachricht').value, bedingungen: true });
+        await api({ aktion: 'angebot', betrag: $('betrag').value, bis: spanneAn() ? $('bis').value : '', nachricht: $('nachricht').value, bedingungen: true });
         $('formBox').innerHTML = '<span class="stempel drauf">✓ Abgegeben</span><h2 style="margin-top:12px">Ihr Angebot ist beim Auftraggeber</h2><p style="margin:0 0 14px">Sobald er sich entscheidet, bekommen Sie eine E-Mail. Nimmt er Ihr Angebot an, stehen darin seine Kontaktdaten.</p><button class="btn ghost" type="button" id="nochmal">Angebot ändern</button>';
         $('nochmal').onclick = laden;
       } catch (err) { msg.textContent = err.message; msg.className = 'msg err'; btn.disabled = false; }
@@ -201,7 +223,8 @@
     var liste = d.angebote.map(function (o) {
       var bew = o.bewertungen ? '<span class="sterne">★ ' + String(o.sterne).replace('.', ',') + '</span> aus ' + o.bewertungen + ' Bewertung' + (o.bewertungen > 1 ? 'en' : '') : (o.auftraege ? o.auftraege + ' Auftrag' + (o.auftraege > 1 ? 'e' : '') + ' über Abgemacht' : '<span class="marke grau">Neu bei Abgemacht</span>');
       var spanne = o.preis && /\d\s*(bis|-|–)\s*\d/.test(o.preis);
-      var preis = o.betrag != null && !spanne ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
+      var preis = o.betrag != null && o.bis != null ? euro(o.betrag).replace(' €', '') + ' – ' + euro(o.bis) + (lang ? '<small>pro Monat, Preisspanne</small>' : '<small>Preisspanne</small>')
+        : o.betrag != null && !spanne ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
       var cls = o.status === 'gewaehlt' ? ' gewaehlt' : o.status === 'nicht_gewaehlt' ? ' aus' : '';
       var knopf = d.offen && o.status === 'angebot' ? '<div class="aktion" data-o="' + o.id + '"><button class="btn" type="button" data-an="' + o.id + '">Dieses Angebot annehmen</button></div>' : '';
       return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + (o.geprueft ? ' <span class="marke" title="Gewerbeanmeldung bzw. Nachweis des Finanzamts liegt vor, bei Handwerksbetrieben auch der Eintrag bei der Handwerkskammer. Die Qualität der Arbeit wird nicht geprüft.">✓ Geprüfter Betrieb</span>' : '') + (o.gruender ? ' <span class="marke gold" title="Einer der ersten 30 Partner-Betriebe von Abgemacht">★ Gründungspartner</span>' : '') + '</div>' +
