@@ -31,6 +31,13 @@ const euro = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: n
 const preisText = (betrag: number, art: string, bis?: number | null) =>
   (bis ? euro(betrag).replace(" €", "") + " – " + euro(bis) : euro(betrag)) + (art === "langzeit" ? " pro Monat" : "");
 // Für Gebühr und Auftragswert zählt bei einer Spanne der obere Wert (wie beim Budget des Auftraggebers)
+// WhatsApp-Nummer (49…) aus einem Kontaktfeld wie "0177 1234567 · max@firma.de"
+const waNummer = (kontakt: string | null) => {
+  const teil = String(kontakt || "").split(/[·,;]/).map((x) => x.trim()).find((x) => x && !x.includes("@")) || "";
+  let n = teil.replace(/\(0\)/g, "").replace(/[^\d+]/g, "");
+  if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "49" + n.slice(1);
+  return n.length >= 8 ? n : "";
+};
 const oben = (x: any): number | null => x.preis_bis != null ? Number(x.preis_bis) : x.preis_betrag != null ? Number(x.preis_betrag) : null;
 
 
@@ -85,7 +92,7 @@ export default async (req: Request, _context: Context) => {
   if (t.startsWith("b_")) {
     const r = (await sql`SELECT vb.*, k.firma, k.partner AS k_partner, k.ansprechpartner, k.email AS k_email, k.gebuehren_ok_am, k.gruender_nr,
         v.freischalt_stufe, v.freigeschaltet_am, v.gebuehr AS v_gebuehr, v.id AS nr, v.leistung, v.ort, v.zeitraum, v.budget, v.art, v.laufzeit, v.beschreibung, v.status AS v_status, v.created_at AS v_created,
-        v.auftraggeber, v.kontakt, v.kunde_token, v.kunde_mail_am
+        v.auftraggeber, v.kontakt, v.kunde_token, v.kunde_mail_am, v.wa_ok_am AS v_wa
       FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id JOIN vermittlungen v ON v.id = vb.vermittlung_id
       WHERE vb.token = ${t}`)[0];
     if (!r) return fehler("Diesen Link gibt es nicht (mehr).", 404);
@@ -164,9 +171,16 @@ export default async (req: Request, _context: Context) => {
           knopf(`${seite()}/angebot?t=${r.kunde_token}`, "Angebote ansehen") + gruss));
         if (ok) await sql`UPDATE vermittlungen SET kunde_mail_am = now() WHERE id = ${r.nr} AND kunde_mail_am IS NULL`;
       }
+      // Kunde wollte zusätzlich per WhatsApp Bescheid: fertiger WhatsApp-Knopf in der Mail an Samuel (ein Tipp, dann Senden)
+      const waKunde = () => {
+        const nr = r.v_wa ? waNummer(r.kontakt) : "";
+        if (!nr) return "";
+        const text = `Guten Tag, hier ist Abgemacht. Für Ihre Anfrage „${r.leistung || ""}“ ist ein neues Angebot da. Alle Angebote sehen Sie hier und können das passende mit einem Klick annehmen: ${seite()}/angebot?t=${r.kunde_token}`;
+        return absatz("<b>Der Auftraggeber möchte zusätzlich per WhatsApp Bescheid bekommen.</b>") + knopf(`https://wa.me/${nr}?text=${encodeURIComponent(text)}`, "Kunde per WhatsApp benachrichtigen");
+      };
       if (neu) await sendeMail(adminMail(), "Samuel", `Angebot zu #${r.nr}: ${r.firma} – ${ptext}`, mailLayout(
         absatz(`<b>${esc(r.firma)}</b> hat ein Angebot zu Anfrage #${r.nr} (${esc(r.leistung || "")}, ${esc(r.ort || "")}) abgegeben: <b>${esc(ptext)}</b>`) +
-        (nachricht ? absatz(esc(nachricht)) : "") + absatz(kmail ? (r.kunde_mail_am ? "Der Auftraggeber sieht es auf seiner Angebotsseite." : "Der Auftraggeber wurde per Mail benachrichtigt.") : "Der Auftraggeber hat keine E-Mail-Adresse hinterlegt: bitte den Kunden-Link selbst schicken.") +
+        (nachricht ? absatz(esc(nachricht)) : "") + waKunde() + absatz(kmail ? (r.kunde_mail_am ? "Der Auftraggeber sieht es auf seiner Angebotsseite." : "Der Auftraggeber wurde per Mail benachrichtigt.") : "Der Auftraggeber hat keine E-Mail-Adresse hinterlegt: bitte den Kunden-Link selbst schicken.") +
         knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")));
       return antwort({ ok: true });
     }

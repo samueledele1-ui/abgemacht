@@ -467,6 +467,8 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     if (!email) return fehler("Bitte geben Sie Ihre E-Mail-Adresse an. Dorthin schicken wir die Angebote.");
     if (!EMAIL_RE.test(email)) return fehler("Bitte prüfen Sie die E-Mail-Adresse.");
     if (telefon && telefon.replace(/\D/g, "").length < 6) return fehler("Bitte prüfen Sie die Telefonnummer.");
+    if (body.wa === true && !telefon) return fehler("Für die Benachrichtigung per WhatsApp brauchen wir Ihre Handynummer.");
+    const kundeWa = body.wa === true && !!telefon;
     if (body.consent !== true) return fehler("Bitte bestätigen Sie kurz die Datenschutzhinweise.");
     const kontakt = [telefon, email].filter(Boolean).join(" · ");
     const kurz = await sql`SELECT count(*)::int AS n FROM vermittlungen WHERE kanal = 'web' AND kontakt = ${kontakt} AND created_at > now() - interval '1 hour'`;
@@ -478,10 +480,10 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     const quelle = QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "direkt";
     const auftraggeber = firma ? `${firma} (${name})` : name;
     const empfehler = await empfehlerZuCode(sql, body.empfohlen);
-    const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, beschreibung, notizen, empfohlen_von)
+    const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, beschreibung, notizen, empfohlen_von, wa_ok_am)
       VALUES (${auftraggeber}, ${kontakt}, 'web', ${leistung}, ${ort}, ${zeitraum}, ${budget}, ${art}, ${beschreibung},
               ${"Über die Website · " + (firma ? "Firma" : "Privat") + (quelle !== "direkt" ? " · Quelle: " + quelle : "") + (empfehler ? " · Empfohlen von " + empfehler.firma : "")},
-              ${empfehler ? empfehler.id : null})
+              ${empfehler ? empfehler.id : null}, ${kundeWa ? new Date().toISOString() : null})
       RETURNING id, kunde_token`;
     if (empfehler) await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${empfehler.id}, 'empfehlung', ${"Kunde empfohlen: Anfrage #" + r[0].id + " (" + leistung + ")"})`;
     const nr = r[0].id;
@@ -503,7 +505,7 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}${zeile("Fotos", fotoAnzahl ? fotoAnzahl + " angehängt" : null)}</table>`;
     await sendeMail(adminMail(), "Samuel", `Neue Anfrage #${nr}: ${leistung} in ${ort}`, mailLayout(
       `<p style="margin:0 0 12px"><b>Neue Anfrage über die Website</b> <span style="color:#A3480A">(noch nicht per E-Mail bestätigt, du bekommst Bescheid, sobald der Kunde bestätigt)</span></p>${tabelle}
-<p style="margin:14px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>${esc(auftraggeber)}</b>${firma ? "" : " (privat)"}<br>${esc(kontakt)}</p>${empfehler ? `<p style="margin:12px 0 0"><b>Empfohlen von ${esc(empfehler.firma)}</b>: Diesen Betrieb nicht für die Anfrage anfragen. Bezahlt der gewählte Betrieb die Freischaltung, bekommt ${esc(empfehler.firma)} die Hälfte.</p>` : ""}
+<p style="margin:14px 0 0;padding:12px 14px;background:#E3F4EE;border-radius:12px"><b>${esc(auftraggeber)}</b>${firma ? "" : " (privat)"}<br>${esc(kontakt)}${kundeWa ? "<br>Möchte zusätzlich per WhatsApp Bescheid bekommen" : ""}</p>${empfehler ? `<p style="margin:12px 0 0"><b>Empfohlen von ${esc(empfehler.firma)}</b>: Diesen Betrieb nicht für die Anfrage anfragen. Bezahlt der gewählte Betrieb die Freischaltung, bekommt ${esc(empfehler.firma)} die Hälfte.</p>` : ""}
 ${knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")}`));
     if (email) await sendeMail(email, name, `Bitte bestätigen: Ihre Anfrage „${leistung}“`, mailLayout(
       `<p style="margin:0 0 12px">Hallo ${esc(name)},</p>
@@ -534,6 +536,8 @@ ${knopf(bestaetigLink, "Anfrage bestätigen")}
     if (!leistungen) return fehler("Bitte schreiben Sie kurz, was Sie anbieten.");
     if (!telefon && !email) return fehler("Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.");
     if (email && !EMAIL_RE.test(email)) return fehler("Bitte prüfen Sie die E-Mail-Adresse.");
+    if (email && body.mailok !== true) return fehler("Bitte setzen Sie den Haken, dass wir Ihnen Anfragen per E-Mail schicken dürfen.");
+    if (body.wa === true && !telefon) return fehler("Für Anfragen per WhatsApp brauchen wir Ihre Handynummer.");
     if (body.consent !== true) return fehler("Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.");
     if (body.taetig !== true) return fehler("Bitte bestätigen Sie kurz, dass Sie gewerblich oder freiberuflich tätig sind.");
     // Nachweis ist freiwillig; wenn einer mitkommt, muss er gültig sein
@@ -541,13 +545,18 @@ ${knopf(bestaetigLink, "Anfrage bestätigen")}
     if (body.nachweis && !nachweis) return fehler("Der Nachweis konnte nicht gelesen werden. Bitte ein Foto oder eine PDF bis 4 MB wählen, oder ihn später schicken.");
     const name = clip(body.name, 80);
     const gebiet = clip(body.ort, 120);
-    const wa = body.wa === true;
+    const wa = body.wa === true && !!telefon;
+    const mailok = body.mailok === true && !!email;
     const anruf = body.anruf === true;
     const quelle = QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "direkt";
     const kid = await crmInteressent(sql, { email, telefon, name, firma, leistungen, ort: gebiet, branche: clip(body.branche, 60), typ: "anbieter", quelle: "website",
-      notiz: `Partner-Anfrage über die Website: ${leistungen}${gebiet ? ", Gebiet: " + gebiet : ""}${wa ? ", wünscht Anfragen per WhatsApp" : ""}${anruf ? ", Anruf-Okay (auch KI-Assistent, geplant)" : ""}${nachweis ? "" : ", noch kein Nachweis"}${quelle !== "direkt" ? " (Quelle: " + quelle + ")" : ""}` });
+      notiz: `Partner-Anfrage über die Website: ${leistungen}${gebiet ? ", Gebiet: " + gebiet : ""}${mailok ? ", E-Mail-Okay" : ""}${wa ? ", WhatsApp-Okay" : ""}${anruf ? ", Anruf-Okay (auch KI-Assistent, geplant)" : ""}${nachweis ? "" : ", noch kein Nachweis"}${quelle !== "direkt" ? " (Quelle: " + quelle + ")" : ""}` });
     // Einwilligung für Anrufe (auch durch den späteren KI-Assistenten) mit Zeitpunkt festhalten
     if (kid && anruf) await sql`UPDATE crm_kontakte SET anruf_ok_am = COALESCE(anruf_ok_am, now()) WHERE id = ${kid}`;
+    // Einwilligungen für Anfragen per E-Mail und WhatsApp direkt aus der Anmeldung (mit Zeitpunkt als Nachweis)
+    if (kid && (mailok || wa)) await sql`UPDATE crm_kontakte SET
+        mail_ok_am = CASE WHEN ${mailok} THEN COALESCE(mail_ok_am, now()) ELSE mail_ok_am END,
+        wa_ok_am = CASE WHEN ${wa} THEN COALESCE(wa_ok_am, now()) ELSE wa_ok_am END WHERE id = ${kid}`;
     if (kid && nachweis) await sql`INSERT INTO betrieb_nachweise (kontakt_id, art, dateiname, mime, daten, bytes) VALUES (${kid}, 'gewerbe', ${clip(body.nachweis_name, 120)}, ${nachweis.mime}, ${nachweis.daten}, ${nachweis.bytes})`;
     await sendeMail(adminMail(), "Samuel", `Neuer Partner-Interessent: ${firma}`, mailLayout(
       `<p style="margin:0 0 12px"><b>Ein Betrieb möchte Partner werden</b></p>
@@ -555,7 +564,7 @@ ${knopf(bestaetigLink, "Anfrage bestätigen")}
 <p style="margin:0 0 6px">Leistungen: ${esc(leistungen)}</p>
 ${gebiet ? `<p style="margin:0 0 6px">Gebiet: ${esc(gebiet)}</p>` : ""}
 <p style="margin:0 0 6px">${esc([telefon, email].filter(Boolean).join(" · "))}</p>
-<p style="margin:0 0 6px">WhatsApp-Anfragen: ${wa ? "gewünscht (beim Freigabe-Gespräch bestätigen)" : "nein"}</p>
+<p style="margin:0 0 6px">Anfragen per E-Mail: ${mailok ? "erlaubt" : "nein"} · per WhatsApp: ${wa ? "erlaubt (WhatsApp ✓ ist schon gesetzt)" : "nein"}</p>
 <p style="margin:0 0 6px">Anrufe, auch durch den KI-Assistenten (für später geplant): ${anruf ? "erlaubt" : "nein"}</p>
 <p style="margin:0 0 6px">Nachweis: ${nachweis ? `hochgeladen (${nachweis.mime === "application/pdf" ? "PDF" : "Foto"}), bitte im Büro prüfen` : "noch keiner (Gewerbeanmeldung oder Steuernummer-Schreiben nachfordern)"}. Bei zulassungspflichtigem Handwerk vor der ersten Anfrage die Handwerksrolle prüfen.</p>
 ${knopf(`${seite()}/vermittlung`, "In Vermittlung → Partner öffnen")}`));
