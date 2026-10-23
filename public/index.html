@@ -335,6 +335,7 @@
               <div><label for="a_tel">Telefon</label><input id="a_tel" name="telefon" type="tel" maxlength="40" autocomplete="tel" placeholder="optional, für Rückfragen"></div>
             </div>
             <p class="klein">Die Angebote kommen per E-Mail. Dort nehmen Sie das passende mit einem Klick an.</p>
+            <label class="check"><input type="checkbox" id="a_wa"> <span>Geben Sie mir zusätzlich per WhatsApp Bescheid, wenn Angebote da sind (an die Telefonnummer oben). <span class="opt">(optional, Widerruf jederzeit mit „Stopp“)</span></span></label>
             <div class="hp" aria-hidden="true"><label for="a_website">Website</label><input id="a_website" name="website" tabindex="-1" autocomplete="off"></div>
             <label class="check"><input type="checkbox" id="a_consent"> <span>Ich habe die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen. Meine Angaben werden zur Bearbeitung der Anfrage gespeichert und ohne Namen und Kontaktdaten an passende Betriebe weitergegeben.</span></label>
             <button class="btn" id="anfrageBtn" type="submit" style="width:100%;margin-top:18px">Anfrage abschicken</button>
@@ -490,12 +491,13 @@
         var m = af.email.value.trim(), t = af.telefon.value.trim();
         if (!m) return ['Bitte geben Sie Ihre E-Mail-Adresse an. Dorthin kommen die Angebote.', 'a_mail'];
         if (!EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'a_mail'];
+        if ($('a_wa').checked && !t) return ['Für die Benachrichtigung per WhatsApp brauchen wir Ihre Handynummer.', 'a_tel'];
         if (!$('a_consent').checked) return ['Bitte bestätigen Sie kurz die Datenschutzhinweise.'];
       },
       daten: function(){
         return { typ: af.querySelector('input[name=typ]:checked').value, leistung: af.leistung.value, beschreibung: af.beschreibung.value, ort: af.ort.value,
           zeitraum: af.zeitraum.value, art: af.querySelector('input[name=art]:checked').value, budget: af.budget.value, name: af.name.value,
-          firma: af.firma.value, telefon: af.telefon.value, email: af.email.value, website: af.website.value, consent: true, quelle: quelle, empfohlen: empfohlen, fotos: fotos };
+          firma: af.firma.value, telefon: af.telefon.value, wa: $('a_wa').checked, email: af.email.value, website: af.website.value, consent: true, quelle: quelle, empfohlen: empfohlen, fotos: fotos };
       },
       fertig: function(d){
         fotos = []; fotoZeigen();

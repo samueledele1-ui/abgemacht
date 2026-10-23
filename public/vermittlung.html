@@ -544,10 +544,10 @@
         ${b.status === "nicht_gewaehlt" ? vorlageHtml("Text: Absage", T.absage(), b.telefon, b.wa_ok_am) : ""}
       </div>`).join("");
     const kundenTexte = [
-      vorlageHtml("Text an Auftraggeber: So habe ich Sie verstanden", T.verstanden(v), v.kontakt, v.kanal === "whatsapp"),
-      mitAngebot.length ? vorlageHtml("Text an Auftraggeber: Ihre Angebote sind da", T.angebote(v, mitAngebot.filter((b) => b.status !== "nicht_gewaehlt")), v.kontakt, v.kanal === "whatsapp") : "",
-      gew ? vorlageHtml("Text an Auftraggeber: Abgemacht", T.abgemachtKunde(v, gew), v.kontakt, v.kanal === "whatsapp") : "",
-      ["abgemacht", "erledigt"].includes(v.status) ? vorlageHtml("Text an Auftraggeber: Hat's gepasst?", T.gepasst(v), v.kontakt, v.kanal === "whatsapp") : "",
+      vorlageHtml("Text an Auftraggeber: So habe ich Sie verstanden", T.verstanden(v), v.kontakt, v.kanal === "whatsapp" || !!v.wa_ok_am),
+      mitAngebot.length ? vorlageHtml("Text an Auftraggeber: Ihre Angebote sind da", T.angebote(v, mitAngebot.filter((b) => b.status !== "nicht_gewaehlt")), v.kontakt, v.kanal === "whatsapp" || !!v.wa_ok_am) : "",
+      gew ? vorlageHtml("Text an Auftraggeber: Abgemacht", T.abgemachtKunde(v, gew), v.kontakt, v.kanal === "whatsapp" || !!v.wa_ok_am) : "",
+      ["abgemacht", "erledigt"].includes(v.status) ? vorlageHtml("Text an Auftraggeber: Hat's gepasst?", T.gepasst(v), v.kontakt, v.kanal === "whatsapp" || !!v.wa_ok_am) : "",
     ].join("");
     const p = panel(`<div class="kopf"><div><h2>${esc(v.leistung || "Anfrage")}${artTag(v)}</h2><small style="color:var(--muted)">#${v.id} · ${dt(v.created_at)} · ${esc(KANL[v.kanal] || "")}</small></div><button class="zu" aria-label="Schließen">×</button></div>
       <div style="margin-top:8px"><span class="st v-${v.status}">${VS[v.status]}</span>${v.gebuehr ? ` <span style="color:var(--muted);font-size:13px">Freischaltung: ${esc(String(v.gebuehr).replace(".", ","))} €${v.bezahlt_am ? " · bezahlt " + dt(v.bezahlt_am) : ""}</span>` : ""}</div>

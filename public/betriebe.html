@@ -289,7 +289,8 @@
             <input type="file" id="p_nachweis" accept="image/*,application/pdf" hidden>
             <p class="klein">Gewerbeanmeldung oder, wenn Sie freiberuflich arbeiten, ein Schreiben des Finanzamts mit Ihrer Steuernummer. Ein Handyfoto reicht, Sie können den Nachweis auch später schicken. Geprüfte Betriebe erscheinen bei Auftraggebern mit „✓ Geprüfter Betrieb“ und werden bevorzugt angefragt. Bei Handwerksbetrieben prüfen wir zusätzlich selbst den Eintrag bei der Handwerkskammer.</p>
             <div class="hp" aria-hidden="true"><label for="p_website">Website</label><input id="p_website" name="website" tabindex="-1" autocomplete="off"></div>
-            <label class="check"><input type="checkbox" id="p_wa"> <span>Ich möchte Anfragen gern per WhatsApp bekommen. <span class="opt">(Widerruf jederzeit mit „Stopp“)</span></span></label>
+            <label class="check"><input type="checkbox" id="p_mailok"> <span>Ich möchte passende Anfragen per E-Mail an die oben angegebene Adresse bekommen. <span class="opt">(Abmelden jederzeit mit einer kurzen Antwort)</span></span></label>
+            <label class="check"><input type="checkbox" id="p_wa"> <span>Ich möchte passende Anfragen auch per WhatsApp an die oben angegebene Nummer bekommen. <span class="opt">(Widerruf jederzeit mit „Stopp“)</span></span></label>
             <label class="check"><input type="checkbox" id="p_anruf"> <span>Sie dürfen mich zu neuen Anfragen auch anrufen, künftig auch durch den digitalen KI-Assistenten von Abgemacht. <span class="opt">(Für später geplant, noch nicht aktiv. Wir sagen Ihnen vorher Bescheid. Widerruf jederzeit.)</span></span></label>
             <label class="check"><input type="checkbox" id="p_taetig"> <span>Ich bin gewerblich oder freiberuflich tätig und, falls mein Handwerk zulassungspflichtig ist, in der Handwerksrolle eingetragen.</span></label>
             <label class="check"><input type="checkbox" id="p_consent"> <span>Ich habe die <a href="/bedingungen" target="_blank">Bedingungen</a> und <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</span></label>
@@ -379,12 +380,14 @@
         var m = pf.email.value.trim(), t = pf.telefon.value.trim();
         if (!m && !t) return ['Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an.', 'p_tel'];
         if (m && !EMAIL.test(m)) return ['Bitte prüfen Sie die E-Mail-Adresse.', 'p_mail'];
+        if (m && !$('p_mailok').checked) return ['Bitte setzen Sie den Haken, dass wir Ihnen Anfragen per E-Mail schicken dürfen. Sonst lassen Sie das E-Mail-Feld leer.', 'p_mailok'];
+        if ($('p_wa').checked && !t) return ['Für Anfragen per WhatsApp brauchen wir Ihre Handynummer.', 'p_tel'];
         if (!$('p_taetig').checked) return ['Bitte bestätigen Sie kurz, dass Sie gewerblich oder freiberuflich tätig sind.', 'p_taetig'];
         if (!$('p_consent').checked) return ['Bitte bestätigen Sie kurz die Bedingungen und Datenschutzhinweise.'];
       },
       daten: function(){
         return { firma: pf.firma.value, name: pf.name.value, leistungen: pf.leistungen.value, ort: pf.ort.value, telefon: pf.telefon.value,
-          email: pf.email.value, wa: $('p_wa').checked, anruf: $('p_anruf').checked, website: pf.website.value, consent: true, taetig: true, quelle: quelle, nachweis: nachweis, nachweis_name: nachweisName };
+          email: pf.email.value, mailok: $('p_mailok').checked, wa: $('p_wa').checked, anruf: $('p_anruf').checked, website: pf.website.value, consent: true, taetig: true, quelle: quelle, nachweis: nachweis, nachweis_name: nachweisName };
       }
     });
   });
