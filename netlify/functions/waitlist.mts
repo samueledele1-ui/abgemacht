@@ -62,6 +62,7 @@ async function sendeMail(an: string, name: string | null, betreff: string, html:
     sender: { name: "Abgemacht", email: Netlify.env.get("MAIL_FROM") || "hallo@abgemacht.de" },
     replyTo: { email: Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com", name: "Samuel von Abgemacht" },
     to: [name ? { email: an, name } : { email: an }],
+    ...(adminKopie(an).length ? { bcc: adminKopie(an) } : {}),
     subject: betreff,
     htmlContent: html,
     ...(abmeldeLink ? { headers: { "List-Unsubscribe": `<${abmeldeLink}>` } } : {}),
@@ -132,6 +133,9 @@ async function crmInteressent(sql: any, d: { email?: string | null; telefon?: st
 const TZ = "Europe/Berlin";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const adminMail = () => Netlify.env.get("MAIL_ADMIN") || "hallo@ab-gemacht.info";
+// Weitere Empfänger für jede Büro-Mail (Netlify-Variable MAIL_ADMIN_KOPIE, mehrere mit Komma)
+const adminKopie = (an: string) => an.toLowerCase() !== adminMail().toLowerCase() ? [] :
+  (Netlify.env.get("MAIL_ADMIN_KOPIE") || "").split(",").map((e) => e.trim()).filter((e) => EMAIL_RE.test(e) && e.toLowerCase() !== an.toLowerCase()).map((email) => ({ email }));
 
 function berlinTeile(d: Date) {
   const p = Object.fromEntries(
