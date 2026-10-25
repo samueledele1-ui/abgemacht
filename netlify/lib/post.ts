@@ -4,6 +4,9 @@ export const seite = () => (Netlify.env.get("PUBLIC_URL") || "https://ab-gemacht
 export const adminMail = () => Netlify.env.get("MAIL_ADMIN") || "hallo@ab-gemacht.info";
 export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// Weitere Empfänger für jede Büro-Mail (Netlify-Variable MAIL_ADMIN_KOPIE, mehrere mit Komma), z. B. für den Mitgründer
+export const adminKopie = (an: string) => an.toLowerCase() !== adminMail().toLowerCase() ? [] :
+  (Netlify.env.get("MAIL_ADMIN_KOPIE") || "").split(",").map((e) => e.trim()).filter((e) => EMAIL_RE.test(e) && e.toLowerCase() !== an.toLowerCase()).map((email) => ({ email }));
 
 export function mailLayout(inhalt: string) {
   return `<!doctype html><html lang="de"><body style="margin:0;background:#F6F8F7;font-family:Arial,Helvetica,sans-serif;color:#14231E">
@@ -59,6 +62,7 @@ export async function sendeMail(an: string, name: string | null, betreff: string
         sender: { name: "Abgemacht", email: Netlify.env.get("MAIL_FROM") || "hallo@ab-gemacht.info" },
         replyTo: { email: Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com", name: "Abgemacht" },
         to: [name ? { email: an, name } : { email: an }],
+        ...(adminKopie(an).length ? { bcc: adminKopie(an) } : {}),
         subject: betreff,
         htmlContent: html,
         textContent: alsText(html),
