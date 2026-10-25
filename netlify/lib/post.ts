@@ -52,6 +52,14 @@ export function alsText(html: string): string {
 
 // Sendet eine Mail über Brevo. Gibt false zurück, wenn kein Schlüssel gesetzt ist oder Brevo ablehnt (wirft nie).
 export async function sendeMail(an: string, name: string | null, betreff: string, html: string): Promise<boolean> {
+  // Kopien (z. B. an den Mitgründer) als eigene Mail direkt an ihn, nicht als Bcc: Bcc landet bei web.de & Co. eher im Spam
+  const kopien = adminKopie(an);
+  const ok = await sendeEinzeln(an, name, betreff, html);
+  for (const k of kopien) await sendeEinzeln(k.email, null, betreff, html);
+  return ok;
+}
+
+async function sendeEinzeln(an: string, name: string | null, betreff: string, html: string): Promise<boolean> {
   const key = Netlify.env.get("BREVO_API_KEY");
   if (!key || !EMAIL_RE.test(an)) return false;
   try {
@@ -62,7 +70,6 @@ export async function sendeMail(an: string, name: string | null, betreff: string
         sender: { name: "Abgemacht", email: Netlify.env.get("MAIL_FROM") || "hallo@ab-gemacht.info" },
         replyTo: { email: Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com", name: "Abgemacht" },
         to: [name ? { email: an, name } : { email: an }],
-        ...(adminKopie(an).length ? { bcc: adminKopie(an) } : {}),
         subject: betreff,
         htmlContent: html,
         textContent: alsText(html),
