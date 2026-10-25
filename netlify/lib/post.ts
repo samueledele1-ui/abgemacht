@@ -27,7 +27,7 @@ export const gruss = `<p style="margin:0">Viele Grüße<br>Ihr Team von Abgemach
 export function tabelle(zeilen: [string, string | null | undefined][]) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45;margin:0 0 12px">${zeilen
     .filter(([, w]) => w)
-    .map(([k, w]) => `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${esc(k)}</td><td style="padding:5px 0">${esc(w)}</td></tr>`)
+    .map(([k, w]) => `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${esc(k)}</td><td style="padding:5px 0">${esc(w).replace(/\n/g, "<br>")}</td></tr>`)
     .join("")}</table>`;
 }
 
