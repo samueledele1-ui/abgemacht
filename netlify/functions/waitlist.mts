@@ -3,6 +3,7 @@ import type { Config, Context } from "@netlify/functions";
 import ical from "node-ical";
 import { empfehlerZuCode } from "../lib/empfehlung.ts";
 import { nachweisPruefen } from "../lib/nachweis.ts";
+import { alsText } from "../lib/post.ts";
 
 // Eine Funktion für alles rund um die Warteliste:
 //   GET  /api/waitlist     -> Anzahl bestätigter Anmeldungen
@@ -57,14 +58,21 @@ const knopf = (href: string, text: string) =>
   `<p style="margin:24px 0"><a href="${href}" style="display:inline-block;background:#138A6B;color:#ffffff;text-decoration:none;font-weight:bold;padding:13px 24px;border-radius:999px">${text}</a></p>`;
 
 async function sendeMail(an: string, name: string | null, betreff: string, html: string, abmeldeLink?: string, anhang?: { name: string; text: string }) {
+  // Kopien an MAIL_ADMIN_KOPIE als eigene Mail (nicht Bcc, das landet bei web.de eher im Spam)
+  const ok = await sendeEinzeln(an, name, betreff, html, abmeldeLink, anhang);
+  for (const k of adminKopie(an)) await sendeEinzeln(k.email, null, betreff, html, undefined, anhang);
+  return ok;
+}
+
+async function sendeEinzeln(an: string, name: string | null, betreff: string, html: string, abmeldeLink?: string, anhang?: { name: string; text: string }) {
   const res = await brevo("/smtp/email", "POST", {
     ...(anhang ? { attachment: [{ name: anhang.name, content: Buffer.from(anhang.text, "utf-8").toString("base64") }] } : {}),
     sender: { name: "Abgemacht", email: Netlify.env.get("MAIL_FROM") || "hallo@abgemacht.de" },
     replyTo: { email: Netlify.env.get("MAIL_REPLY_TO") || "samuel.edele1@gmail.com", name: "Samuel von Abgemacht" },
     to: [name ? { email: an, name } : { email: an }],
-    ...(adminKopie(an).length ? { bcc: adminKopie(an) } : {}),
     subject: betreff,
     htmlContent: html,
+    textContent: alsText(html),
     ...(abmeldeLink ? { headers: { "List-Unsubscribe": `<${abmeldeLink}>` } } : {}),
   });
   return !!res && res.ok;
