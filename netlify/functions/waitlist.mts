@@ -476,7 +476,13 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     const art = ["einmalig", "projekt", "langzeit"].includes(String(body.art)) ? String(body.art) : "einmalig";
     const zeitraum = clip(body.zeitraum, 80);
     const budget = clip(body.budget, 60);
-    const beschreibung = clip(body.beschreibung, 3000);
+    // Antworten auf die Zusatzfragen je Bereich kommen vorn in die Beschreibung (sehen Betriebe, Büro und Mails)
+    const zusatz = (Array.isArray(body.details) ? body.details : []).slice(0, 10)
+      .map((d: any) => Array.isArray(d) ? [clip(d[0], 80), clip(d[1], 200)] : [null, null])
+      .filter(([f, a]) => f && a).map(([f, a]) => `${f}: ${a}`);
+    const bereich = clip(body.bereich, 60);
+    const kopf = [bereich && bereich !== "Etwas anderes" ? `Bereich: ${bereich}` : null, ...zusatz].filter(Boolean).join("\n");
+    const beschreibung = clip([kopf, clip(body.beschreibung, 3000)].filter(Boolean).join("\n\n"), 3600);
     const quelle = QUELLEN.includes(String(body.quelle)) ? String(body.quelle) : "direkt";
     const auftraggeber = firma ? `${firma} (${name})` : name;
     const empfehler = await empfehlerZuCode(sql, body.empfohlen);
@@ -501,7 +507,7 @@ ${knopf(`${seite()}/admin`, "Antworten in der Übersicht ansehen")}`));
     const angebotsLink = `${seite()}/angebot?t=${r[0].kunde_token}`;
     const bestaetigLink = `${angebotsLink}&bestaetigen=1`;
     const ART: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
-    const zeile = (k: string, w: string | null) => w ? `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:5px 0">${esc(w)}</td></tr>` : "";
+    const zeile = (k: string, w: string | null) => w ? `<tr><td style="padding:5px 12px 5px 0;color:#5B6B65;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:5px 0">${esc(w).replace(/\n/g, "<br>")}</td></tr>` : "";
     const tabelle = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;line-height:1.45">${zeile("Leistung", leistung)}${zeile("Ort", ort)}${zeile("Wann", zeitraum)}${zeile("Art", ART[art])}${zeile("Budget", budget)}${zeile("Details", beschreibung)}${zeile("Fotos", fotoAnzahl ? fotoAnzahl + " angehängt" : null)}</table>`;
     await sendeMail(adminMail(), "Samuel", `Neue Anfrage #${nr}: ${leistung} in ${ort}`, mailLayout(
       `<p style="margin:0 0 12px"><b>Neue Anfrage über die Website</b> <span style="color:#A3480A">(noch nicht per E-Mail bestätigt, du bekommst Bescheid, sobald der Kunde bestätigt)</span></p>${tabelle}
