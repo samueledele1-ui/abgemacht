@@ -103,8 +103,13 @@ export default async (req: Request, _context: Context) => {
     const frei = gewaehlt && !!r.freigeschaltet_am;
     const fs = () => freischaltung({ art: r.art || "einmalig", budget: r.budget, betrag: oben(r), stufe: r.freischalt_stufe, gruender: !!r.gruender_nr });
 
-    if (aktion === "ansehen") {
+    // „Link geöffnet“ erst bei echter Nutzung (Scrollen, Tippen, Klicken nach ein paar Sekunden), nicht beim automatischen Link-Scan von Mail-Postfächern
+    if (aktion === "gesehen") {
       if (!r.gesehen_am) await sql`UPDATE vermittlung_betriebe SET gesehen_am = now() WHERE id = ${r.id}`;
+      return antwort({ ok: true });
+    }
+
+    if (aktion === "ansehen") {
       const f = fs();
       const code = r.k_partner && r.k_partner !== "interessiert" ? await empfehlCode(sql, r.kontakt_id) : null;
       const empfehlung = code ? { link: empfehlLink(code), anteil: EMPFEHL_ANTEIL, ...(await empfehlStand(sql, r.kontakt_id)) } : null;
