@@ -63,6 +63,12 @@
   .erg button:hover{border-color:var(--gruen)}
   .erg button small{display:block;font-weight:500;color:var(--muted);font-size:12px}
   .erg .gut{background:var(--gruen-l);border-color:#BFE5D7}
+  .pst{grid-template-columns:1fr 1fr 1fr}
+  .erg .aktiv{border:2px solid var(--gruen)}
+  html.einbett header, html.einbett #app{display:none}
+  html.einbett .panel{width:100%;box-shadow:none}
+  html.einbett .scrim{background:var(--bg)}
+  @media (max-width:420px){.pst{grid-template-columns:1fr}}
   .unter{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:8px}
   .unter label{margin-top:0}
   .unter .reihe{display:flex;gap:8px;margin-top:8px}
@@ -297,7 +303,10 @@
   function setze(v) { ansicht = v; document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === v)); zeichne(); }
 
   /* ---------- Detail ---------- */
-  function schliessen() { document.querySelectorAll(".scrim,.panel").forEach((n) => n.remove()); offenId = null; }
+  // Eingebettet aus der Vermittlung: ?k=<id>&eingebettet=1 öffnet direkt den Kontakt, Schließen meldet sich beim Fenster darüber
+  const URLQ = new URLSearchParams(location.search), EINBETT = URLQ.get("eingebettet") === "1", K_START = Number(URLQ.get("k")) || 0;
+  if (EINBETT) document.documentElement.classList.add("einbett");
+  function schliessen() { document.querySelectorAll(".scrim,.panel").forEach((n) => n.remove()); offenId = null; if (EINBETT && window.parent !== window) window.parent.postMessage("crm-zu", location.origin); }
   const ERG = [
     ["nicht_erreicht", "Nicht erreicht", "Rückruf automatisch planen"], ["mailbox", "Mailbox besprochen", "in 3 Werktagen nochmal"],
     ["rueckruf", "Rückruf vereinbart", "Datum und Uhrzeit wählen", "zeit"], ["mail_gewuenscht", "Will Infos per Mail", "Mail öffnen + nachfassen"],
@@ -305,6 +314,7 @@
     ["keine_anrufe", "Will keine Anrufe", "sofort sperren"], ["gespraech", "Gespräch geführt", "nur notieren"],
     ["eintrag", "Partner angeboten 📝", "Freigabe-Mail, in 2 Tagen nachfassen"], ["eintrag_frei", "Partner freigegeben ✓", "„Passt“ bekommen", "", "gut"],
   ];
+  const PST = [["interessiert", "Interessiert", "Okay am Telefon: bekommt Anfragen per Mail"], ["aktiv", "Aktiver Partner", "fest dabei"], ["", "Kein Partner", "keine Anfragen per Mail"]];
   const EINTRAG = { angeboten: "📝 Partner-Freigabe offen", freigegeben: "✓ Als Partner freigegeben" };
   function oeffne(id, still) {
     const k = alle.find((x) => x.id === id); if (!k) return schliessen();
@@ -325,6 +335,8 @@
         ${k.eintrag ? `<span>Partner</span><span>${EINTRAG[k.eintrag] || esc(k.eintrag)}</span>` : ""}
         <span>Nächster Kontakt</span><span class="${istFaellig(k) ? "faellig" : ""}">${k.naechster_kontakt ? dt(k.naechster_kontakt) : "–"}</span>
       </div>
+      <h3 class="ab">Partner-Status</h3>
+      <div class="erg pst">${PST.map(([v, a, b]) => `<button data-p="${v}" class="${(k.partner || "") === v ? "gut aktiv" : ""}">${a}${(k.partner || "") === v ? " ✓" : ""}<small>${b}</small></button>`).join("")}</div>
       <h3 class="ab">Ergebnis des Anrufs</h3>
       <div class="erg">${ERG.map(([v, a, b, , c]) => `<button data-e="${v}" class="${c || ""}">${a}<small>${b}</small></button>`).join("")}</div>
       <div id="unter"></div>
@@ -338,6 +350,15 @@
     document.body.append(scrim, p);
     p.querySelector(".zu").onclick = schliessen;
     if (!still) p.scrollTop = 0;
+    p.querySelectorAll("[data-p]").forEach((b) => b.onclick = async () => {
+      try {
+        const r = await fetch("/api/vermittlung", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pw, aktion: "partner", kontakt: id, partner: b.dataset.p || null }) });
+        const j = await r.json().catch(() => ({}));
+        if (!j.ok) throw new Error(j.error || "Fehler");
+        toast(b.dataset.p ? "Partner-Status: " + b.firstChild.textContent.trim() : "Kein Partner mehr");
+        await laden();
+      } catch (e) { toast(e.message); }
+    });
     const msg = (t, ok) => { const m = p.querySelector("#pmsg"); m.textContent = t; m.className = "msg " + (ok ? "ok" : "err"); };
 
     async function sende(erg, extra = {}) {
@@ -472,7 +493,7 @@
   }
 
   function abmelden() { pw = null; try { sessionStorage.removeItem("hs_admin"); } catch {} $("app").hidden = true; $("raus").hidden = true; $("login").hidden = false; schliessen(); }
-  async function start(p) { pw = p; await laden(); $("login").hidden = true; $("app").hidden = false; $("raus").hidden = false; }
+  async function start(p) { pw = p; await laden(); $("login").hidden = true; $("app").hidden = false; $("raus").hidden = false; if (K_START && !offenId) oeffne(K_START); }
 
   $("login").onsubmit = async (e) => {
     e.preventDefault(); const m = $("loginMsg"); m.textContent = "";
