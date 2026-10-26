@@ -534,11 +534,11 @@
     const gew = bs.find((b) => b.status === "gewaehlt");
     const vbHtml = bs.map((b) => `<div class="vb" data-vb="${b.id}">
         <div class="zeile"><b>${esc(b.firma)}${b.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}</b><span class="st b-${b.status}">${BS[b.status]}</span></div>
-        <small style="color:var(--muted)">${esc([b.ansprechpartner, b.telefon, b.k_ort].filter(Boolean).join(" · "))} · angefragt ${dt(b.angefragt_am)}${b.gemailt_am ? " · ✉ per Mail" : ""}${b.gesehen_am ? " · 👁 Link geöffnet" : ""}${b.preis_betrag ? " · Angebot selbst abgegeben" : ""}</small>
+        <small style="color:var(--muted)">${esc([b.ansprechpartner, b.telefon, b.k_ort].filter(Boolean).join(" · "))} · angefragt ${dt(b.angefragt_am)}${b.gemailt_am ? " · ✉ per Mail" : b.status === "angefragt" ? ' · <span style="color:#A3480A">✉ noch keine Mail</span>' : ""}${b.gesehen_am ? " · 👁 Link geöffnet" : ""}${b.preis_betrag ? " · Angebot selbst abgegeben" : ""}</small>
         <div class="reihe"><select data-g="status">${Object.entries(BS).filter(([k]) => k !== "gewaehlt" && k !== "nicht_gewaehlt").map(([k, t]) => `<option value="${k}" ${b.status === k ? "selected" : ""}>${t}</option>`).join("")}${["gewaehlt", "nicht_gewaehlt"].includes(b.status) ? `<option selected value="${b.status}">${BS[b.status]}</option>` : ""}</select>
           <input data-g="preis" placeholder="Preis, z. B. 380 €" value="${esc(b.preis || "")}" style="flex:1;min-width:120px"></div>
         <textarea data-g="angebot" placeholder="Angebot: Termin, was drin ist" style="margin-top:6px;min-height:50px">${esc(b.angebot || "")}</textarea>
-        <div class="knopfreihe"><button class="btn ghost klein" data-sp="${b.id}" type="button">Speichern</button>${b.token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(b.token))}">Angebots-Link kopieren</button>` : ""}${b.telefon ? `<a class="btn ghost klein" href="tel:${esc(String(b.telefon).replace(/[^\d+]/g, ""))}">Anrufen</a>` : ""}${b.status === "angebot" ? `<button class="btn klein" data-wahl="${b.id}" type="button">Abgemacht</button>` : ""}</div>
+        <div class="knopfreihe"><button class="btn ghost klein" data-sp="${b.id}" type="button">Speichern</button>${b.token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(b.token))}">Angebots-Link kopieren</button>` : ""}${b.status === "angefragt" && !b.gemailt_am && b.email ? `<button class="btn klein" data-nachmail="${b.kontakt_id}" type="button">Per Mail schicken</button>` : ""}${b.telefon ? `<a class="btn ghost klein" href="tel:${esc(String(b.telefon).replace(/[^\d+]/g, ""))}">Anrufen</a>` : ""}${b.status === "angebot" ? `<button class="btn klein" data-wahl="${b.id}" type="button">Abgemacht</button>` : ""}</div>
         ${b.status === "angefragt" ? vorlageHtml("Text: Anfrage an diesen Betrieb", T.anfrage(v) + (b.token ? "\n\nAngebot direkt hier abgeben: " + LINK(b.token) : ""), b.telefon, b.wa_ok_am) + vorlageHtml("Text: Erinnerung", T.erinnerung(v), b.telefon, b.wa_ok_am) : ""}
         ${b.status === "gewaehlt" ? vorlageHtml("Text: Zusage an den Betrieb", T.zusage(v, b), b.telefon, b.wa_ok_am) : ""}
         ${b.status === "nicht_gewaehlt" ? vorlageHtml("Text: Absage", T.absage(), b.telefon, b.wa_ok_am) : ""}
@@ -606,10 +606,14 @@
     if (["neu", "angefragt", "angebote"].includes(v.status)) suchen();
     ["#kSuch", "#kOrt"].forEach((s) => p.querySelector(s).onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } });
     p.querySelector("#kKm").onchange = suchen;
+    p.querySelectorAll("[data-nachmail]").forEach((k) => k.onclick = async () => {
+      try { const r = await api({ aktion: "anfragen", id, kontakte: [+k.dataset.nachmail], trotzdem: true }); await laden(); oeffneV(id);
+        toast(r.gemailt ? "Anfrage per Mail geschickt." : "Keine Mail gesendet: Der Betrieb ist kein Partner. Erst im Partner-Profil auf „Interessiert“ oder „Aktiv“ setzen (nur mit seinem Okay)."); } catch (e) { toast(e.message); }
+    });
     p.querySelector("#kAnfragen").onclick = async () => {
       const ids = [...p.querySelectorAll("#kListe input:checked")].map((x) => +x.value);
       if (!ids.length) return toast("Bitte Betriebe auswählen.");
-      try { const r = await api({ aktion: "anfragen", id, kontakte: ids }); await laden(); oeffneV(id); toast((r.gemailt ? r.gemailt + " per Mail angefragt. " : "") + (r.ohneMail && r.ohneMail.length ? "Ohne Mail (Link kopieren oder anrufen): " + r.ohneMail.join(", ") : "")); } catch (e) { toast(e.message); }
+      try { const r = await api({ aktion: "anfragen", id, kontakte: ids }); await laden(); oeffneV(id); toast((r.gemailt ? r.gemailt + " per Mail angefragt. " : "") + (r.ohneMail && r.ohneMail.length ? "Keine Mail (kein Partner oder keine E-Mail): " + r.ohneMail.join(", ") + ". Nach Okay am Telefon im Profil auf „Interessiert“ setzen und dann „Per Mail schicken“." : "")); } catch (e) { toast(e.message); }
     };
     p.querySelector("#vSpeichern").onclick = async () => {
       const form = p.querySelector("#vEdit");
