@@ -75,6 +75,18 @@
   var ART = { einmalig: 'Einmalig', projekt: 'Projekt', langzeit: 'Regelmäßig / langfristig' };
   var zahl = function (v) { var n = Number(String(v || '').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.')); return isFinite(n) && n > 0 ? n : null; };
 
+  // Als gelesen melden erst, wenn ein Mensch die Seite nutzt: sichtbar, mindestens 3 Sekunden offen und eine echte Eingabe (Scrollen, Tippen, Klicken, Taste)
+  if (/^b_/.test(t)) (function () {
+    var start = Date.now(), gemeldet = false;
+    function melden() {
+      if (gemeldet || document.visibilityState !== 'visible' || Date.now() - start < 3000) return;
+      gemeldet = true;
+      fetch('/api/angebot', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: t, aktion: 'gesehen' }), keepalive: true }).catch(function () {});
+      ['scroll', 'pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function (e) { window.removeEventListener(e, melden, true); });
+    }
+    ['scroll', 'pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function (e) { window.addEventListener(e, melden, { capture: true, passive: true }); });
+  })();
+
   async function api(daten) {
     var res = await fetch(daten ? '/api/angebot' : '/api/angebot?t=' + encodeURIComponent(t), daten ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ t: t }, daten)) } : undefined);
     var d = await res.json().catch(function () { return { ok: false, error: 'Verbindung fehlgeschlagen. Bitte später erneut versuchen.' }; });
