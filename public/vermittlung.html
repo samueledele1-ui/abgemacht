@@ -99,6 +99,10 @@
   .kand{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
   .kand input{width:18px;height:18px;flex:none;accent-color:var(--gruen)}
   .kand label{margin:0;font-weight:600;flex:1;cursor:pointer}
+  .kand .info{margin:0;font-weight:600;flex:1;cursor:pointer;border-radius:10px;padding:2px 4px}
+  .kand .info:hover{background:var(--gruen-l, #E3F4EE)}
+  .kand input[type=checkbox]{width:24px;height:24px}
+  .crmrahmen{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:80;background:#F6F8F7}
   .kand small{color:var(--muted);font-weight:500;display:block}
   .fotos{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
   .fotos img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}
@@ -527,6 +531,12 @@
     };
   }
 
+  // Kontakt wie in der Akquise öffnen (CRM eingebettet), danach die Trefferliste neu laden, damit Partner-Tags stimmen
+  function crmOeffnen(kid, danach) {
+    const f = document.createElement("iframe"); f.className = "crmrahmen"; f.src = "/crm?k=" + kid + "&eingebettet=1"; f.title = "Kontakt";
+    const zu = (e) => { if (e.origin !== location.origin || e.data !== "crm-zu") return; window.removeEventListener("message", zu); f.remove(); if (danach) danach(); };
+    window.addEventListener("message", zu); document.body.appendChild(f);
+  }
   function oeffneV(id) {
     const v = V.find((x) => x.id === id); if (!v) return;
     const bs = B.filter((b) => b.vermittlung_id === id);
@@ -592,11 +602,12 @@
       // Gründungspartner im Umkreis zuerst (Vorrang bei Aufträgen), sonst nach Entfernung
       const nah = liste.filter((k) => !max || !zielGefunden || (k.km != null && k.km <= max)).sort((a, b) => (b.gruender_nr ? 1 : 0) - (a.gruender_nr ? 1 : 0)).slice(0, 30);
       const weiter = zielGefunden && max ? liste.filter((k) => k.km == null || k.km > max) : [];
-      const zeile = (k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}"><label for="kk${k.id}">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}${esc(k.firma)}${k.gruender_nr ? '<span class="tag2 t-gold">★ Gründer</span>' : ""}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}${k.partner && geprueft(k) ? '<span class="tag2 t-wa">✓ geprüft</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></label></div>`;
+      const zeile = (k) => `<div class="kand"><input type="checkbox" id="kk${k.id}" value="${k.id}" aria-label="${esc(k.firma)} auswählen"><div class="info" data-crm="${k.id}" role="button" tabindex="0" title="Kontakt öffnen">${k.km != null ? `<span class="km">${k.km} km</span>` : ""}${esc(k.firma)}${k.gruender_nr ? '<span class="tag2 t-gold">★ Gründer</span>' : ""}${k.partner === "aktiv" ? '<span class="tag2 t-p">Partner</span>' : k.partner === "interessiert" ? '<span class="tag2 t-proj">Interessiert</span>' : ""}${k.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}${k.partner && geprueft(k) ? '<span class="tag2 t-wa">✓ geprüft</span>' : ""}<small>${esc([k.kategorie, k.leistungen, k.ort || k.region, k.telefon].filter(Boolean).join(" · "))}${k.grund ? " · passt: " + esc(k.grund) : ""}</small></div></div>`;
       const hinweis = ort && !zielGefunden ? `<p class="msg err" style="margin:6px 0">Ort „${esc(ort)}“ nicht erkannt, Treffer daher ohne Entfernung. Am besten die PLZ eingeben.</p>` : "";
       p.querySelector("#kListe").innerHTML = hinweis + (nah.map(zeile).join("") || (d.kandidaten.length && !liste.length ? '<p style="color:var(--muted)">Alle passenden Betriebe sind schon angefragt.</p>' : `<p style="color:var(--muted)">Keine passenden Betriebe${max && zielGefunden ? " im Umkreis von " + max + " km" : ""}${d.gruppen && d.gruppen.length ? " (gesucht in: " + esc(d.gruppen.join(", ")) + ")" : ""}. Umkreis vergrößern oder über Google Maps suchen und mit „+ Partner“ anlegen.</p>`))
         + (weiter.length ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">${weiter.length} weitere weiter weg oder ohne Ortsangabe</summary>${weiter.slice(0, 30).map(zeile).join("")}</details>` : "");
       p.querySelector("#kAnfragen").hidden = !(nah.length || weiter.length);
+      p.querySelectorAll("#kListe [data-crm]").forEach((el) => { el.onclick = () => crmOeffnen(+el.dataset.crm, async () => { const sel = [...p.querySelectorAll("#kListe input:checked")].map((x) => x.value); await suchen(); sel.forEach((v) => { const c = p.querySelector("#kk" + v); if (c) c.checked = true; }); }); el.onkeydown = (e) => { if (e.key === "Enter") el.click(); }; });
     };
     const vf = p.querySelector("#vFrei"); if (vf) vf.onclick = async (e) => { if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich ohne Zahlung freischalten?"; return; } try { await api({ aktion: "freigeben", id }); await laden(); oeffneV(id); toast("Freigeschaltet, Kontaktdaten sind raus"); } catch (er) { toast(er.message); } };
     const vr = p.querySelector("#vReset"); if (vr) vr.onclick = async (e) => { if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich zurücksetzen?"; return; } try { await api({ aktion: "zuruecksetzen", id }); await laden(); oeffneV(id); toast("Zurückgesetzt. Dem Kunden kurz Bescheid geben, dass er neu wählen kann."); } catch (er) { toast(er.message); } };
