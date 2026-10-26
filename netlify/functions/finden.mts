@@ -487,7 +487,7 @@ ${zeilen}
 
 function sitemap() {
   const heute = new Date().toISOString().slice(0, 10);
-  const urls = ["/", "/betriebe", "/finden", "/ratgeber", ...RATGEBER.map((r) => `/ratgeber/${r.slug}`), ...ORTE.flatMap((o) => BRANCHEN.map((b) => `/finden/${b.slug}-${o.slug}`))];
+  const urls = ["/", "/betriebe", "/hausverwaltungen", "/finden", "/ratgeber", ...RATGEBER.map((r) => `/ratgeber/${r.slug}`), ...ORTE.flatMap((o) => BRANCHEN.map((b) => `/finden/${b.slug}-${o.slug}`))];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${basis()}${u}</loc><lastmod>${heute}</lastmod></url>`).join("\n")}
