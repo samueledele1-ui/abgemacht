@@ -1,7 +1,9 @@
 import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
 import { rechnungPdf, datumDE, euro, type Absender } from "../lib/rechnung.ts";
-import { auftragswert, freischaltung } from "../lib/gebuehr.ts";
+import { auftragswert, freischaltung, dauerModell, DAUER_MONATE } from "../lib/gebuehr.ts";
+import * as Besichtigung from "../lib/besichtigung.ts";
+import { einladung, einladeLink, ARTEN_KUNDE } from "../lib/portal.ts";
 import { freigeben } from "../lib/freischalten.ts";
 import { bewerte, analysiere } from "../lib/passend.ts";
 import { empfehlCode, empfehlLink, EMPFEHL_ANTEIL } from "../lib/empfehlung.ts";
@@ -14,8 +16,8 @@ import { seite, esc as escP, mailLayout, knopf, absatz, gruss, tabelle, sendeMai
 const STATUS = ["neu", "angefragt", "angebote", "abgemacht", "erledigt", "verloren"];
 const VB_STATUS = ["angefragt", "angebot", "abgesagt", "keine_antwort", "gewaehlt", "nicht_gewaehlt"];
 const ARTEN = ["einmalig", "projekt", "langzeit"];
-const KANAELE = ["whatsapp", "telefon", "email", "web", "persoenlich"];
-const FELDER = ["auftraggeber", "kontakt", "kanal", "leistung", "ort", "zeitraum", "budget", "art", "laufzeit", "beschreibung", "notizen"] as const;
+const KANAELE = ["whatsapp", "telefon", "email", "web", "persoenlich", "portal"];
+const FELDER = ["auftraggeber", "kontakt", "kanal", "leistung", "ort", "zeitraum", "budget", "art", "laufzeit", "beschreibung", "notizen", "objekt_adresse", "vor_ort", "besichtigung", "dauer_ende_am"] as const;
 
 const fehler = (msg: string, status = 400) =>
   Response.json({ ok: false, error: msg }, { status, headers: { "Cache-Control": "no-store" } });
@@ -38,7 +40,7 @@ const zahl = (v: unknown) => {
 
 
 /* ---------- Rechnungen ---------- */
-const EIN_FELDER = ["name", "firma", "strasse", "plz_ort", "email", "telefon", "steuernummer", "iban", "bic", "bank", "kleinunternehmer", "zahlungsziel", "gebuehren_ab"];
+const EIN_FELDER = ["name", "firma", "strasse", "plz_ort", "email", "telefon", "steuernummer", "iban", "bic", "bank", "kleinunternehmer", "zahlungsziel", "gebuehren_ab", "besichtigung_ab"];
 async function einstellungen(sql: any): Promise<Record<string, string>> {
   const rows = await sql`SELECT schluessel, wert FROM einstellungen`;
   return Object.fromEntries(rows.map((r: any) => [r.schluessel, r.wert ?? ""]));
@@ -90,6 +92,33 @@ async function gleich(a: string, b: string) {
 }
 
 const ARTNAME: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
+
+/* Monatsraten bei Daueraufträgen mit „8 % monatlich“: Rate 1 ist die Gebühr bei Annahme, Raten 2 bis 24 kommen
+   mit der Monatsrechnung, solange der Auftrag läuft (Ende im Büro unter „Auftrag beendet am“ eintragen). */
+const datumAus = (x: any) => new Date(typeof x === "string" && x.length === 10 ? x + "T12:00:00Z" : x);
+const monatIndex = (x: any) => { const [y, m] = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit" }).format(datumAus(x)).split("-").map(Number); return y * 12 + m - 1; };
+const indexMonat = (i: number) => `${Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`;
+async function offeneRaten(sql: any, monat: string, kid: number | null = null) {
+  const ab = (await sql`SELECT wert FROM einstellungen WHERE schluessel = 'gebuehren_ab'`)[0]?.wert;
+  if (!ab) return [];
+  const [jj, mm] = monat.split("-").map(Number); const bisIndex = jj * 12 + mm - 1;
+  const rows = await sql`SELECT v.id, v.leistung, v.ort, v.gebuehr, v.abgemacht_am, v.dauer_ende_am, v.gewaehlt_id, k.firma,
+      COALESCE((SELECT array_agg(d.nr) FROM dauer_raten d WHERE d.vermittlung_id = v.id), '{}') AS nrs
+    FROM vermittlungen v JOIN crm_kontakte k ON k.id = v.gewaehlt_id
+    WHERE v.art = 'langzeit' AND v.dauer_modell = 'monatlich' AND v.status IN ('abgemacht', 'erledigt') AND v.gebuehr > 0
+      AND v.abgemacht_am >= ${ab + " 00:00 Europe/Berlin"}::timestamptz AND (${kid}::int IS NULL OR v.gewaehlt_id = ${kid}::int)`;
+  const out: any[] = [];
+  for (const v of rows) {
+    const start = monatIndex(v.abgemacht_am), ende = v.dauer_ende_am ? monatIndex(v.dauer_ende_am) : Infinity;
+    const schon = (v.nrs || []).map(Number);
+    for (let nr = 2; nr <= DAUER_MONATE; nr++) {
+      const m = start + nr - 1;
+      if (m > bisIndex || m > ende) break;
+      if (!schon.includes(nr)) out.push({ vermittlung_id: v.id, kontakt_id: v.gewaehlt_id, firma: v.firma, leistung: v.leistung, ort: v.ort, nr, monat: indexMonat(m), betrag: Number(v.gebuehr) });
+    }
+  }
+  return out;
+}
 async function gebuehrenAktiv(sql: any) {
   const r = await sql`SELECT wert FROM einstellungen WHERE schluessel = 'gebuehren_ab'`;
   return !!r[0]?.wert && r[0].wert <= berlinHeute();
@@ -103,7 +132,7 @@ async function anfrageMail(v: any, b: any, aktiv: boolean) {
     (v.fotos ? absatz(`📷 Zur Anfrage gibt es ${v.fotos} ${v.fotos === 1 ? "Foto" : "Fotos"}. Sie sehen ${v.fotos === 1 ? "es" : "sie"} auf der Angebotsseite.`) : "") +
     absatz("Wenn Sie Interesse haben, geben Sie Ihr Angebot über den Knopf ab. Das dauert eine Minute. Name und Kontaktdaten des Auftraggebers bekommen Sie, sobald er Ihr Angebot annimmt" + (aktiv ? " und Sie die Kontaktdaten freigeschaltet haben." : ".")) +
     knopf(`${seite()}/angebot?t=${b.token}`, "Angebot abgeben") +
-    absatz(`<span style="font-size:14px;color:#5B6B65">Kein Interesse oder keine Zeit? Dann sagen Sie auf derselben Seite kurz ab. ${aktiv ? "Kosten entstehen nur, wenn der Auftraggeber Ihr Angebot annimmt: dann einmalig die Freischaltgebühr nach Budget, bei einer Spanne nach dem oberen Wert (siehe Bedingungen)." : "In der Startphase ist das für Sie kostenlos."}</span>`) + gruss));
+    absatz(`<span style="font-size:14px;color:#5B6B65">Kein Interesse oder keine Zeit? Dann sagen Sie auf derselben Seite kurz ab. ${aktiv ? "Kosten entstehen nur, wenn der Auftraggeber Ihr Angebot annimmt: 5 % vom angenommenen Preis, bei regelmäßigen Aufträgen wahlweise ein Monatsumsatz oder 8 % monatlich für höchstens 24 Monate (siehe Bedingungen)." : "In der Startphase ist das für Sie kostenlos."}</span>`) + gruss));
 }
 
 export default async (req: Request, _context: Context) => {
@@ -126,7 +155,9 @@ export default async (req: Request, _context: Context) => {
     // Empfehlungslinks für Partner ohne Code anlegen
     for (const o of await sql`SELECT id FROM crm_kontakte WHERE partner IN ('aktiv', 'pausiert') AND empfehl_code IS NULL LIMIT 50`) await empfehlCode(sql, o.id);
     const [vermittlungen, betriebe, partner] = await Promise.all([
-      sql`SELECT v.*, k.firma AS gewaehlt_firma, (SELECT e.firma FROM crm_kontakte e WHERE e.id = v.empfohlen_von) AS empfohlen_firma, (SELECT count(*)::int FROM anfrage_fotos f WHERE f.vermittlung_id = v.id) AS fotos FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id ORDER BY
+      sql`SELECT v.*, k.firma AS gewaehlt_firma, (SELECT e.firma FROM crm_kontakte e WHERE e.id = v.empfohlen_von) AS empfohlen_firma, (SELECT count(*)::int FROM anfrage_fotos f WHERE f.vermittlung_id = v.id) AS fotos,
+            ku.name AS kunde_name, ku.art AS kunde_art, o.name AS objekt_name
+            FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id LEFT JOIN kunden ku ON ku.id = v.kunde_id LEFT JOIN objekte o ON o.id = v.objekt_id ORDER BY
             CASE v.status WHEN 'neu' THEN 0 WHEN 'angefragt' THEN 1 WHEN 'angebote' THEN 2 WHEN 'abgemacht' THEN 3 ELSE 4 END, v.created_at DESC`,
       sql`SELECT vb.*, k.firma, k.ansprechpartner, k.telefon, k.email, k.kategorie, k.ort AS k_ort, k.wa_ok_am, k.gruender_nr
             FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id ORDER BY vb.angefragt_am`,
@@ -142,23 +173,37 @@ export default async (req: Request, _context: Context) => {
            WHERE k.partner IS NOT NULL GROUP BY k.id ORDER BY k.partner, k.kategorie NULLS LAST, k.firma`,
     ]);
     for (const p of partner as any[]) p.empfehl_link = p.empfehl_code ? empfehlLink(p.empfehl_code) : null;
-    return Response.json({ ok: true, vermittlungen, betriebe, partner }, { headers: { "Cache-Control": "no-store" } });
+    const [kunden, besichtigungen, ab] = await Promise.all([
+      sql`SELECT ku.*, (SELECT count(*)::int FROM objekte o WHERE o.kunde_id = ku.id AND o.aktiv) AS objekte,
+            (SELECT count(*)::int FROM meldungen m WHERE m.kunde_id = ku.id AND m.status = 'neu') AS meldungen_neu,
+            (SELECT count(*)::int FROM vermittlungen v WHERE v.kunde_id = ku.id) AS anfragen,
+            (SELECT count(*)::int FROM vermittlungen v WHERE v.kunde_id = ku.id AND v.status IN ('abgemacht', 'erledigt')) AS abgemacht,
+            COALESCE((SELECT json_agg(json_build_object('id', z.id, 'name', z.name, 'email', z.email, 'aktiv', z.aktiv, 'eingerichtet', z.pw_hash IS NOT NULL, 'letzter_login', z.letzter_login, 'einladung_offen', z.einlade_token IS NOT NULL AND z.einlade_bis > now()) ORDER BY z.id) FROM kunden_zugaenge z WHERE z.kunde_id = ku.id), '[]') AS zugaenge
+          FROM kunden ku ORDER BY ku.name`,
+      sql`SELECT b.id, b.vermittlung_id, b.vb_id, b.wunsch, b.termin, b.nachricht, b.status, b.bestaetigt_am, b.bestaetigt_von, b.created_at FROM besichtigungen b ORDER BY b.created_at`,
+      Besichtigung.grenze(sql),
+    ]);
+    return Response.json({ ok: true, vermittlungen, betriebe, partner, kunden, besichtigungen, besichtigung_ab: ab }, { headers: { "Cache-Control": "no-store" } });
   }
 
   if (aktion === "neu" || aktion === "aendern") {
     const w: Record<string, string | null> = {};
     for (const f of FELDER) w[f] = clip(body[f], f === "beschreibung" || f === "notizen" ? 3000 : 200);
     if (w.art && !ARTEN.includes(w.art)) w.art = "einmalig";
+    if (w.besichtigung && !["ja", "nein"].includes(w.besichtigung)) w.besichtigung = null;
+    if (w.dauer_ende_am && !/^\d{4}-\d{2}-\d{2}$/.test(w.dauer_ende_am)) w.dauer_ende_am = null;
+    const kundeId = Number(body.kunde_id) > 0 ? Number(body.kunde_id) : null;
     if (w.kanal && !KANAELE.includes(w.kanal)) w.kanal = null;
     if (aktion === "neu") {
       if (!w.leistung && !w.beschreibung) return fehler("Bitte mindestens Leistung oder Beschreibung angeben.");
       // Selbst angelegte Anfragen (Telefon, WhatsApp) gelten als bestätigt
-      const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, laufzeit, beschreibung, notizen, bestaetigt_am)
-        VALUES (${w.auftraggeber}, ${w.kontakt}, ${w.kanal}, ${w.leistung}, ${w.ort}, ${w.zeitraum}, ${w.budget}, ${w.art || "einmalig"}, ${w.laufzeit}, ${w.beschreibung}, ${w.notizen}, now())
+      const r = await sql`INSERT INTO vermittlungen (auftraggeber, kontakt, kanal, leistung, ort, zeitraum, budget, art, laufzeit, beschreibung, notizen, objekt_adresse, vor_ort, besichtigung, kunde_id, bestaetigt_am)
+        VALUES (${w.auftraggeber}, ${w.kontakt}, ${w.kanal}, ${w.leistung}, ${w.ort}, ${w.zeitraum}, ${w.budget}, ${w.art || "einmalig"}, ${w.laufzeit}, ${w.beschreibung}, ${w.notizen},
+                ${w.objekt_adresse}, ${w.vor_ort}, ${w.besichtigung}, ${kundeId}, now())
         RETURNING id`;
       return Response.json({ ok: true, id: r[0].id });
     }
-    const alt = (await sql`SELECT status, auftragswert, bewertung, bezahlt_am, gebuehr, freischalt_stufe, gewaehlt_id FROM vermittlungen WHERE id = ${id}`)[0];
+    const alt = (await sql`SELECT status, auftragswert, bewertung, bezahlt_am, gebuehr, gebuehr_hand, dauer_modell, gewaehlt_id FROM vermittlungen WHERE id = ${id}`)[0];
     if (!alt) return fehler("Nicht gefunden.", 404);
     const status = STATUS.includes(String(body.status)) ? String(body.status) : alt.status;
     const wert = body.auftragswert !== undefined ? zahl(body.auftragswert) : (alt.auftragswert === null ? null : Number(alt.auftragswert));
@@ -167,7 +212,8 @@ export default async (req: Request, _context: Context) => {
     await sql`UPDATE vermittlungen SET auftraggeber = ${w.auftraggeber}, kontakt = ${w.kontakt}, kanal = ${w.kanal}, leistung = ${w.leistung},
         ort = ${w.ort}, zeitraum = ${w.zeitraum}, budget = ${w.budget}, art = ${w.art || "einmalig"}, laufzeit = ${w.laufzeit},
         beschreibung = ${w.beschreibung}, notizen = ${w.notizen}, status = ${status},
-        auftragswert = ${wert}, bewertung = ${bew}, gebuehr = ${alt.bezahlt_am ? alt.gebuehr : freischaltung({ art: w.art || "einmalig", budget: w.budget, wert, stufe: alt.freischalt_stufe, gruender: !!(await sql`SELECT gruender_nr FROM crm_kontakte WHERE id = ${alt.gewaehlt_id ?? 0}`)[0]?.gruender_nr }).preis}, updated_at = now(),
+        objekt_adresse = ${w.objekt_adresse}, vor_ort = ${w.vor_ort}, besichtigung = ${w.besichtigung}, dauer_ende_am = ${w.dauer_ende_am}, kunde_id = ${kundeId},
+        auftragswert = ${wert}, bewertung = ${bew}, gebuehr = ${alt.bezahlt_am || !alt.gewaehlt_id ? alt.gebuehr : freischaltung({ art: w.art || "einmalig", budget: w.budget, wert, hand: alt.gebuehr_hand == null ? null : Number(alt.gebuehr_hand), dauer_modell: alt.dauer_modell, gruender: !!(await sql`SELECT gruender_nr FROM crm_kontakte WHERE id = ${alt.gewaehlt_id}`)[0]?.gruender_nr }).preis}, updated_at = now(),
         abgemacht_am = CASE WHEN ${status}::text IN ('abgemacht', 'erledigt') THEN COALESCE(abgemacht_am, now()) ELSE abgemacht_am END
       WHERE id = ${id}`;
     return Response.json({ ok: true });
@@ -226,9 +272,12 @@ export default async (req: Request, _context: Context) => {
     await sql`UPDATE vermittlung_betriebe SET status = 'angebot' WHERE vermittlung_id = ${id} AND status IN ('gewaehlt', 'nicht_gewaehlt') AND preis IS NOT NULL`;
     return Response.json({ ok: true });
   }
-  if (aktion === "stufe") {
-    const st = Number(body.stufe);
-    await sql`UPDATE vermittlungen SET freischalt_stufe = ${st >= 1 && st <= 4 ? st : null}, updated_at = now() WHERE id = ${id}`;
+  // Gebühr von Hand festlegen (leer = nach Modell). Ist schon angenommen und noch nicht bezahlt, gilt sie sofort.
+  if (aktion === "gebuehr_hand") {
+    const roh = String(body.betrag ?? "").trim();
+    const n = roh === "" ? null : roh.replace(/\s/g, "") === "0" ? 0 : zahl(roh) ?? NaN;
+    if (n !== null && !Number.isFinite(n)) return fehler("Bitte einen Betrag in Euro eingeben oder das Feld leeren.");
+    await sql`UPDATE vermittlungen SET gebuehr_hand = ${n}, gebuehr = CASE WHEN ${n}::numeric IS NOT NULL AND gewaehlt_id IS NOT NULL AND bezahlt_am IS NULL THEN ${n}::numeric ELSE gebuehr END, updated_at = now() WHERE id = ${id}`;
     return Response.json({ ok: true });
   }
 
@@ -331,7 +380,8 @@ export default async (req: Request, _context: Context) => {
         AND v.abgemacht_am >= ${von}::timestamptz AND v.abgemacht_am < ${bis}::timestamptz
       ORDER BY k.firma, v.abgemacht_am`;
     const ein = await einstellungen(sql);
-    return Response.json({ ok: true, monat, posten, gebuehren_ab: ein.gebuehren_ab || null, rechnungsdaten_ok: !fehlendeDaten(ein).length }, { headers: { "Cache-Control": "no-store" } });
+    const raten = await offeneRaten(sql, monat);
+    return Response.json({ ok: true, monat, posten, raten, gebuehren_ab: ein.gebuehren_ab || null, rechnungsdaten_ok: !fehlendeDaten(ein).length }, { headers: { "Cache-Control": "no-store" } });
   }
 
   /* Empfehlungen: Partner haben Kunden weitergeleitet, die Hälfte der bezahlten Freischaltgebühr geht an sie */
@@ -355,10 +405,11 @@ export default async (req: Request, _context: Context) => {
 
   if (aktion === "waehlen") {
     const vbid = Number(body.vb) || 0;
-    const r = await sql`SELECT vb.vermittlung_id, vb.kontakt_id, vb.preis, vb.preis_betrag, vb.preis_bis, v.art, v.budget, v.freischalt_stufe, k.gruender_nr
+    const r = await sql`SELECT vb.vermittlung_id, vb.kontakt_id, vb.preis, vb.preis_betrag, vb.preis_bis, vb.dauer_modell, v.art, v.budget, v.gebuehr_hand, k.gruender_nr
       FROM vermittlung_betriebe vb JOIN vermittlungen v ON v.id = vb.vermittlung_id JOIN crm_kontakte k ON k.id = vb.kontakt_id WHERE vb.id = ${vbid}`;
     if (!r.length) return fehler("Nicht gefunden.", 404);
-    const { vermittlung_id, kontakt_id, preis, preis_betrag, preis_bis, art, budget, freischalt_stufe, gruender_nr } = r[0];
+    const { vermittlung_id, kontakt_id, preis, preis_betrag, preis_bis, art, budget, gebuehr_hand, gruender_nr } = r[0];
+    const dm = art === "langzeit" ? dauerModell(body.dauer_modell ?? r[0].dauer_modell) : null;
     // Bei regelmäßigen Aufträgen zählt der Wert des ersten Vertragsjahres (Monatspreis × 12)
     // Bei einer Preisspanne zählt der obere Wert
     const roh = zahl(body.auftragswert) ?? (preis_bis !== null ? Number(preis_bis) : null) ?? zahl(preis) ?? (preis_betrag === null ? null : Number(preis_betrag));
@@ -366,8 +417,8 @@ export default async (req: Request, _context: Context) => {
     const wert = proMonat ? auftragswert("langzeit", roh) : roh;
     await sql`UPDATE vermittlung_betriebe SET status = CASE WHEN id = ${vbid} THEN 'gewaehlt' WHEN status = 'angebot' THEN 'nicht_gewaehlt' ELSE status END
       WHERE vermittlung_id = ${vermittlung_id}`;
-    const geb = freischaltung({ art, budget, wert, stufe: freischalt_stufe, gruender: !!gruender_nr }).preis;
-    await sql`UPDATE vermittlungen SET status = 'abgemacht', gewaehlt_id = ${kontakt_id}, auftragswert = ${wert}, gebuehr = ${geb}, updated_at = now(), abgemacht_am = COALESCE(abgemacht_am, now()),
+    const geb = freischaltung({ art, budget, wert, hand: gebuehr_hand == null ? null : Number(gebuehr_hand), gruender: !!gruender_nr, dauer_modell: dm }).preis;
+    await sql`UPDATE vermittlungen SET status = 'abgemacht', gewaehlt_id = ${kontakt_id}, auftragswert = ${wert}, gebuehr = ${geb}, dauer_modell = ${dm}, updated_at = now(), abgemacht_am = COALESCE(abgemacht_am, now()),
         freigeschaltet_am = COALESCE(freigeschaltet_am, now())
       WHERE id = ${vermittlung_id}`;
     await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kontakt_id}, 'vermittlung', ${"Abgemacht: Anfrage #" + vermittlung_id})`;
@@ -414,6 +465,7 @@ export default async (req: Request, _context: Context) => {
       if (k === "kleinunternehmer") v = v === "nein" ? "nein" : "ja";
       if (k === "zahlungsziel") v = String(Math.max(0, Math.min(60, Number(v) || 14)));
       if (k === "gebuehren_ab" && v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return fehler("Bitte ein gültiges Datum für „Gebühren ab“ wählen.");
+      if (k === "besichtigung_ab" && v && !(Number(v) > 0)) return fehler("Bitte für „Besichtigung ab“ einen Betrag in Euro eingeben.");
       if (k === "iban") v = v.replace(/\s+/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim();
       await sql`INSERT INTO einstellungen (schluessel, wert) VALUES (${k}, ${v}) ON CONFLICT (schluessel) DO UPDATE SET wert = EXCLUDED.wert, updated_at = now()`;
     }
@@ -435,17 +487,22 @@ export default async (req: Request, _context: Context) => {
     if (!k.gebuehren_ok_am && body.zugestimmt !== true) return fehler("Der Betrieb muss den Gebühren vorher zugestimmt haben (Bedingungen, Abschnitt 3). Bitte bestätigen.");
     const { von, bis } = monatsGrenzen(monat);
     const ab = `${ein.gebuehren_ab} 00:00 Europe/Berlin`;
-    const vs = await sql`SELECT id, leistung, ort, art, laufzeit, auftragswert, gebuehr, abgemacht_am FROM vermittlungen
+    const vs = await sql`SELECT id, leistung, ort, art, laufzeit, auftragswert, gebuehr, abgemacht_am, dauer_modell FROM vermittlungen
       WHERE gewaehlt_id = ${kid} AND status IN ('abgemacht', 'erledigt') AND rechnung_id IS NULL AND gebuehr > 0
         AND abgemacht_am >= ${von}::timestamptz AND abgemacht_am < ${bis}::timestamptz AND abgemacht_am >= ${ab}::timestamptz
       ORDER BY abgemacht_am, id`;
-    if (!vs.length) return fehler("Für diesen Betrieb gibt es in diesem Monat keine offenen, gebührenpflichtigen Vermittlungen (Gebühren gelten ab " + datumDE(new Date(ein.gebuehren_ab + "T12:00:00Z")) + ").");
-    const positionen = vs.map((v: any) => ({
+    const raten = await offeneRaten(sql, monat, kid);
+    if (!vs.length && !raten.length) return fehler("Für diesen Betrieb gibt es in diesem Monat keine offenen, gebührenpflichtigen Vermittlungen (Gebühren gelten ab " + datumDE(new Date(ein.gebuehren_ab + "T12:00:00Z")) + ").");
+    const positionen = [...vs.map((v: any) => ({
       vermittlung_id: v.id, datum: v.abgemacht_am,
       text: `Vermittlungsgebühr – Auftrag #${v.id} vom ${datumDE(new Date(v.abgemacht_am))}: ${v.leistung || "Auftrag"}${v.ort ? ", " + v.ort : ""}` +
-        (v.art === "langzeit" ? ` (Langzeitauftrag${v.laufzeit ? ", " + v.laufzeit : ""})` : v.auftragswert ? ` (Auftragswert ${euro(Number(v.auftragswert))})` : ""),
+        (v.art === "langzeit" ? ` (Dauerauftrag${v.laufzeit ? ", " + v.laufzeit : ""}${v.dauer_modell === "monatlich" ? ", Rate 1 von höchstens " + DAUER_MONATE : ""})` : v.auftragswert ? ` (5 % von ${euro(Number(v.auftragswert))})` : ""),
       betrag: Number(v.gebuehr),
-    }));
+    })), ...raten.map((x: any) => ({
+      vermittlung_id: x.vermittlung_id, rate: x.nr,
+      text: `Vermittlungsgebühr Dauerauftrag #${x.vermittlung_id}: ${x.leistung || "Auftrag"}${x.ort ? ", " + x.ort : ""} – Rate ${x.nr} von höchstens ${DAUER_MONATE} (${monatsName(x.monat)})`,
+      betrag: x.betrag,
+    }))];
     const summe = Math.round(positionen.reduce((a: number, p: any) => a + p.betrag, 0) * 100) / 100;
     const absender = absenderAus(ein);
     const empfaenger = { firma: k.firma, ansprechpartner: k.ansprechpartner || null, adresse, email: k.email || null };
@@ -461,6 +518,7 @@ export default async (req: Request, _context: Context) => {
         VALUES (${rid}, ${nummer}, 'rechnung', ${heute}::date, ${monatsName(monat)}, ${kid}, ${JSON.stringify(empfaenger)}::jsonb, ${JSON.stringify(absender)}::jsonb,
                 ${JSON.stringify(positionen)}::jsonb, ${summe}, decode(${hex(pdf)}, 'hex'), ${await sha256(pdf)}, 'offen')`,
       sql`UPDATE vermittlungen SET rechnung_id = ${rid}, abgerechnet_am = now(), updated_at = now() WHERE id = ANY(${ids}::int[])`,
+      ...raten.map((x: any) => sql`INSERT INTO dauer_raten (vermittlung_id, nr, monat, betrag, rechnung_id) VALUES (${x.vermittlung_id}, ${x.nr}, ${x.monat}, ${x.betrag}, ${rid})`),
       sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kid}, 'abrechnung', ${"Rechnung " + nummer + " über " + euro(summe) + " erstellt"})`,
     ]);
     return Response.json({ ok: true, id: rid, nummer, summe });
@@ -531,6 +589,7 @@ export default async (req: Request, _context: Context) => {
                 ${JSON.stringify(positionen)}::jsonb, ${summe}, ${o.id}, decode(${hex(pdf)}, 'hex'), ${await sha256(pdf)}, 'storno')`,
       sql`UPDATE rechnungen SET status = 'storniert', storniert_durch = ${sid} WHERE id = ${o.id}`,
       sql`UPDATE vermittlungen SET rechnung_id = NULL, abgerechnet_am = NULL, updated_at = now() WHERE rechnung_id = ${o.id}`,
+      sql`DELETE FROM dauer_raten WHERE rechnung_id = ${o.id}`,
       sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${o.kontakt_id}, 'abrechnung', ${"Rechnung " + o.nummer + " storniert (" + nummer + ")"})`,
     ]);
     return Response.json({ ok: true, id: sid, nummer });
@@ -548,6 +607,61 @@ export default async (req: Request, _context: Context) => {
     if (!ok) return fehler("Mail konnte nicht gesendet werden (Brevo nicht eingerichtet?).", 502);
     await sql`UPDATE vermittlungen SET kunde_mail_am = now() WHERE id = ${id}`;
     return Response.json({ ok: true, an });
+  }
+
+  /* ---------- Besichtigungen ---------- */
+  if (aktion === "besichtigung_setzen") {
+    const st = String(body.status);
+    if (!["bestaetigt", "abgelehnt", "vorschlag"].includes(st)) return fehler("Unbekannter Status.");
+    const e = await Besichtigung.setzen(sql, Number(body.bid) || 0, st as any, clip(body.termin, 120), "Büro", clip(body.nachricht, 500));
+    return e.ok ? Response.json({ ok: true }) : fehler(e.fehler!, 409);
+  }
+
+  /* ---------- Feste Partner: Hausverwaltungen, Makler, Gewerbe ---------- */
+  if (aktion === "kunde_speichern") {
+    const kid = Number(body.kunde) || 0;
+    const w = { name: clip(body.name, 160), art: ARTEN_KUNDE.includes(String(body.art)) ? String(body.art) : "verwaltung", ansprechpartner: clip(body.ansprechpartner, 120),
+      email: clip(body.email, 160), telefon: clip(body.telefon, 60), adresse: clip(body.adresse, 300), notizen: clip(body.notizen, 3000) };
+    if (!w.name) return fehler("Bitte den Namen der Verwaltung oder des Maklers angeben.");
+    const kontakt = Number(body.kontakt_id) > 0 ? Number(body.kontakt_id) : null;
+    const verein = body.vereinbarung === true;
+    if (kid) {
+      await sql`UPDATE kunden SET name = ${w.name}, art = ${w.art}, ansprechpartner = ${w.ansprechpartner}, email = ${w.email}, telefon = ${w.telefon}, adresse = ${w.adresse}, notizen = ${w.notizen},
+          kontakt_id = COALESCE(${kontakt}, kontakt_id), vereinbarung_am = CASE WHEN ${verein} THEN COALESCE(vereinbarung_am, now()) ELSE NULL END, updated_at = now() WHERE id = ${kid}`;
+      return Response.json({ ok: true, id: kid });
+    }
+    const r = await sql`INSERT INTO kunden (name, art, ansprechpartner, email, telefon, adresse, notizen, kontakt_id, vereinbarung_am)
+      VALUES (${w.name}, ${w.art}, ${w.ansprechpartner}, ${w.email}, ${w.telefon}, ${w.adresse}, ${w.notizen}, ${kontakt}, ${verein ? new Date().toISOString() : null}) RETURNING id`;
+    if (kontakt) await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${kontakt}, 'partner', 'Als fester Partner (Auftraggeber) angelegt')`;
+    return Response.json({ ok: true, id: r[0].id });
+  }
+  if (aktion === "kunde_details") {
+    const kid = Number(body.kunde) || 0;
+    const [objekte, meldungen] = await Promise.all([
+      sql`SELECT id, name, adresse, art, einheiten, vor_ort, aktiv, qr_token FROM objekte WHERE kunde_id = ${kid} ORDER BY aktiv DESC, name`,
+      sql`SELECT m.id, m.titel, m.status, m.quelle, m.created_at, m.vermittlung_id, o.name AS objekt FROM meldungen m LEFT JOIN objekte o ON o.id = m.objekt_id WHERE m.kunde_id = ${kid} ORDER BY m.created_at DESC LIMIT 40`,
+    ]);
+    return Response.json({ ok: true, objekte, meldungen });
+  }
+  if (aktion === "zugang_neu" || aktion === "zugang_einladen") {
+    let zid = Number(body.zugang) || 0;
+    if (aktion === "zugang_neu") {
+      const mail = String(body.email || "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) return fehler("Bitte eine gültige E-Mail-Adresse angeben.");
+      const kid = Number(body.kunde) || 0;
+      if (!(await sql`SELECT id FROM kunden WHERE id = ${kid}`).length) return fehler("Partner nicht gefunden.", 404);
+      if ((await sql`SELECT id FROM kunden_zugaenge WHERE lower(email) = ${mail}`).length) return fehler("Für diese E-Mail-Adresse gibt es schon einen Zugang.");
+      zid = (await sql`INSERT INTO kunden_zugaenge (kunde_id, name, email) VALUES (${kid}, ${clip(body.name, 120)}, ${mail}) RETURNING id`)[0].id;
+    }
+    const e = await einladung(sql, zid, body.mail === true);
+    if (!e) return fehler("Zugang nicht gefunden.", 404);
+    return Response.json({ ok: true, link: e.link, gemailt: e.gemailt });
+  }
+  if (aktion === "zugang_aktiv") {
+    const an = body.aktiv !== false;
+    await sql`UPDATE kunden_zugaenge SET aktiv = ${an} WHERE id = ${Number(body.zugang) || 0}`;
+    if (!an) await sql`DELETE FROM kunden_sitzungen WHERE zugang_id = ${Number(body.zugang) || 0}`;
+    return Response.json({ ok: true });
   }
 
   if (aktion === "loeschen") {

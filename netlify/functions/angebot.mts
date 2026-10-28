@@ -1,8 +1,9 @@
 import { neon } from "@neondatabase/serverless";
 import type { Config, Context } from "@netlify/functions";
-import { auftragswert, freischaltung, budgetWert, STUFEN, GRUENDER_RABATT } from "../lib/gebuehr.ts";
+import { freischaltung, SATZ_EINZEL, SATZ_DAUER, DAUER_MONATE, GRUENDER_RABATT, dauerModell } from "../lib/gebuehr.ts";
+import { annehmen, ladeAngebote, angeboteAnonym, ZU, oben } from "../lib/annehmen.ts";
+import * as Besichtigung from "../lib/besichtigung.ts";
 import { gebuehrenStand, stripeAktiv, zahlungStarten, zahlungPruefen, webhookPruefen, freigeben } from "../lib/freischalten.ts";
-import { istGeprueft } from "../lib/nachweis.ts";
 import { empfehlCode, empfehlLink, empfehlStand, EMPFEHL_ANTEIL } from "../lib/empfehlung.ts";
 import { seite, adminMail, esc, mailLayout, knopf, absatz, gruss, tabelle, sendeMail, ohneKontakt, mailAus } from "../lib/post.ts";
 
@@ -12,7 +13,6 @@ import { seite, adminMail, esc, mailLayout, knopf, absatz, gruss, tabelle, sende
 // Kontaktdaten beider Seiten gibt es erst nach der Annahme.
 
 const TOKEN_RE = /^[bk]_[0-9a-f]{32}$/;
-const ZU = ["abgemacht", "erledigt", "verloren"];
 const ART: Record<string, string> = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Regelmäßig / langfristig" };
 
 const antwort = (d: unknown, status = 200) => Response.json(d, { status, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
@@ -38,7 +38,6 @@ const waNummer = (kontakt: string | null) => {
   if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "49" + n.slice(1);
   return n.length >= 8 ? n : "";
 };
-const oben = (x: any): number | null => x.preis_bis != null ? Number(x.preis_bis) : x.preis_betrag != null ? Number(x.preis_betrag) : null;
 
 
 function anfrageZeilen(v: any, anonym: boolean): [string, string | null][] {
@@ -91,7 +90,7 @@ export default async (req: Request, _context: Context) => {
   /* ================= Betrieb ================= */
   if (t.startsWith("b_")) {
     const r = (await sql`SELECT vb.*, k.firma, k.partner AS k_partner, k.ansprechpartner, k.email AS k_email, k.gebuehren_ok_am, k.gruender_nr,
-        v.freischalt_stufe, v.freigeschaltet_am, v.gebuehr AS v_gebuehr, v.id AS nr, v.leistung, v.ort, v.zeitraum, v.budget, v.art, v.laufzeit, v.beschreibung, v.status AS v_status, v.created_at AS v_created,
+        v.gebuehr_hand, v.freigeschaltet_am, v.gebuehr AS v_gebuehr, v.besichtigung AS v_besichtigung, v.objekt_adresse, v.vor_ort, v.kunde_id, v.id AS nr, v.leistung, v.ort, v.zeitraum, v.budget, v.art, v.laufzeit, v.beschreibung, v.status AS v_status, v.created_at AS v_created,
         v.auftraggeber, v.kontakt, v.kunde_token, v.kunde_mail_am, v.wa_ok_am AS v_wa
       FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id JOIN vermittlungen v ON v.id = vb.vermittlung_id
       WHERE vb.token = ${t}`)[0];
@@ -101,7 +100,8 @@ export default async (req: Request, _context: Context) => {
 
     const gewaehlt = r.status === "gewaehlt";
     const frei = gewaehlt && !!r.freigeschaltet_am;
-    const fs = () => freischaltung({ art: r.art || "einmalig", budget: r.budget, betrag: oben(r), stufe: r.freischalt_stufe, gruender: !!r.gruender_nr });
+    const fs = (dm?: string | null) => freischaltung({ art: r.art || "einmalig", budget: r.budget, betrag: oben(r), hand: r.gebuehr_hand == null ? null : Number(r.gebuehr_hand), gruender: !!r.gruender_nr, dauer_modell: dm ?? r.dauer_modell });
+    const ladeBes = async () => (await sql`SELECT id, wunsch, termin, nachricht, status, bestaetigt_am FROM besichtigungen WHERE vb_id = ${r.id}`)[0] || null;
 
     // „Link geöffnet“ erst bei echter Nutzung (Scrollen, Tippen, Klicken nach ein paar Sekunden), nicht beim automatischen Link-Scan von Mail-Postfächern
     if (aktion === "gesehen") {
@@ -111,6 +111,9 @@ export default async (req: Request, _context: Context) => {
 
     if (aktion === "ansehen") {
       const f = fs();
+      const ab = await Besichtigung.grenze(sql);
+      const bes = await ladeBes();
+      const besMoeglich = Besichtigung.moeglich({ besichtigung: r.v_besichtigung, budget: r.budget, art: r.art }, ab);
       const code = r.k_partner && r.k_partner !== "interessiert" ? await empfehlCode(sql, r.kontakt_id) : null;
       const empfehlung = code ? { link: empfehlLink(code), anteil: EMPFEHL_ANTEIL, ...(await empfehlStand(sql, r.kontakt_id)) } : null;
       return antwort({
@@ -121,10 +124,15 @@ export default async (req: Request, _context: Context) => {
           beschreibung: frei ? r.beschreibung : ohneKontakt(r.beschreibung), erstellt: r.v_created, fotos: await fotoZahl(r.nr) },
         angebot: r.preis_betrag ? { betrag: Number(r.preis_betrag), bis: r.preis_bis != null ? Number(r.preis_bis) : null, nachricht: r.angebot } : null,
         kunde: frei ? { name: r.auftraggeber, kontakt: r.kontakt } : null,
-        freischalten: gewaehlt && !frei ? { preis: geb.aktiv ? (r.v_gebuehr !== null ? Number(r.v_gebuehr) : f.preis) : 0, grundpreis: f.grundpreis, rabatt: f.rabatt, online: geb.aktiv && stripeAktiv() } : null,
+        freischalten: gewaehlt && !frei ? { preis: geb.aktiv ? (r.v_gebuehr !== null ? Number(r.v_gebuehr) : f.preis) : 0, grundpreis: f.grundpreis, rabatt: f.rabatt, modell: f.modell, online: geb.aktiv && stripeAktiv() } : null,
+        besichtigung: (besMoeglich || bes) && !gewaehlt ? {
+          moeglich: besMoeglich, grenze: ab,
+          eigene: bes ? { status: bes.status, wunsch: bes.wunsch, termin: bes.termin, termin_text: bes.termin ? Besichtigung.terminText(bes.termin) : null, nachricht: bes.nachricht } : null,
+          adresse: bes && bes.status === "bestaetigt" ? r.objekt_adresse : null, vor_ort: bes && bes.status === "bestaetigt" ? r.vor_ort : null,
+        } : null,
         gruender: r.gruender_nr || null,
         gebuehren: { aktiv: geb.aktiv, ab: geb.ab, zugestimmt: !!r.gebuehren_ok_am },
-        modell: { stufen: STUFEN.map((x) => ({ bis: Number.isFinite(x.bis) ? x.bis : null, preis: x.preis, text: x.text })), rabatt: GRUENDER_RABATT, budgetwert: budgetWert(r.budget, r.art || "einmalig"), stufe: r.freischalt_stufe || null },
+        modell: { satz: SATZ_EINZEL, satz_dauer: SATZ_DAUER, monate: DAUER_MONATE, rabatt: GRUENDER_RABATT, hand: r.gebuehr_hand == null ? null : Number(r.gebuehr_hand), dauer_modell: r.dauer_modell || null },
       });
     }
 
@@ -160,8 +168,9 @@ export default async (req: Request, _context: Context) => {
       const ptext = preisText(betrag, r.art, bis);
       const nachricht = ohneKontakt(clip(body.nachricht, 2000));
       if (body.bedingungen !== true) return fehler("Bitte bestätigen Sie die Bedingungen.");
+      const dm = r.art === "langzeit" ? dauerModell(body.dauer_modell) : null;
       const neu = !r.preis_betrag;
-      await sql`UPDATE vermittlung_betriebe SET status = 'angebot', preis_betrag = ${betrag}, preis_bis = ${bis}, preis = ${ptext},
+      await sql`UPDATE vermittlung_betriebe SET status = 'angebot', preis_betrag = ${betrag}, preis_bis = ${bis}, preis = ${ptext}, dauer_modell = ${dm},
           angebot = ${nachricht || null}, geantwortet_am = COALESCE(geantwortet_am, now()) WHERE id = ${r.id}`;
       await sql`UPDATE vermittlungen SET status = 'angebote', updated_at = now() WHERE id = ${r.nr} AND status IN ('neu', 'angefragt')`;
       if (geb.aktiv) await sql`UPDATE crm_kontakte SET gebuehren_ok_am = COALESCE(gebuehren_ok_am, now()) WHERE id = ${r.kontakt_id}`;
@@ -190,6 +199,26 @@ export default async (req: Request, _context: Context) => {
       return antwort({ ok: true });
     }
 
+    if (aktion === "besichtigung") {
+      if (!offen) return fehler("Für diese Anfrage ist bereits entschieden.", 409);
+      const ab = await Besichtigung.grenze(sql);
+      if (!Besichtigung.moeglich({ besichtigung: r.v_besichtigung, budget: r.budget, art: r.art }, ab)) return fehler("Für diese Anfrage ist keine Besichtigung vorgesehen.", 409);
+      const termine = Besichtigung.wunschTermine(body.termine);
+      if (!termine.length) return fehler("Bitte mindestens einen Wunschtermin angeben.");
+      if (body.bedingungen !== true || body.kundenschutz !== true) return fehler("Bitte bestätigen Sie Gebühr und Kundenschutz.");
+      const alt = await ladeBes();
+      if (alt && alt.status === "bestaetigt") return fehler("Ihre Besichtigung ist bereits bestätigt.", 409);
+      await Besichtigung.anfragen(sql, { id: r.id, nr: r.nr, kontakt_id: r.kontakt_id, firma: r.firma, leistung: r.leistung, ort: r.ort, kunde_id: r.kunde_id }, termine, ohneKontakt(clip(body.nachricht, 500)) || null);
+      if (geb.aktiv) await sql`UPDATE crm_kontakte SET gebuehren_ok_am = COALESCE(gebuehren_ok_am, now()) WHERE id = ${r.kontakt_id}`;
+      return antwort({ ok: true });
+    }
+    if (aktion === "besichtigung_annehmen") {
+      const b = await ladeBes();
+      if (!b || b.status !== "vorschlag") return fehler("Es gibt keinen offenen Terminvorschlag.", 409);
+      const e = await Besichtigung.setzen(sql, b.id, "bestaetigt", b.termin, "Betrieb");
+      return e.ok ? antwort({ ok: true }) : fehler(e.fehler!, 409);
+    }
+
     if (aktion === "absagen") {
       if (!offen) return fehler("Für diese Anfrage ist bereits entschieden.", 409);
       await sql`UPDATE vermittlung_betriebe SET status = 'abgesagt', geantwortet_am = COALESCE(geantwortet_am, now()) WHERE id = ${r.id}`;
@@ -204,15 +233,6 @@ export default async (req: Request, _context: Context) => {
       FROM vermittlungen v LEFT JOIN crm_kontakte k ON k.id = v.gewaehlt_id WHERE v.kunde_token = ${t}`)[0];
   if (!v) return fehler("Diesen Link gibt es nicht (mehr).", 404);
 
-  const ladeAngebote = () => sql`SELECT vb.id, vb.status, vb.preis_betrag, vb.preis_bis, vb.preis, vb.angebot, vb.geantwortet_am, vb.kontakt_id,
-        k.kategorie, k.ort AS k_ort, k.firma, k.ansprechpartner, k.email, k.gruender_nr, k.gewerbe_geprueft_am, k.hwk_status,
-        (SELECT round(avg(x.bewertung)::numeric, 1) FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.bewertung IS NOT NULL) AS sterne,
-        (SELECT count(*)::int FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.bewertung IS NOT NULL) AS bewertungen,
-        (SELECT count(*)::int FROM vermittlungen x WHERE x.gewaehlt_id = k.id AND x.status IN ('abgemacht', 'erledigt')) AS auftraege
-      FROM vermittlung_betriebe vb JOIN crm_kontakte k ON k.id = vb.kontakt_id
-      WHERE vb.vermittlung_id = ${v.id} AND vb.status IN ('angebot', 'gewaehlt', 'nicht_gewaehlt')
-      ORDER BY vb.geantwortet_am NULLS LAST, vb.id`;
-
   if (aktion === "ansehen") {
     // Erster Aufruf über den Link aus der E-Mail bestätigt die Anfrage (E-Mail-Adresse ist damit echt)
     let gerade = false;
@@ -223,73 +243,22 @@ export default async (req: Request, _context: Context) => {
         absatz(`Der Auftraggeber hat Anfrage #${v.id} (${esc(v.leistung || "")}${v.ort ? ", " + esc(v.ort) : ""}) per E-Mail bestätigt. Sie kann jetzt an Betriebe gehen.`) +
         knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")));
     }
-    const liste = await ladeAngebote();
+    const liste = await ladeAngebote(sql, v.id);
     const angefragt = (await sql`SELECT count(*)::int AS n FROM vermittlung_betriebe WHERE vermittlung_id = ${v.id} AND status NOT IN ('abgesagt')`)[0].n;
     const gew = ["abgemacht", "erledigt"].includes(v.status) && v.gewaehlt_id && v.freigeschaltet_am;
     const wartet = ["abgemacht", "erledigt"].includes(v.status) && v.gewaehlt_id && !v.freigeschaltet_am;
     return antwort({
       ok: true, rolle: "kunde", status: v.status, gerade_bestaetigt: gerade, offen: !ZU.includes(v.status), angefragt, wartet: !!wartet,
       anfrage: { nr: v.id, leistung: v.leistung, ort: v.ort, zeitraum: v.zeitraum, budget: v.budget, art: v.art, laufzeit: v.laufzeit, beschreibung: v.beschreibung, erstellt: v.created_at, fotos: await fotoZahl(v.id) },
-      angebote: liste.map((a: any, i: number) => ({
-        id: a.id, label: "Angebot " + String.fromCharCode(65 + i), status: a.status, kategorie: a.kategorie, ort: a.k_ort,
-        betrag: a.preis_betrag === null ? null : Number(a.preis_betrag), bis: a.preis_bis === null ? null : Number(a.preis_bis), preis: a.preis, nachricht: ohneKontakt(a.angebot), am: a.geantwortet_am,
-        sterne: a.sterne === null ? null : Number(a.sterne), bewertungen: a.bewertungen, auftraege: a.auftraege, gruender: !!a.gruender_nr, geprueft: istGeprueft(a),
-        ...(a.status === "gewaehlt" && gew ? { firma: a.firma } : {}),
-      })),
+      angebote: angeboteAnonym(liste, !!gew),
       betrieb: gew ? { firma: v.g_firma, ansprechpartner: v.g_ansprech, telefon: v.g_tel, email: v.g_mail, website: v.g_web } : null,
     });
   }
 
   if (aktion === "annehmen") {
-    const vbid = Number(body.vb) || 0;
-    const liste = await ladeAngebote();
-    const a = liste.find((x: any) => x.id === vbid);
-    if (!a || a.status !== "angebot") return fehler("Dieses Angebot ist nicht mehr verfügbar.", 409);
-    const wert = auftragswert(v.art || "einmalig", oben(a));
-    const gk = (await sql`SELECT firma, ansprechpartner, email, gruender_nr FROM crm_kontakte WHERE id = ${a.kontakt_id}`)[0];
-    const f = freischaltung({ art: v.art || "einmalig", budget: v.budget, betrag: oben(a), stufe: v.freischalt_stufe, gruender: !!gk.gruender_nr });
-    const stand = await gebuehrenStand(sql);
-    const zahlen = stand.aktiv && stripeAktiv();
-    // Atomar: nur wenn noch nicht entschieden (verhindert doppeltes Annehmen)
-    const ok = await sql`UPDATE vermittlungen SET status = 'abgemacht', gewaehlt_id = ${a.kontakt_id}, auftragswert = ${wert}, gebuehr = ${f.preis},
-        angenommen_am = now(), abgemacht_am = COALESCE(abgemacht_am, now()), updated_at = now()
-      WHERE id = ${v.id} AND status NOT IN ('abgemacht', 'erledigt', 'verloren') RETURNING id`;
-    if (!ok.length) return fehler("Für diese Anfrage ist bereits entschieden.", 409);
-    await sql`UPDATE vermittlung_betriebe SET status = CASE WHEN id = ${vbid} THEN 'gewaehlt' WHEN status = 'angebot' THEN 'nicht_gewaehlt' ELSE status END
-      WHERE vermittlung_id = ${v.id}`;
-    await sql`INSERT INTO crm_log (kontakt_id, art, text) VALUES (${a.kontakt_id}, 'vermittlung', ${"Vom Auftraggeber angenommen: Anfrage #" + v.id + (zahlen ? " (wartet auf Freischaltung)" : "")})`;
-    const preis = a.preis || (a.preis_betrag ? euro(Number(a.preis_betrag)) : "");
-    const kmail = mailAus(v.kontakt);
-    const tok = (await sql`SELECT token FROM vermittlung_betriebe WHERE id = ${vbid}`)[0].token;
-    if (zahlen) {
-      // Betrieb: angenommen, Kontaktdaten nach Freischaltung
-      if (gk.email) await sendeMail(gk.email, gk.ansprechpartner || gk.firma, `Ihr Angebot wurde angenommen: ${v.leistung || "Anfrage #" + v.id}`, mailLayout(
-        absatz(`Guten Tag${gk.ansprechpartner ? " " + esc(gk.ansprechpartner) : ""},`) +
-        absatz(`gute Nachricht: Der Auftraggeber hat sich für Ihr Angebot${preis ? " über <b>" + esc(preis) + "</b>" : ""} entschieden.`) +
-        absatz(`Schalten Sie jetzt seine Kontaktdaten frei. Die Freischaltung kostet einmalig <b>${esc(euro(f.preis))}</b>${f.rabatt ? " (Gründungspartner-Preis, statt " + esc(euro(f.grundpreis)) + ")" : ""}. Sie bezahlen online per Karte oder Lastschrift und bekommen die Kontaktdaten sofort.`) +
-        knopf(`${seite()}/angebot?t=${tok}`, "Kontaktdaten freischalten") +
-        absatz(`<span style="font-size:14px;color:#5B6B65">Der Auftraggeber wartet auf Ihre Rückmeldung. Bitte schalten Sie innerhalb von 48 Stunden frei, sonst kann er ein anderes Angebot wählen.</span>`) + gruss));
-      // Auftraggeber: Bestätigung, Kontaktdaten folgen
-      if (kmail) await sendeMail(kmail, null, `Angebot angenommen: ${v.leistung || "Ihre Anfrage"}`, mailLayout(
-        absatz("Guten Tag,") +
-        absatz(`Sie haben ein Angebot${preis ? " über " + esc(preis) : ""} angenommen. Der Betrieb wurde benachrichtigt und bestätigt in Kürze. Danach bekommen Sie seine Kontaktdaten per E-Mail, und er meldet sich bei Ihnen.`) +
-        knopf(`${seite()}/angebot?t=${v.kunde_token}`, "Zur Übersicht") + gruss));
-    } else {
-      await freigeben(sql, v.id, {});
-    }
-    // Nicht gewählte Betriebe
-    for (const x of liste.filter((x: any) => x.id !== vbid && x.status === "angebot" && x.email))
-      await sendeMail(x.email, x.ansprechpartner || x.firma, `Anfrage „${v.leistung || "#" + v.id}“: Entscheidung gefallen`, mailLayout(
-        absatz(`Guten Tag${x.ansprechpartner ? " " + esc(x.ansprechpartner) : ""},`) +
-        absatz(`danke für Ihr Angebot zur Anfrage „${esc(v.leistung || "")}“${v.ort ? " in " + esc(v.ort) : ""}. Diesmal hat sich der Auftraggeber für ein anderes Angebot entschieden. Bei der nächsten passenden Anfrage melden wir uns wieder.`) + gruss));
-    // Info an Samuel
-    await sendeMail(adminMail(), "Samuel", `Angenommen #${v.id}: ${gk.firma}${preis ? " – " + preis : ""}`, mailLayout(
-      absatz(`Der Auftraggeber hat das Angebot von <b>${esc(gk.firma)}</b> selbst angenommen.${zahlen ? " Kontaktdaten gehen raus, sobald der Betrieb die Freischaltung bezahlt hat." : " Die Kontaktdaten sind an beide gegangen."}`) +
-      tabelle([["Anfrage", `#${v.id} ${v.leistung || ""}`], ["Auftraggeber", v.auftraggeber], ["Preis", preis], ["Budget", v.budget], ["Freischaltung", euro(f.preis) + (f.rabatt ? " (Gründungspartner)" : "") + (stand.aktiv ? "" : " – Startphase: gratis")]]) +
-      knopf(`${seite()}/vermittlung`, "In der Vermittlung öffnen")));
-    if (zahlen) return antwort({ ok: true, wartet: true });
-    const g = (await sql`SELECT firma, ansprechpartner, telefon, email, website FROM crm_kontakte WHERE id = ${a.kontakt_id}`)[0];
-    return antwort({ ok: true, betrieb: { firma: g.firma, ansprechpartner: g.ansprechpartner, telefon: g.telefon, email: g.email, website: g.website } });
+    const e = await annehmen(sql, v, Number(body.vb) || 0);
+    if (!e.ok) return fehler(e.fehler!, e.status || 409);
+    return antwort(e.wartet ? { ok: true, wartet: true } : { ok: true, betrieb: e.betrieb });
   }
   return fehler("Unbekannte Aktion.");
 };

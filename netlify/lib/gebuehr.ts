@@ -1,15 +1,19 @@
-// Freischaltgebühr für Betriebe (gilt erst nach Ankündigung und Zustimmung, siehe Bedingungen Abschnitt 3):
-// Der Betrieb zahlt einmal, wenn der Auftraggeber sein Angebot angenommen hat, und bekommt dann die Kontaktdaten.
-// Die Stufe richtet sich nach dem Budget des Auftraggebers (sonst nach dem Angebotspreis), bei regelmäßigen
-// Aufträgen nach dem Wert des ersten Jahres. Gründungspartner (die ersten 30 festen Partner) zahlen dauerhaft die Hälfte.
-export const STUFEN = [
-  { nr: 1, bis: 500, preis: 9, text: "bis 500 €" },
-  { nr: 2, bis: 2000, preis: 29, text: "bis 2.000 €" },
-  { nr: 3, bis: 10000, preis: 69, text: "bis 10.000 €" },
-  { nr: 4, bis: Infinity, preis: 129, text: "über 10.000 € oder große Daueraufträge" },
-];
+// Vermittlungsgebühr für Betriebe (gilt erst ab dem Datum „Gebühren ab“ und nach Zustimmung, siehe Bedingungen Abschnitt 3):
+// Der Betrieb zahlt nur, wenn der Auftraggeber sein Angebot angenommen hat.
+//   Einzelaufträge und Projekte: 5 % vom angenommenen Angebotspreis (bei einer Spanne der obere Wert), ohne Obergrenze.
+//   Regelmäßige Aufträge: wahlweise einmal ein Monatsumsatz oder 8 % vom Monatspreis, monatlich für höchstens 24 Monate.
+// Gründungspartner (die ersten 30 festen Partner) zahlen dauerhaft die Hälfte.
+export const SATZ_EINZEL = 0.05;
+export const SATZ_DAUER = 0.08;
+export const DAUER_MONATE = 24;
 export const GRUENDER_RABATT = 0.5;
 export const GRUENDER_PLAETZE = 30;
+export const DAUER_MODELLE = ["einmal", "monatlich"] as const;
+export const MODELL_TEXT = {
+  einzel: "5 % vom angenommenen Angebotspreis, ohne Obergrenze",
+  einmal: "einmalig ein Monatsumsatz (Ihr Monatspreis)",
+  monatlich: "8 % vom Monatspreis, monatlich für höchstens 24 Monate",
+};
 
 const cent = (n: number) => Math.round(n * 100) / 100;
 
@@ -31,23 +35,39 @@ export function auftragswert(art: string, betrag: number | null): number | null 
   return art === "langzeit" ? cent(betrag * 12) : betrag;
 }
 
-export function stufeFuer(wert: number | null): number {
-  if (!wert) return 2;
-  return (STUFEN.find((s) => wert <= s.bis) || STUFEN[3]).nr;
+export const dauerModell = (v: unknown): "einmal" | "monatlich" => (v === "monatlich" ? "monatlich" : "einmal");
+
+/* Gebühr bei Annahme.
+   betrag = Angebotspreis (oberer Wert, bei regelmäßigen Aufträgen pro Monat)
+   wert   = Auftragswert (bei regelmäßigen Aufträgen erstes Vertragsjahr), falls kein Angebotspreis vorliegt
+   hand   = von Samuel im Büro festgelegte Gebühr (hat Vorrang)
+   Rückgabe: preis = was bei der Freischaltung fällig ist (bei „monatlich“ die erste Monatsrate) */
+export function freischaltung(o: { art: string; budget?: string | null; betrag?: number | null; wert?: number | null; hand?: number | null; gruender?: boolean; dauer_modell?: string | null }) {
+  const lang = o.art === "langzeit";
+  const modell = lang ? dauerModell(o.dauer_modell) : null;
+  const ausBudget = budgetWert(o.budget, o.art);
+  const wert = o.betrag != null ? (lang ? cent(o.betrag * 12) : o.betrag) : o.wert ?? ausBudget;
+  const quelle = o.hand != null ? "hand" : o.betrag != null ? "angebot" : o.wert != null ? "wert" : ausBudget != null ? "budget" : "offen";
+  const monatspreis = lang && wert != null ? cent(wert / 12) : null;
+  let grundpreis = 0;
+  if (lang) grundpreis = monatspreis == null ? 0 : modell === "monatlich" ? cent(monatspreis * SATZ_DAUER) : monatspreis;
+  else grundpreis = wert == null ? 0 : cent(wert * SATZ_EINZEL);
+  const rabatt = !!o.gruender;
+  let preis = rabatt ? cent(grundpreis * GRUENDER_RABATT) : grundpreis;
+  if (o.hand != null && Number.isFinite(Number(o.hand))) preis = cent(Math.max(0, Number(o.hand)));
+  return {
+    preis, grundpreis, rabatt, wert, quelle, monatspreis, modell,
+    satz: lang ? (modell === "monatlich" ? SATZ_DAUER : null) : SATZ_EINZEL,
+    raten: lang && modell === "monatlich" ? DAUER_MONATE : 1,
+  };
 }
 
-// Freischaltgebühr: Stufe aus (1) Hand-Einstellung im Büro, (2) Budget des Kunden, (3) Angebotspreis
-export function freischaltung(o: { art: string; budget?: string | null; betrag?: number | null; wert?: number | null; stufe?: number | null; gruender?: boolean }) {
-  const ausBudget = budgetWert(o.budget, o.art);
-  const ausAngebot = o.wert ?? auftragswert(o.art, o.betrag ?? null);
-  const wert = ausBudget ?? ausAngebot;
-  const nr = o.stufe && o.stufe >= 1 && o.stufe <= 4 ? o.stufe : stufeFuer(wert);
-  const s = STUFEN[nr - 1];
-  const preis = o.gruender ? cent(s.preis * GRUENDER_RABATT) : s.preis;
-  return { stufe: nr, grundpreis: s.preis, preis, rabatt: !!o.gruender, wert, quelle: o.stufe ? "hand" : ausBudget != null ? "budget" : ausAngebot != null ? "angebot" : "standard" };
+// Monatsrate bei „8 % monatlich“ (gleich hoch wie die erste Rate)
+export function monatsrate(v: { gebuehr?: number | string | null }) {
+  return v.gebuehr == null ? 0 : cent(Number(v.gebuehr));
 }
 
 // Kompatibel zu älterem Code: Gebühr ohne Rabatt nach Auftragswert
 export function gebuehr(art: string, wert: number | null): number | null {
-  return STUFEN[stufeFuer(wert) - 1].preis;
+  return freischaltung({ art, wert }).grundpreis;
 }

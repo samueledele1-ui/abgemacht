@@ -88,8 +88,9 @@ export async function freigeben(sql: any, vid: number, wie: { bezahlt?: number |
   const stand = await gebuehrenStand(sql);
   const preis = g.preis || (g.preis_betrag ? euro(Number(g.preis_betrag)) : "");
   const zeilen: [string, string | null][] = [["Leistung", v.leistung], ["Ort", v.ort], ["Wann", v.zeitraum], ["Art", ART[v.art] + (v.laufzeit ? ", " + v.laufzeit : "")], ["Budget", v.budget], ["Details", v.beschreibung]];
-  const kostenText = wie.bezahlt ? `Die Freischaltgebühr von ${esc(euro(wie.bezahlt))} ist bezahlt. Die Rechnung kommt separat per E-Mail.`
-    : stand.aktiv && !wie.hand && v.gebuehr ? `Die Freischaltgebühr von ${esc(euro(Number(v.gebuehr)))} kommt mit der Monatsrechnung.`
+  const rate = v.dauer_modell === "monatlich" ? " (erste Monatsrate, die weiteren kommen monatlich mit der Rechnung)" : "";
+  const kostenText = wie.bezahlt ? `Die Vermittlungsgebühr von ${esc(euro(wie.bezahlt))}${rate} ist bezahlt. Die Rechnung kommt separat per E-Mail.`
+    : stand.aktiv && !wie.hand && v.gebuehr ? `Die Vermittlungsgebühr von ${esc(euro(Number(v.gebuehr)))}${rate} kommt mit der Monatsrechnung.`
     : stand.aktiv ? "" : "In der Startphase ist die Vermittlung für Sie kostenlos.";
   if (g.email) await sendeMail(g.email, g.ansprechpartner || g.firma, `Kontaktdaten: ${v.leistung || "Anfrage #" + vid}`, mailLayout(
     absatz(`Guten Tag${g.ansprechpartner ? " " + esc(g.ansprechpartner) : ""},`) +
