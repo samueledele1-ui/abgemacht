@@ -9,10 +9,10 @@
   var pfad = location.pathname.replace(/\.html$/, "").replace(/\/$/, "");
   var css = document.createElement("style");
   css.textContent =
-    ".buero-nav{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;display:flex;gap:4px;padding:5px;border-radius:999px;background:#0D4F3E;box-shadow:0 14px 34px -12px rgba(0,0,0,.55)}" +
+    ".buero-nav{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;display:flex;gap:4px;padding:5px;border-radius:999px;background:#138A6B;box-shadow:0 14px 34px -12px rgba(0,0,0,.55)}" +
     ".buero-nav a{display:flex;align-items:center;gap:7px;padding:10px 16px;border-radius:999px;color:#CFEFE3;text-decoration:none;font-weight:700;font-size:14px;white-space:nowrap}" +
     ".buero-nav a svg{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}" +
-    ".buero-nav a[aria-current=page]{background:#fff;color:#0D4F3E}" +
+    ".buero-nav a[aria-current=page]{background:#fff;color:#138A6B}" +
     ".buero-nav a:not([aria-current]):hover{background:rgba(255,255,255,.1);color:#fff}" +
     ".buero-nav a:focus-visible{outline:3px solid #F2B33D;outline-offset:2px}" +
     "[hidden]{display:none!important}" +

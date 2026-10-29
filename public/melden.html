@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Schaden melden – Abgemacht</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#138A6B">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/portal.css">
+<style>
+/* Layout: eine Spalte wie ein Handy-Formular. Grüner Kopf mit Hausname, darunter Kacheln für die Art des Schadens, Freitext, Foto, Dringend-Schalter, Kontakt. */
+body{background:var(--flaeche2)}
+.blatt{max-width:520px;margin:0 auto;min-height:100vh;background:var(--flaeche);box-shadow:0 0 0 1px var(--line)}
+.oben{background:#138A6B;color:#fff;padding:calc(22px + env(safe-area-inset-top,0px)) 20px 20px}
+.oben small{display:block;font-size:13px;font-weight:700;color:#FFE3A3}
+.oben b{display:block;font:800 23px/1.15 var(--f-disp);margin-top:4px}
+.oben span{display:block;color:#DDF3EA;font-size:14px;margin-top:4px}
+.inhalt{padding:18px 18px calc(32px + env(safe-area-inset-bottom,0px))}
+.gruss{font:800 21px/1.2 var(--f-disp);margin:0 0 12px}
+.t{display:block;font-weight:700;font-size:15px;margin:18px 2px 8px}
+.inhalt input[type=text],.inhalt input[type=tel],.inhalt textarea{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--flaeche2);font-size:16px}
+.inhalt textarea{min-height:96px;resize:vertical}
+.inhalt input:focus,.inhalt textarea:focus{outline:none;border-color:var(--gruen);background:var(--flaeche)}
+.btn.p{width:100%;margin-top:18px;min-height:54px;font-size:16.5px}
+.hinweis{font-size:13px;color:var(--muted);margin-top:14px}
+.hinweis a{color:var(--gruen-d)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-heiz" viewBox="0 0 24 24"><path d="M12 3c0 4-5 6-5 11a5 5 0 0 0 10 0c0-3-2-5-2-7-1.5 1.5-2 2.5-2 4"/></symbol>
+  <symbol id="i-strom" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.3V16h6v-.2c0-.9.4-1.7 1-2.3A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-tuer" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M15 8l2 2"/></symbol>
+  <symbol id="i-rein" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></symbol>
+  <symbol id="i-aussen" viewBox="0 0 24 24"><path d="M12 2v20M4.9 7l14.2 10M4.9 17 19.1 7M9 4l3 3 3-3M9 20l3-3 3 3"/></symbol>
+  <symbol id="i-sonst" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></symbol>
+  <symbol id="i-kamera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+</svg>
+<div class="blatt">
+  <div class="oben"><small>Schaden melden</small><b id="objekt">Wird geladen …</b><span id="verwaltung"></span></div>
+  <div class="inhalt" id="inhalt">
+    <form id="f" novalidate hidden>
+      <p class="gruss">Hallo! Was ist kaputt?</p>
+      <div class="wahlk" role="radiogroup" aria-label="Was ist kaputt">
+        <input type="radio" name="art" id="k1" value="Heizung / Wasser"><label for="k1"><span class="ic"><svg class="i"><use href="#i-heiz"/></svg></span>Heizung, Wasser</label>
+        <input type="radio" name="art" id="k2" value="Strom / Licht"><label for="k2"><span class="ic y"><svg class="i"><use href="#i-strom"/></svg></span>Strom, Licht</label>
+        <input type="radio" name="art" id="k3" value="Tür / Schloss / Fenster"><label for="k3"><span class="ic y"><svg class="i"><use href="#i-tuer"/></svg></span>Tür, Fenster</label>
+        <input type="radio" name="art" id="k4" value="Sauberkeit"><label for="k4"><span class="ic"><svg class="i"><use href="#i-rein"/></svg></span>Sauberkeit</label>
+        <input type="radio" name="art" id="k5" value="Außen / Winterdienst"><label for="k5"><span class="ic"><svg class="i"><use href="#i-aussen"/></svg></span>Außen, Schnee</label>
+        <input type="radio" name="art" id="k6" value="Etwas anderes"><label for="k6"><span class="ic y"><svg class="i"><use href="#i-sonst"/></svg></span>Anderes</label>
+      </div>
+      <span class="t">Wo genau?</span>
+      <div class="chips">
+        <input type="radio" name="wo" id="w1" value="In der Wohnung" checked><label for="w1">In meiner Wohnung</label>
+        <input type="radio" name="wo" id="w2" value="Treppenhaus"><label for="w2">Treppenhaus</label>
+        <input type="radio" name="wo" id="w3" value="Keller"><label for="w3">Keller</label>
+        <input type="radio" name="wo" id="w4" value="Draußen"><label for="w4">Draußen</label>
+      </div>
+      <label class="t" for="text">Beschreiben Sie es kurz *</label>
+      <textarea id="text" maxlength="3000" placeholder="z. B. Heizkörper im Bad bleibt seit gestern kalt."></textarea>
+      <span class="t">Fotos <span class="kleiner">(optional, bis zu 3)</span></span>
+      <div class="mfotos" id="fotos"><label class="fotoplus" for="foto"><svg class="i"><use href="#i-kamera"/></svg><span>Foto hinzufügen</span></label></div>
+      <input type="file" id="foto" accept="image/*" hidden>
+      <label class="schalter" for="dringend"><span>Es ist dringend<small>z. B. Wasser läuft aus, Heizung ganz aus</small></span><input type="checkbox" id="dringend"></label>
+      <div class="zw" style="margin-top:4px">
+        <div><label class="t" for="name">Ihr Name *</label><input type="text" id="name" maxlength="120" autocomplete="name"></div>
+        <div><label class="t" for="einheit">Ihre Wohnung</label><input type="text" id="einheit" maxlength="60" placeholder="z. B. 2. OG links"></div>
+      </div>
+      <label class="t" for="kontakt">Telefon oder E-Mail *</label>
+      <input type="text" id="kontakt" maxlength="160" autocomplete="tel" placeholder="damit sich die Verwaltung melden kann">
+      <div class="hp" aria-hidden="true" style="position:absolute;left:-9999px"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
+      <label class="haken2"><input type="checkbox" id="ok"> <span>Meine Angaben gehen an meine Hausverwaltung, damit sie sich um den Schaden kümmern kann. Holt sie Angebote ein, sehen Handwerker zunächst nur die Beschreibung und die Fotos. <a href="/datenschutz#portal" target="_blank" rel="noopener">Datenschutz</a></span></label>
+      <div class="fehler" id="fehler" role="status"></div>
+      <button class="btn p" type="submit" id="senden">Meldung abschicken</button>
+      <p class="hinweis">Bei Gefahr (Gasgeruch, Feuer, Wasserrohrbruch) bitte zuerst den Notruf 112 oder den Notdienst Ihrer Verwaltung anrufen.</p>
+    </form>
+  </div>
+</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var o = new URLSearchParams(location.search).get('o') || '';
+  var fotos = [];
+  function fehlerSeite(t) { $('objekt').textContent = 'Link nicht gefunden'; $('inhalt').innerHTML = '<p style="margin:0">' + t.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }) + '</p>'; }
+  if (!/^o_[0-9a-f]{32}$/.test(o)) return fehlerSeite('Dieser QR-Code ist unvollständig. Bitte scannen Sie ihn noch einmal oder melden Sie sich direkt bei Ihrer Verwaltung.');
+  fetch('/api/melden?o=' + encodeURIComponent(o)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.ok) return fehlerSeite(d.error || 'Diesen QR-Code gibt es nicht (mehr).');
+    $('objekt').textContent = (d.adresse && d.adresse.indexOf(d.objekt) === 0 ? d.adresse : d.objekt + (d.adresse && d.adresse !== d.objekt ? ', ' + d.adresse : ''));
+    $('verwaltung').textContent = d.verwaltung;
+    document.title = 'Schaden melden: ' + d.objekt;
+    $('f').hidden = false;
+  }).catch(function () { fehlerSeite('Keine Verbindung. Bitte versuchen Sie es gleich noch einmal.'); });
+
+  function fotoZeigen() {
+    var box = $('fotos'); box.querySelectorAll('img,button').forEach(function (x) { x.remove(); });
+    fotos.forEach(function (src, i) {
+      var img = document.createElement('img'); img.src = src; img.alt = 'Foto ' + (i + 1); img.title = 'Antippen zum Entfernen';
+      img.onclick = function () { fotos.splice(i, 1); fotoZeigen(); };
+      box.insertBefore(img, box.querySelector('.fotoplus'));
+    });
+    box.classList.toggle('mit', fotos.length > 0);
+    box.querySelector('.fotoplus').hidden = fotos.length >= 3;
+  }
+  $('foto').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    var url = URL.createObjectURL(f), img = new Image();
+    img.onload = function () {
+      var g = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * g); c.height = Math.round(img.height * g);
+      var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); fotos.push(c.toDataURL('image/jpeg', 0.78)); fotoZeigen();
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); $('fehler').textContent = 'Das Bild konnte nicht gelesen werden. Bitte ein anderes Foto wählen.'; };
+    img.src = url;
+  });
+  $('f').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var art = document.querySelector('input[name=art]:checked'), wo = document.querySelector('input[name=wo]:checked'), fe = $('fehler');
+    var text = $('text').value.trim();
+    if (text.length < 5) { fe.textContent = 'Bitte beschreiben Sie kurz, was kaputt ist.'; $('text').focus(); return; }
+    if (!$('name').value.trim()) { fe.textContent = 'Bitte geben Sie Ihren Namen an.'; $('name').focus(); return; }
+    if (!$('kontakt').value.trim()) { fe.textContent = 'Bitte geben Sie eine Telefonnummer oder E-Mail an, damit sich die Verwaltung melden kann.'; $('kontakt').focus(); return; }
+    if (!$('ok').checked) { fe.textContent = 'Bitte bestätigen Sie den Hinweis zum Datenschutz.'; return; }
+    fe.textContent = ''; var btn = $('senden'); btn.disabled = true; btn.textContent = 'Wird gesendet …';
+    var titel = (art ? art.value : 'Meldung') + (wo ? ' · ' + wo.value : '');
+    fetch('/api/melden', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ o: o, titel: titel, text: text, name: $('name').value, einheit: $('einheit').value, kontakt: $('kontakt').value, dringend: $('dringend').checked, fotos: fotos, einwilligung: true, website: $('website').value }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) throw new Error(d.error || 'Fehler');
+        $('inhalt').innerHTML = '<div class="fertig"><div class="haken"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 12.5l4.2 4.2L18.5 7.8" fill="none" stroke="#0E6E55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h3>Danke, ist angekommen!</h3><p>Ihre Hausverwaltung hat die Meldung bekommen und meldet sich bei Ihnen.</p></div>';
+      }).catch(function (err) { fe.textContent = err.message && err.message !== 'Failed to fetch' && err.message !== 'Fehler' ? err.message : 'Das hat nicht geklappt. Bitte versuchen Sie es gleich noch einmal.'; btn.disabled = false; btn.textContent = 'Meldung abschicken'; });
+  });
+})();
+</script>
+</body>
+</html>

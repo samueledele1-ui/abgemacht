@@ -114,25 +114,71 @@
   }
 
   /* ================= Betrieb ================= */
-  // Freischaltgebühr: Stufe nach Budget des Kunden (sonst nach Ihrem Preis), Gründungspartner zahlen die Hälfte
-  function gebuehrBerechnen(m, art, betrag, gruender) {
-    var wert = m.budgetwert != null ? m.budgetwert : (betrag ? (art === 'langzeit' ? betrag * 12 : betrag) : null);
-    var st = m.stufe ? m.stufen[m.stufe - 1] : (wert ? m.stufen.find(function (x) { return x.bis == null || wert <= x.bis; }) : m.stufen[1]);
-    return { preis: Math.round(st.preis * (gruender ? m.rabatt : 1) * 100) / 100, grund: st.preis, text: st.text };
+  // Gebühr (nur bei Annahme): Einzelaufträge 5 % vom angenommenen Preis (bei Spanne der obere Wert); regelmäßig: einmal ein Monatsumsatz oder 8 % monatlich für höchstens 24 Monate. Gründungspartner die Hälfte.
+  function gebuehrBerechnen(m, art, betrag, gruender, dm) {
+    var r = function (x) { return Math.round(x * 100) / 100; }, grund = 0;
+    if (m.hand != null) grund = m.hand;
+    else if (!betrag) grund = null;
+    else if (art === 'langzeit') grund = dm === 'monatlich' ? r(betrag * m.satz_dauer) : betrag;
+    else grund = r(betrag * m.satz);
+    if (grund == null) return null;
+    return { preis: m.hand != null ? grund : r(grund * (gruender ? m.rabatt : 1)), grund: grund };
   }
-  function stufenText(m) { return m.stufen.map(function (x) { return x.text + ': ' + euro(x.preis); }).join(' · '); }
+  var pz = function (x) { return String(Math.round(x * 1000) / 10).replace('.', ',') + ' %'; };
+  function terminText(t) { var d = new Date(t + ':00'); return isNaN(d) ? t : new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d) + ' Uhr'; }
+  /* Besichtigung bei größeren Aufträgen: Wunschtermine nennen, Gebühr und Kundenschutz bestätigen; Adresse erst nach Bestätigung */
+  function besichtigung(d) {
+    var b = d.besichtigung, e = b.eigene, box = $('besBox'), g = d.gebuehren;
+    function formular(alt) {
+      var morgen = new Date(Date.now() + 86400000), min = new Date(morgen.getTime() - morgen.getTimezoneOffset() * 60000).toISOString().slice(0, 10) + 'T07:00';
+      var w = (alt && alt.wunsch) || [];
+      box.innerHTML = '<div class="box" style="border:2px solid #F2B33D;background:#FFFBF0"><h2>Objekt vorher ansehen?</h2>' +
+        '<p style="margin:0 0 12px">Bei diesem Auftrag ist eine Besichtigung möglich. Nennen Sie bis zu drei Wunschtermine. Ist ein Termin bestätigt, bekommen Sie die Adresse und den Ansprechpartner vor Ort. Name und Kontaktdaten des Auftraggebers gibt es weiterhin erst, wenn er Ihr Angebot annimmt.</p>' +
+        [0, 1, 2].map(function (i) { return '<label for="bt' + i + '"' + (i ? '' : ' style="margin-top:0"') + '>Wunschtermin ' + (i + 1) + (i ? ' <span class="klein">(optional)</span>' : ' *') + '</label><input type="datetime-local" id="bt' + i + '" min="' + min + '" step="900" value="' + esc(w[i] || '') + '">'; }).join('') +
+        '<label for="bn" style="margin-top:14px">Nachricht <span class="klein">(optional)</span></label><textarea id="bn" maxlength="500" style="min-height:70px" placeholder="z. B. Ich brauche etwa 30 Minuten, gern auch kurzfristig.">' + esc((alt && alt.nachricht) || '') + '</textarea>' +
+        '<label class="check"><input type="checkbox" id="bb"> <span>Ich akzeptiere die <a href="/bedingungen#besichtigung" target="_blank">Bedingungen</a>' + (g.aktiv ? ' einschließlich der Gebühr, falls ich den Auftrag bekomme' : '') + '.</span></label>' +
+        '<label class="check"><input type="checkbox" id="bk"> <span>Kundenschutz: Bekomme ich von diesem Auftraggeber innerhalb von 12 Monaten nach der Besichtigung einen Auftrag, läuft er über Abgemacht.</span></label>' +
+        '<button class="btn" type="button" id="bSend" style="width:100%;margin-top:16px;background:#F2B33D;color:#0E6E55">Besichtigung anfragen</button><div class="msg" id="bMsg" role="status"></div>' +
+        (alt ? '<p style="margin:12px 0 0;text-align:center"><button class="linkknopf" type="button" id="bZur">Abbrechen</button></p>' : '<p class="klein" style="margin:10px 0 0">Kein Termin nötig? Dann geben Sie Ihr Angebot einfach unten ab.</p>') + '</div>';
+      if (alt) $('bZur').onclick = function () { besichtigung(d); };
+      $('bSend').onclick = async function () {
+        var msg = $('bMsg'), t = [0, 1, 2].map(function (i) { return $('bt' + i).value; }).filter(Boolean);
+        if (!t.length) { msg.textContent = 'Bitte mindestens einen Wunschtermin angeben.'; msg.className = 'msg err'; return; }
+        if (!$('bb').checked || !$('bk').checked) { msg.textContent = 'Bitte bestätigen Sie Bedingungen und Kundenschutz.'; msg.className = 'msg err'; return; }
+        this.disabled = true;
+        try { await api({ aktion: 'besichtigung', termine: t, nachricht: $('bn').value, bedingungen: true, kundenschutz: true }); laden(); }
+        catch (err) { msg.textContent = err.message; msg.className = 'msg err'; this.disabled = false; }
+      };
+    }
+    if (!e) { if (b.moeglich) formular(null); return; }
+    if (e.status === 'bestaetigt') {
+      box.innerHTML = '<div class="box abgemacht"><span class="stempel-gross">Bestätigt</span><h2>Besichtigung: ' + esc(e.termin_text || '') + '</h2>' +
+        kontaktDaten([['Adresse', b.adresse], ['Vor Ort', b.vor_ort]]) + '<p class="klein" style="color:#E3F5EC;margin:12px 0 0">Bitte geben Sie danach Ihr Angebot unten ab. Es gilt der Kundenschutz aus den Bedingungen.</p></div>';
+    } else if (e.status === 'vorschlag') {
+      box.innerHTML = '<div class="box" style="border:2px solid #F2B33D;background:#FFFBF0"><h2>Neuer Terminvorschlag</h2><p style="margin:0 0 12px">Für die Besichtigung wurde vorgeschlagen: <b>' + esc(e.termin_text || e.termin || '') + '</b>' + (e.nachricht ? '<br><span class="klein">' + esc(e.nachricht) + '</span>' : '') + '</p>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" type="button" id="bJa">Termin passt</button><button class="btn ghost" type="button" id="bAnders">Andere Termine nennen</button></div><div class="msg" id="bMsg" role="status"></div></div>';
+      $('bJa').onclick = async function () { this.disabled = true; try { await api({ aktion: 'besichtigung_annehmen' }); laden(); } catch (err) { $('bMsg').textContent = err.message; $('bMsg').className = 'msg err'; this.disabled = false; } };
+      $('bAnders').onclick = function () { formular(e); };
+    } else if (e.status === 'abgelehnt') {
+      box.innerHTML = '<div class="box"><h2>Besichtigung nicht möglich</h2><p style="margin:0">' + (e.nachricht ? esc(e.nachricht) + ' ' : '') + 'Sie können Ihr Angebot trotzdem nach den Angaben und Fotos abgeben, gern auch als Preisspanne.</p></div>';
+    } else {
+      box.innerHTML = '<div class="box" style="border:2px solid #F2B33D;background:#FFFBF0"><span class="marke gold">Besichtigung angefragt</span><h2 style="margin-top:10px">Wir stimmen den Termin ab</h2><p style="margin:0 0 10px">Ihre Wunschtermine: ' + (e.wunsch || []).map(function (t) { return '<b>' + esc(terminText(t)) + '</b>'; }).join(', ') + '. Sobald ein Termin bestätigt ist, bekommen Sie eine E-Mail mit Adresse und Ansprechpartner vor Ort.</p><button class="linkknopf" type="button" id="bAnders">Termine ändern</button></div>';
+      $('bAnders').onclick = function () { formular(e); };
+    }
+  }
+
   function betrieb(d) {
     var a = d.anfrage, lang = a.art === 'langzeit';
     var kopf = '<h1>' + esc(a.leistung || 'Anfrage') + '</h1><p class="unterzeile">Anfrage #' + a.nr + ' vom ' + datum(a.erstellt) + (a.ort ? ' · ' + esc(a.ort) : '') + ' · für ' + esc(d.firma) + '</p>';
     var details = '<div class="box"><h2>Das wird gesucht</h2>' + anfrageDaten(a) + '</div>';
-    var gr = d.gruender ? '<p class="marke" style="margin:-12px 0 18px">★ Gründungspartner Nr. ' + d.gruender + ' · dauerhaft 50 % auf Freischaltungen</p>' : '';
+    var gr = d.gruender ? '<p class="marke" style="margin:-12px 0 18px">★ Gründungspartner Nr. ' + d.gruender + ' · dauerhaft die Hälfte jeder Gebühr</p>' : '';
     kopf += gr;
     if (d.status === 'gewaehlt' && d.freischalten) {
       var fz = d.freischalten, q = new URLSearchParams(location.search);
       main.innerHTML = kopf + '<div class="box abgemacht"><span class="stempel-gross">Angenommen</span><h2>Der Auftraggeber hat sich für Sie entschieden</h2>' +
-        (fz.online ? '<p>Schalten Sie jetzt seine Kontaktdaten frei. Einmalig <b>' + euro(fz.preis) + '</b>' + (fz.rabatt ? ' <span style="opacity:.8">(Gründungspartner-Preis, statt ' + euro(fz.grundpreis) + ')</span>' : '') + '. Sie zahlen online per Karte oder Lastschrift, die Rechnung kommt per E-Mail.</p>'
+        (fz.online ? '<p>Schalten Sie jetzt seine Kontaktdaten frei. ' + (fz.modell === 'monatlich' ? 'Erste Monatsrate' : 'Einmalig') + ' <b>' + euro(fz.preis) + '</b>' + (fz.rabatt ? ' <span style="opacity:.8">(Gründungspartner-Preis, statt ' + euro(fz.grundpreis) + ')</span>' : '') + '. Sie zahlen online per Karte oder Lastschrift, die Rechnung kommt per E-Mail.</p>'
           : '<p>Bestätigen Sie kurz, dann bekommen Sie und der Auftraggeber gegenseitig die Kontaktdaten.' + (d.gebuehren.aktiv ? '' : ' In der Startphase ist das kostenlos.') + '</p>') +
-        '<button class="btn" type="button" id="frei" style="background:#F2B33D;color:#0A3F31">' + (fz.online ? 'Kontaktdaten freischalten · ' + euro(fz.preis) : 'Bestätigen und Kontaktdaten erhalten') + '</button>' +
+        '<button class="btn" type="button" id="frei" style="background:#F2B33D;color:#0E6E55">' + (fz.online ? 'Kontaktdaten freischalten · ' + euro(fz.preis) : 'Bestätigen und Kontaktdaten erhalten') + '</button>' +
         '<div class="msg" id="fmsg" role="status" style="margin-top:10px"></div>' +
         '<p class="klein" style="color:#CFEBDF;margin:14px 0 0">Bitte innerhalb von 48 Stunden, sonst kann der Auftraggeber ein anderes Angebot wählen.</p></div>' + details;
       var fmsg = $('fmsg');
@@ -160,7 +206,7 @@
 
     var hatAngebot = !!d.angebot, hatSpanne = hatAngebot && d.angebot.bis != null;
     var g = d.gebuehren, m = d.modell;
-    main.innerHTML = kopf + details +
+    main.innerHTML = kopf + details + '<div id="besBox"></div>' +
       '<div class="box" id="formBox"><h2>' + (hatAngebot ? 'Ihr Angebot (Sie können es noch ändern)' : 'Ihr Angebot') + '</h2>' +
       (hatAngebot ? '<p class="marke" style="margin:0 0 12px">✓ Liegt beim Auftraggeber</p>' : '') +
       '<form id="aForm" novalidate>' +
@@ -169,19 +215,24 @@
       '<div class="spanne"><div class="euro"><input id="betrag" inputmode="decimal" autocomplete="off" aria-label="' + (hatSpanne ? 'Preis von' : 'Preis') + '" placeholder="' + (lang ? 'z. B. 380' : 'z. B. 450') + '" value="' + (hatAngebot ? esc(String(d.angebot.betrag).replace('.', ',')) : '') + '"><span>€' + (lang ? ' / Monat' : '') + '</span></div>' +
       '<span class="strich" id="bisStrich"' + (hatSpanne ? '' : ' hidden') + '>–</span><div class="euro" id="bisFeld"' + (hatSpanne ? '' : ' hidden') + '><input id="bis" inputmode="decimal" autocomplete="off" aria-label="Preis bis" placeholder="' + (lang ? 'z. B. 450' : 'z. B. 600') + '" value="' + (hatSpanne ? esc(String(d.angebot.bis).replace('.', ',')) : '') + '"><span>€</span></div></div>' +
       '<p class="klein" id="spanneHinweis" style="margin:6px 0 0"' + (hatSpanne ? '' : ' hidden') + '>Gut, wenn der genaue Preis erst nach einer Besichtigung feststeht. Der Auftraggeber sieht die ganze Spanne.</p>' +
+      (lang ? '<label style="margin-top:14px">Wie möchten Sie die Gebühr zahlen, falls Sie den Auftrag bekommen?</label><div class="preisart" role="radiogroup" aria-label="Gebühr bei regelmäßigen Aufträgen"><label><input type="radio" name="dm" value="einmal"' + (m.dauer_modell === 'monatlich' ? '' : ' checked') + '> Einmal ein Monatsumsatz</label><label><input type="radio" name="dm" value="monatlich"' + (m.dauer_modell === 'monatlich' ? ' checked' : '') + '> ' + pz(m.satz_dauer) + ' monatlich, max. ' + m.monate + ' Monate</label></div>' : '') +
       '<label for="nachricht" style="margin-top:14px">Was ist enthalten, wann können Sie?</label>' +
       '<textarea id="nachricht" maxlength="2000" placeholder="z. B. Termin ab KW 46 möglich, inkl. Material und Anfahrt. Telefonnummern, E-Mail- und Web-Adressen werden ausgeblendet, die Kontaktdaten gibt es nach der Zusage.">' + (hatAngebot ? esc(d.angebot.nachricht || '') : '') + '</textarea>' +
       '<div class="gebuehr" id="gebuehr"></div>' +
-      '<label class="check" style="margin-top:14px"><input type="checkbox" id="bed"' + (hatAngebot ? ' checked' : '') + '> <span>Ich akzeptiere die <a href="/bedingungen" target="_blank">Bedingungen</a>' + (g.aktiv ? ' einschließlich der Freischaltgebühr' : '') + '.</span></label>' +
+      '<label class="check" style="margin-top:14px"><input type="checkbox" id="bed"' + (hatAngebot ? ' checked' : '') + '> <span>Ich akzeptiere die <a href="/bedingungen" target="_blank">Bedingungen</a>' + (g.aktiv ? ' einschließlich der Gebühr und des Kundenschutzes' : '') + '.</span></label>' +
       '<button class="btn" id="senden" type="submit" style="width:100%;margin-top:16px">' + (hatAngebot ? 'Angebot aktualisieren' : 'Angebot abgeben') + '</button>' +
       '<div class="msg" id="msg" role="status"></div></form>' +
       '<p style="margin:16px 0 0;text-align:center"><button class="linkknopf" id="absagen" type="button">Keine Zeit oder kein Interesse? Kurz absagen</button></p></div>';
 
+    function dmWahl() { var x = main.querySelector('input[name="dm"]:checked'); return x ? x.value : 'einmal'; }
     function gebuehrText() {
-      var b = zahl($('betrag').value), bb = spanneAn() ? zahl($('bis').value) : null, f = gebuehrBerechnen(m, a.art, bb && b ? Math.max(b, bb) : (bb || b), !!d.gruender);
-      var modell = 'Freischaltung nach Budget des Auftraggebers, bei einer Spanne zählt der obere Wert: ' + stufenText(m) + (d.gruender ? '. Als Gründungspartner zahlen Sie die Hälfte.' : '.');
-      if (!g.aktiv) $('gebuehr').innerHTML = '<b>In der Startphase kostenlos.</b> Später zahlen Sie nur, wenn der Auftraggeber Ihr Angebot annimmt, einmalig für die Kontaktdaten. ' + modell;
-      else $('gebuehr').innerHTML = '<b>Nur wenn Ihr Angebot angenommen wird: einmalig ' + euro(f.preis) + ' für die Kontaktdaten</b>' + (d.gruender ? ' (statt ' + euro(f.grund) + ')' : '') + '. ' + modell;
+      var b = zahl($('betrag').value), bb = spanneAn() ? zahl($('bis').value) : null, dm = dmWahl(), f = gebuehrBerechnen(m, a.art, bb && b ? Math.max(b, bb) : (bb || b), !!d.gruender, dm);
+      var modell = lang ? 'Bei regelmäßigen Aufträgen wählen Sie: einmal ein Monatsumsatz oder ' + pz(m.satz_dauer) + ' vom Monatspreis, monatlich für höchstens ' + m.monate + ' Monate. Danach und bei Verlängerungen nichts mehr.'
+        : pz(m.satz) + ' vom angenommenen Preis, bei einer Spanne vom oberen Wert. Keine Grundgebühr, kein Abo.';
+      if (d.gruender) modell += ' Als Gründungspartner zahlen Sie die Hälfte.';
+      var betragText = f ? (lang && dm === 'monatlich' ? euro(f.preis) + ' pro Monat (höchstens ' + m.monate + ' Monate)' : 'einmalig ' + euro(f.preis)) : null;
+      if (!g.aktiv) $('gebuehr').innerHTML = '<b>In der Startphase kostenlos.</b> Später zahlen Sie nur, wenn der Auftraggeber Ihr Angebot annimmt. ' + modell;
+      else $('gebuehr').innerHTML = '<b>Nur wenn Ihr Angebot angenommen wird' + (betragText ? ': ' + betragText : '') + '</b>' + (f && d.gruender && m.hand == null ? ' (statt ' + euro(f.grund) + ')' : '') + '. ' + modell;
     }
     function spanneAn() { return main.querySelector('input[name="pa"]:checked').value === 'spanne'; }
     main.querySelectorAll('input[name="pa"]').forEach(function (x) {
@@ -193,6 +244,8 @@
         gebuehrText();
       });
     });
+    if (d.besichtigung) besichtigung(d);
+    main.querySelectorAll('input[name="dm"]').forEach(function (x) { x.addEventListener('change', gebuehrText); });
     gebuehrText();
     $('betrag').addEventListener('input', gebuehrText);
     $('bis').addEventListener('input', gebuehrText);
@@ -204,7 +257,7 @@
       if (!$('bed').checked) { msg.textContent = 'Bitte bestätigen Sie die Bedingungen.'; msg.className = 'msg err'; return; }
       btn.disabled = true; msg.textContent = ''; msg.className = 'msg';
       try {
-        await api({ aktion: 'angebot', betrag: $('betrag').value, bis: spanneAn() ? $('bis').value : '', nachricht: $('nachricht').value, bedingungen: true });
+        await api({ aktion: 'angebot', betrag: $('betrag').value, bis: spanneAn() ? $('bis').value : '', nachricht: $('nachricht').value, bedingungen: true, dauer_modell: dmWahl() });
         $('formBox').innerHTML = '<span class="stempel drauf">✓ Abgegeben</span><h2 style="margin-top:12px">Ihr Angebot ist beim Auftraggeber</h2><p style="margin:0 0 14px">Sobald er sich entscheidet, bekommen Sie eine E-Mail. Nimmt er Ihr Angebot an, stehen darin seine Kontaktdaten.</p><button class="btn ghost" type="button" id="nochmal">Angebot ändern</button>';
         $('nochmal').onclick = laden;
       } catch (err) { msg.textContent = err.message; msg.className = 'msg err'; btn.disabled = false; }
@@ -239,7 +292,7 @@
         : o.betrag != null && !spanne ? euro(o.betrag) + (lang ? '<small>pro Monat</small>' : '<small>Gesamtpreis</small>') : esc(o.preis || 'Preis auf Anfrage');
       var cls = o.status === 'gewaehlt' ? ' gewaehlt' : o.status === 'nicht_gewaehlt' ? ' aus' : '';
       var knopf = d.offen && o.status === 'angebot' ? '<div class="aktion" data-o="' + o.id + '"><button class="btn" type="button" data-an="' + o.id + '">Dieses Angebot annehmen</button></div>' : '';
-      return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + (o.geprueft ? ' <span class="marke" title="Gewerbeanmeldung bzw. Nachweis des Finanzamts liegt vor, bei Handwerksbetrieben auch der Eintrag bei der Handwerkskammer. Die Qualität der Arbeit wird nicht geprüft.">✓ Geprüfter Betrieb</span>' : '') + (o.gruender ? ' <span class="marke gold" title="Einer der ersten 30 Partner-Betriebe von Abgemacht">★ Gründungspartner</span>' : '') + '</div>' +
+      return '<div class="box angebot' + cls + '"><div class="kopf"><div><div class="label">' + (o.firma ? esc(o.firma) : o.label) + (o.status === 'gewaehlt' ? ' <span class="marke">✓ Gewählt</span>' : '') + (o.geprueft ? ' <span class="marke" title="Gewerbeanmeldung bzw. Nachweis des Finanzamts liegt vor, bei Handwerksbetrieben auch der Eintrag bei der Handwerkskammer. Die Qualität der Arbeit wird nicht geprüft.">✓ Geprüfter Betrieb</span>' : '') + (o.gruender ? ' <span class="marke gold" title="Einer der ersten 30 Partner-Betriebe von Abgemacht">★ Gründungspartner</span>' : '') + (o.besichtigung === 'bestaetigt' ? ' <span class="marke">Nach Besichtigung</span>' : '') + '</div>' +
         '<div class="wer">' + esc([o.kategorie, o.ort].filter(Boolean).join(' · ') || 'Betrieb aus der Region') + '</div><div class="wer">' + bew + '</div></div>' +
         '<div class="betrag">' + preis + '</div></div>' + (o.nachricht ? '<p class="text">' + esc(o.nachricht) + '</p>' : '') +
         '<p class="klein" style="margin:10px 0 0">Eingegangen am ' + datum(o.am) + '</p>' + knopf + '</div>';
@@ -270,7 +323,7 @@
     var stand = e.anzahl ? '<p class="klein" style="margin:10px 0 0">Bisher ' + e.anzahl + (e.anzahl === 1 ? ' Empfehlung' : ' Empfehlungen') + (e.verdient ? ', davon verdient: <b>' + euro(e.verdient) + '</b>' + (e.verdient > e.ausgezahlt ? ' (' + euro(e.verdient - e.ausgezahlt) + ' noch offen)' : ' (ausgezahlt)') : '') + '.</p>' : '';
     var text = 'Ich schaffe es gerade leider nicht. Über Abgemacht bekommen Sie kostenlos Angebote von geprüften Betrieben aus der Region: ' + e.link;
     box.innerHTML = '<summary style="cursor:pointer;font-weight:700">Zu viele Anfragen? Kunden weiterleiten und mitverdienen</summary>' +
-      '<p style="margin:12px 0 10px">Wenn Sie einen Auftrag selbst nicht annehmen können, schicken Sie dem Kunden Ihren persönlichen Link. Er stellt seine Anfrage dann bei uns, für ihn kostenlos. Kommt der Auftrag mit einem anderen Betrieb zustande, bekommen Sie <b>die Hälfte der Freischaltgebühr</b>, die dieser Betrieb bezahlt.</p>' +
+      '<p style="margin:12px 0 10px">Wenn Sie einen Auftrag selbst nicht annehmen können, schicken Sie dem Kunden Ihren persönlichen Link. Er stellt seine Anfrage dann bei uns, für ihn kostenlos. Kommt der Auftrag mit einem anderen Betrieb zustande, bekommen Sie <b>die Hälfte der Gebühr</b>, die dieser Betrieb bezahlt.</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><input readonly value="' + esc(e.link) + '" style="flex:1;min-width:200px;font-size:14px" onclick="this.select()">' +
       '<button class="btn ghost" type="button" id="empKopie" style="padding:8px 16px;font-size:14px">Link kopieren</button>' +
       '<a class="btn" style="padding:8px 16px;font-size:14px" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(text) + '">Per WhatsApp teilen</a></div>' +

@@ -26,6 +26,12 @@
   to = "/?quelle=wa"
   status = 302
 
+# Eigene Web-App „Zentrale“ (Vermittlung), gleiche Seite wie /vermittlung
+[[redirects]]
+  from = "/zentrale"
+  to = "/vermittlung"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -41,6 +47,42 @@
 
 [[headers]]
   for = "/crm*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/vermittlung*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/zentrale*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/portal*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/melden*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/aushang*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/angebot*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
     Cache-Control = "no-store"

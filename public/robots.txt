@@ -5,5 +5,11 @@ Disallow: /api/
 Disallow: /termin
 Disallow: /bestaetigen
 Disallow: /abmelden
+Disallow: /vermittlung
+Disallow: /zentrale
+Disallow: /portal
+Disallow: /melden
+Disallow: /aushang
+Disallow: /angebot
 
 Sitemap: https://ab-gemacht.info/sitemap.xml

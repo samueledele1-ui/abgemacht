@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Vermittlung – Abgemacht</title>
+<title>Zentrale – Abgemacht</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="/style.css">
 <style>
@@ -107,7 +107,7 @@
   .fotos{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
   .fotos img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}
   .tag2.t-gold{background:#FCEFD2;color:#7A4E00}
-  .kand .km{display:inline-block;min-width:52px;margin-right:8px;padding:1px 7px;border-radius:999px;background:var(--minze, #DDF3EA);color:#0D4F3E;font-size:12px;font-weight:700;text-align:center}
+  .kand .km{display:inline-block;min-width:52px;margin-right:8px;padding:1px 7px;border-radius:999px;background:var(--minze, #DDF3EA);color:#138A6B;font-size:12px;font-weight:700;text-align:center}
   .suchzeile{display:grid;grid-template-columns:1.2fr 1.2fr 96px auto;gap:8px;align-items:end}
   .suchzeile label{margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   @media (max-width:640px){.suchzeile{grid-template-columns:1fr 1fr}.suchzeile button{grid-column:1/-1}}
@@ -117,11 +117,11 @@
   details.box summary{cursor:pointer;font-weight:700}
   @media (max-width:760px){.klein-z .z{font-size:18px}}
 </style>
-<link rel="manifest" href="/buero.webmanifest">
-<meta name="theme-color" content="#0D4F3E">
+<link rel="manifest" href="/zentrale.webmanifest">
+<meta name="theme-color" content="#138A6B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Abgemacht">
+<meta name="apple-mobile-web-app-title" content="Zentrale">
 <link rel="apple-touch-icon" href="/buero-180.png">
 <script src="/buero.js" defer></script>
 </head>
@@ -141,12 +141,13 @@
   <main id="app" hidden>
     <div class="top">
       <h1>Vermittlung</h1>
-      <div class="knoepfe"><button class="btn klein" id="neuA">+ Anfrage</button><button class="btn ghost klein" id="neuP">+ Partner</button></div>
+      <div class="knoepfe"><button class="btn klein" id="neuA">+ Anfrage</button><button class="btn ghost klein" id="neuP">+ Betrieb</button><button class="btn ghost klein" id="neuK">+ Verwaltung / Makler</button></div>
     </div>
     <div class="kpis kpis5" id="kpis"></div>
     <div class="tabs" role="tablist">
       <button data-v="anfragen" aria-pressed="true">Anfragen</button>
       <button data-v="partner" aria-pressed="false">Partner-Betriebe</button>
+      <button data-v="kunden" aria-pressed="false">Feste Partner</button>
       <button data-v="abrechnung" aria-pressed="false">Abrechnung</button>
       <button data-v="hilfe" aria-pressed="false">So geht's</button>
     </div>
@@ -163,8 +164,10 @@
   const VS = { neu: "Neu", angefragt: "Betriebe angefragt", angebote: "Angebote da", abgemacht: "Abgemacht", erledigt: "Erledigt", verloren: "Verloren" };
   const BS = { angefragt: "Angefragt", angebot: "Angebot", abgesagt: "Abgesagt", keine_antwort: "Keine Antwort", gewaehlt: "Gewählt", nicht_gewaehlt: "Nicht gewählt" };
   const ARTL = { einmalig: "Einmalig", projekt: "Projekt", langzeit: "Langzeit" };
-  const KANL = { whatsapp: "WhatsApp", telefon: "Telefon", email: "E-Mail", web: "Website", persoenlich: "Persönlich" };
-  let pw = null, V = [], B = [], P = [], ansicht = "anfragen";
+  const KANL = { whatsapp: "WhatsApp", telefon: "Telefon", email: "E-Mail", web: "Website", persoenlich: "Persönlich", portal: "Portal" };
+  const KARTL = { verwaltung: "Hausverwaltung", makler: "Immobilienmakler", gewerbe: "Gewerbe", sonstige: "Sonstige" };
+  const BESL = { angefragt: "Besichtigung angefragt", bestaetigt: "Besichtigung bestätigt", vorschlag: "Neuer Termin vorgeschlagen", abgelehnt: "Besichtigung abgelehnt" };
+  let pw = null, V = [], B = [], P = [], K = [], BES = [], BES_AB = 2000, ansicht = "anfragen";
 
   function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 3200); }
   async function api(daten) {
@@ -173,7 +176,8 @@
     if (!r.ok || !d.ok) throw new Error(d.error || "Fehler " + r.status);
     return d;
   }
-  async function laden() { const d = await api({ aktion: "liste" }); V = d.vermittlungen; B = d.betriebe; P = d.partner; zeichne(); }
+  async function laden() { const d = await api({ aktion: "liste" }); V = d.vermittlungen; B = d.betriebe; P = d.partner; K = d.kunden || []; BES = d.besichtigungen || []; BES_AB = d.besichtigung_ab || 2000; zeichne(); }
+  const terminText = (t) => { const d = new Date(String(t) + ":00"); return isNaN(d) ? String(t || "") : new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d) + " Uhr"; };
 
   /* ---------- Texte (wie im Textvorlagen-Dokument) ---------- */
   const artText = (v) => v.art === "langzeit" ? "Langzeit" + (v.laufzeit ? ", " + v.laufzeit : "") : v.art === "projekt" ? "Projekt" + (v.laufzeit ? ", " + v.laufzeit : "") : "";
@@ -235,7 +239,7 @@
     zusage: (v, b) => `Abgemacht ✅ Der Kunde hat Ihr Angebot angenommen${b.preis ? ": " + b.preis : ""}.\nKontakt: ${v.auftraggeber || "[Name]"}, ${v.kontakt || "[Telefon]"}${v.ort ? ", " + v.ort : ""}.\nBitte melden Sie sich kurz zur Bestätigung. Vielen Dank!`,
     absage: () => `Vielen Dank für Ihr Angebot! Diesmal hat sich der Kunde für einen anderen Betrieb entschieden. Bei der nächsten passenden Anfrage melde ich mich wieder.`,
     gepasst: (v) => `Hat mit ${v.gewaehlt_firma || "dem Betrieb"} alles gepasst? Antworten Sie mit 1 bis 5 Sternen – das hilft anderen bei der Auswahl. Danke!`,
-    empfehlung: (k) => `Hallo${k.ansprechpartner ? " " + k.ansprechpartner : ""}, kurze Info von Abgemacht: Wenn Sie mal einen Auftrag nicht annehmen können, weil Sie voll sind oder es nicht Ihr Gebiet ist, schicken Sie dem Kunden einfach Ihren persönlichen Link. Er stellt die Anfrage dann bei uns, für ihn kostenlos. Kommt der Auftrag mit einem anderen Betrieb zustande, bekommen Sie die Hälfte unserer Freischaltgebühr. Ihr Link: ${k.empfehl_link}\n\nViele Grüße\nSamuel Edele`,
+    empfehlung: (k) => `Hallo${k.ansprechpartner ? " " + k.ansprechpartner : ""}, kurze Info von Abgemacht: Wenn Sie mal einen Auftrag nicht annehmen können, weil Sie voll sind oder es nicht Ihr Gebiet ist, schicken Sie dem Kunden einfach Ihren persönlichen Link. Er stellt die Anfrage dann bei uns, für ihn kostenlos. Kommt der Auftrag mit einem anderen Betrieb zustande, bekommen Sie die Hälfte unserer Vermittlungsgebühr. Ihr Link: ${k.empfehl_link}\n\nViele Grüße\nSamuel Edele`,
     anmeldung: (k) => `Guten Tag${k.ansprechpartner ? " " + k.ansprechpartner : ""}, hier ist Samuel Edele von Abgemacht. Ich vermittle Aufträge aus allen Branchen an geprüfte Betriebe – in der Startphase kostenlos, ohne Abo und ohne Vertrag.\nDarf ich Ihnen passende Anfragen hier per WhatsApp schicken? Sie entscheiden bei jeder Anfrage selbst, ob Sie ein Angebot machen. Ein kurzes „Ja“ reicht. Abmelden geht jederzeit mit „Stopp“.`,
   };
   const nummer = (t) => { let n = String(t || "").replace(/\(0\)/g, "").replace(/[^\d+]/g, ""); if (n.startsWith("+")) n = n.slice(1); else if (n.startsWith("00")) n = n.slice(2); else if (n.startsWith("0")) n = "49" + n.slice(1); return n.length >= 8 ? n : ""; };
@@ -260,8 +264,9 @@
       [offen.length, "offene Anfragen", offen.some((v) => v.status === "neu") ? "rot" : ""],
       [V.filter((v) => v.status === "angefragt").length, "warten auf Angebote", ""],
       [abg.length, "Abgemacht", "gruen"],
+      [BES.filter((b) => b.status === "angefragt").length, "Besichtigungen offen", BES.some((b) => b.status === "angefragt") ? "rot" : ""],
       [aktiv.length, "aktive Partner", ""],
-      [aktiv.filter((p) => p.wa_ok_am).length, "mit WhatsApp-Okay", ""],
+      [K.length, "feste Partner", ""],
     ].map(([z, t, c]) => `<div class="kpi ${c}"><div class="z">${z}</div><div class="t">${t}</div></div>`).join("");
   }
   const geprueft = (k) => !!k.gewerbe_geprueft_am && (k.hwk_status === "eingetragen" || k.hwk_status === "nicht_noetig");
@@ -271,7 +276,7 @@
     const bs = B.filter((b) => b.vermittlung_id === v.id);
     const ang = bs.filter((b) => ["angebot", "gewaehlt", "nicht_gewaehlt"].includes(b.status)).length;
     return `<div class="karte" data-v="${v.id}"><div class="m"><b>${esc(v.leistung || "Anfrage")}${v.ort ? " · " + esc(v.ort) : ""}${artTag(v)}${v.bestaetigt_am ? "" : '<span class="tag2 t-proj" title="Kunde hat die Anfrage noch nicht per E-Mail bestätigt">unbestätigt</span>'}</b>
-      <small>${esc(v.auftraggeber || "Unbekannt")}${v.zeitraum ? " · " + esc(v.zeitraum) : ""}${v.budget ? " · " + esc(v.budget) : ""}${v.gewaehlt_firma ? " · mit " + esc(v.gewaehlt_firma) : ""}${v.empfohlen_firma ? " · empfohlen von " + esc(v.empfohlen_firma) : ""}</small></div>
+      <small>${esc(v.auftraggeber || "Unbekannt")}${v.zeitraum ? " · " + esc(v.zeitraum) : ""}${v.budget ? " · " + esc(v.budget) : ""}${v.gewaehlt_firma ? " · mit " + esc(v.gewaehlt_firma) : ""}${v.empfohlen_firma ? " · empfohlen von " + esc(v.empfohlen_firma) : ""}</small>${v.kunde_name ? `<small><span class="tag2 t-lang" style="margin-left:0">${esc(KARTL[v.kunde_art] || "Fester Partner")}: ${esc(v.kunde_name)}</span>${v.objekt_name ? " · Objekt " + esc(v.objekt_name) : ""}</small>` : ""}${BES.some((b) => b.vermittlung_id === v.id && b.status === "angefragt") ? '<small><span class="tag2 t-gold" style="margin-left:0">Besichtigung bestätigen</span></small>' : ""}</div>
       <div class="rechts"><span class="st v-${v.status}">${VS[v.status]}</span><br><small style="color:var(--muted)">${bs.length} angefragt · ${ang} Angebote</small></div></div>`;
   }
   function zeichne() {
@@ -304,6 +309,16 @@
         $("pTreffer").querySelectorAll("[data-neu]").forEach((b) => b.onclick = async () => { await api({ aktion: "partner", kontakt: +b.dataset.neu, partner: "aktiv" }); toast("Als Partner aufgenommen"); await laden(); });
       };
       $("pSuchen").onclick = suchen; ["pSuch", "pOrt"].forEach((i) => $(i).onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); suchen(); } });
+    } else if (ansicht === "kunden") {
+      const karte = (k) => { const z = k.zugaenge || []; const ein = z.filter((x) => x.eingerichtet).length, off = z.filter((x) => !x.eingerichtet).length;
+        return `<div class="karte" data-k="${k.id}"><div class="m"><b>${esc(k.name)}<span class="tag2 t-lang">${esc(KARTL[k.art] || k.art)}</span>${k.vereinbarung_am ? '<span class="tag2 t-wa" title="Partnervereinbarung / Nutzungsbedingungen bestätigt">✓ Vereinbarung</span>' : '<span class="tag2 t-proj">Vereinbarung offen</span>'}${k.meldungen_neu ? `<span class="tag2 v-neu">${k.meldungen_neu} neue Meldung${k.meldungen_neu > 1 ? "en" : ""}</span>` : ""}</b>
+          <small>${esc([k.ansprechpartner, k.telefon, k.email].filter(Boolean).join(" · ") || "Keine Kontaktdaten")}</small></div>
+          <div class="rechts"><small style="color:var(--muted)">${k.objekte} Objekte · ${k.anfragen} Anfragen · ${k.abgemacht} abgemacht</small><br><small style="color:var(--muted)">${ein ? ein + " Zugang" + (ein > 1 ? "e" : "") + " aktiv" : off ? "Einladung offen" : "noch kein Zugang"}</small></div></div>`; };
+      el.innerHTML = `<div class="box"><b>${K.length} feste Partner</b> <span style="color:var(--muted)">· Hausverwaltungen, Makler und Gewerbe mit Portal-Zugang. Für sie ist alles kostenlos.</span>
+        <div class="knopfreihe"><button class="btn klein" type="button" id="kNeu2">+ Verwaltung / Makler anlegen</button><a class="btn ghost klein" href="/portal" target="_blank" rel="noopener">Portal ansehen</a></div></div>
+        ${K.length ? K.map(karte).join("") : '<div class="leer">Noch keine festen Partner. Leg die erste Verwaltung an, schick die Einladung und richte mit ihr die Objekte ein.</div>'}`;
+      el.querySelectorAll("[data-k]").forEach((r) => r.onclick = () => oeffneK(+r.dataset.k));
+      $("kNeu2").onclick = () => oeffneK(0);
     } else if (ansicht === "abrechnung") {
       abrechnung(el);
     } else {
@@ -311,10 +326,11 @@
         <li>Anfragen über die Website kommen automatisch rein (der Kunde hat schon seinen Link zur Angebotsseite). WhatsApp, Anruf oder Mail: mit „+ Anfrage“ anlegen.</li>
         <li>In der Anfrage passende Betriebe suchen und bis zu 5 auswählen. <b>Partner mit E-Mail bekommen die anonyme Anfrage automatisch</b> mit dem Knopf „Angebot abgeben“. Ohne E-Mail: „Link kopieren“ und per WhatsApp schicken oder anrufen.</li>
         <li>Betriebe geben ihr Angebot selbst über den Link ab. Kontaktdaten werden darin automatisch ausgeblendet. Telefonische Angebote kannst du weiter von Hand eintragen.</li>
-        <li>Beim ersten Angebot bekommt der Kunde automatisch eine Mail. Er nimmt auf seiner Angebotsseite selbst an: Die anderen bekommen eine Absage, der gewählte Betrieb schaltet die Kontaktdaten frei (sobald Gebühren gelten: online bezahlt, Stufe nach Budget, Gründungspartner −50 %), dann gehen die Kontaktdaten an beide. Hat der Kunde keine E-Mail, schickst du ihm den Link per WhatsApp.</li>
+        <li>Beim ersten Angebot bekommt der Kunde automatisch eine Mail. Er nimmt auf seiner Angebotsseite selbst an: Die anderen bekommen eine Absage, der gewählte Betrieb schaltet die Kontaktdaten frei (sobald Gebühren gelten: online bezahlt, 5 % vom Angebot, Gründungspartner −50 %), dann gehen die Kontaktdaten an beide. Hat der Kunde keine E-Mail, schickst du ihm den Link per WhatsApp.</li>
         <li>Beim gewählten Betrieb „Abgemacht“ drücken. Die Texte für Kunde, Zusage und Absagen stehen dann bereit.</li>
-        <li>Nach dem Termin „Hat's gepasst?“ schicken, Bewertung eintragen, Status „Erledigt“.</li></ol>
-        <p style="color:var(--muted);margin:12px 0 0">Freischaltgebühr nach Budget des Kunden: bis 500 € 9 €, bis 2.000 € 29 €, bis 10.000 € 69 €, darüber oder große Daueraufträge 129 €. Gründungspartner (die ersten 30 festen Partner, ★) zahlen dauerhaft die Hälfte und stehen bei der Betriebssuche vorne. In der Startphase wird nichts verlangt. Online-Zahlung startet, sobald unter Abrechnung → Rechnungsdaten „Gebühren ab“ erreicht ist und in Netlify STRIPE_SECRET_KEY gesetzt ist. Ohne Stripe kommt die Gebühr wie bisher in die Monatsrechnung.</p></div>`;
+        <li>Nach dem Termin „Hat's gepasst?“ schicken, Bewertung eintragen, Status „Erledigt“.</li>
+        <li>Feste Partner: Unter „Feste Partner“ Verwaltung oder Makler anlegen, Zugang einladen (Mail mit Passwort-Link), Objekte anlegen. Jedes Objekt hat einen QR-Code für den Hausaushang. Meldungen, die die Verwaltung mit „Angebote holen“ freigibt, erscheinen hier als neue, schon bestätigte Anfrage.</li></ol>
+        <p style="color:var(--muted);margin:12px 0 0">Gebühr: Einzelaufträge 5 % vom angenommenen Angebot (bei Spanne der obere Wert), ohne Grenze. Regelmäßige Aufträge: Der Betrieb wählt einmal einen Monatsumsatz oder 8 % monatlich für höchstens 24 Monate (Raten 2 bis 24 kommen automatisch in die Monatsrechnung, bis du „Auftrag beendet am“ einträgst). In jeder Anfrage kannst du die Gebühr auch von Hand festlegen. Besichtigung: ab ${BES_AB.toLocaleString("de-DE")} € geschätztem Wert automatisch möglich (in der Anfrage auf Ja/Nein stellbar, Grenze unter Abrechnung → Rechnungsdaten). Feste Partner (Verwaltungen, Makler) bestätigen Besichtigungen und wählen Angebote selbst im Portal. Gründungspartner (die ersten 30 festen Partner, ★) zahlen dauerhaft die Hälfte und stehen bei der Betriebssuche vorne. In der Startphase wird nichts verlangt. Online-Zahlung startet, sobald unter Abrechnung → Rechnungsdaten „Gebühren ab“ erreicht ist und in Netlify STRIPE_SECRET_KEY gesetzt ist. Ohne Stripe kommt die Gebühr wie bisher in die Monatsrechnung.</p></div>`;
     }
   }
   function tabZahl() { const n = P.filter((p) => p.partner === "interessiert").length; const b = document.querySelector('.tabs button[data-v="partner"]'); if (b) b.textContent = "Partner-Betriebe" + (n ? ` (${n} neu)` : ""); }
@@ -345,6 +361,7 @@
     const d = await api({ aktion: "abrechnung", monat });
     const ab = d.gebuehren_ab ? new Date(d.gebuehren_ab + "T00:00:00") : null;
     const gruppen = [];
+    for (const r of d.raten || []) d.posten.push({ id: r.vermittlung_id, kontakt_id: r.kontakt_id, firma: r.firma, leistung: r.leistung + " · Rate " + r.nr, ort: r.ort, art: "langzeit", auftragswert: null, gebuehr: r.betrag, abgemacht_am: r.monat + "-15T12:00:00Z", rate: true });
     for (const p of d.posten) {
       let g = gruppen.find((x) => x.kontakt_id === p.kontakt_id);
       if (!g) { g = { ...p, posten: [], offen: [], rechnungen: new Set() }; gruppen.push(g); }
@@ -485,6 +502,7 @@
         ${f("bic", "BIC")}${f("zahlungsziel", "Zahlungsziel in Tagen", "number")}
         <div class="ganz"><label for="e_gebuehren_ab">Gebühren gelten für Vermittlungen ab</label><input id="e_gebuehren_ab" data-e="gebuehren_ab" type="date" value="${esc(e.gebuehren_ab || "")}" style="max-width:220px">
           <small style="color:var(--muted);display:block;margin-top:4px">Erst eintragen, wenn die Gebühren mindestens 4 Wochen vorher angekündigt wurden und die Betriebe zugestimmt haben (Bedingungen, Abschnitt 3). Vermittlungen davor bleiben kostenlos.</small></div>
+        <div><label for="e_besichtigung_ab">Besichtigung möglich ab (geschätzter Auftragswert in €)</label><input id="e_besichtigung_ab" data-e="besichtigung_ab" type="number" min="0" step="100" value="${esc(e.besichtigung_ab || "2000")}"></div>
       </div>
       ${e.kleinunternehmer === "nein" ? `<p style="color:#A3480A;font-size:13.5px">Hinweis: Ohne Kleinunternehmerregelung müssen Rechnungen Umsatzsteuer ausweisen. Das unterstützt das System noch nicht – bitte vorher Bescheid geben.</p>` : ""}
       <div class="knopfreihe"><button class="btn klein" type="button" id="eSpeichern">Speichern</button></div></div>`;
@@ -516,15 +534,20 @@
       ${feld("ort", "Ort", v.ort)}${feld("zeitraum", "Zeitraum / Rhythmus", v.zeitraum)}
       ${feld("budget", "Budget", v.budget)}${auswahl("art", "Art", v.art || "einmalig", ARTL)}
       ${feld("laufzeit", "Laufzeit (bei Projekt/Langzeit)", v.laufzeit)}${v.id ? auswahl("status", "Status", v.status, VS) : "<div></div>"}
+      <div><label for="v_kunde_id">Fester Partner</label><select id="v_kunde_id" data-f="kunde_id"><option value="">– keiner –</option>${K.map((k) => `<option value="${k.id}" ${String(v.kunde_id || "") === String(k.id) ? "selected" : ""}>${esc(k.name)}</option>`).join("")}</select></div>
+      ${auswahl("besichtigung", "Besichtigung", v.besichtigung || "", { "": "automatisch ab " + BES_AB.toLocaleString("de-DE") + " €", ja: "ja, möglich", nein: "nein" })}
+      ${feld("objekt_adresse", "Adresse des Objekts (erst nach bestätigter Besichtigung an den Betrieb)", v.objekt_adresse, "text", true)}
+      ${feld("vor_ort", "Ansprechpartner vor Ort (Name, Telefon)", v.vor_ort, "text", true)}
+      ${v.id && v.art === "langzeit" ? feld("dauer_ende_am", "Auftrag beendet am (stoppt die Monatsraten)", v.dauer_ende_am ? String(v.dauer_ende_am).slice(0, 10) : "", "date") : ""}
       <div class="ganz"><label for="v_beschreibung">Beschreibung (Worte des Auftraggebers)</label><textarea id="v_beschreibung" data-f="beschreibung">${esc(v.beschreibung || "")}</textarea></div>
       ${v.id ? feld("auftragswert", v.art === "langzeit" ? "Wert im 1. Vertragsjahr in €" : "Auftragswert in €", v.auftragswert, "text") + feld("bewertung", "Bewertung 1–5", v.bewertung, "number") : ""}
       <div class="ganz"><label for="v_notizen">Notizen</label><textarea id="v_notizen" data-f="notizen">${esc(v.notizen || "")}</textarea></div></div>`;
   }
   const werte = (root) => { const o = {}; root.querySelectorAll("[data-f]").forEach((e) => o[e.dataset.f] = e.value); return o; };
 
-  function neueAnfrage() {
+  function neueAnfrage(vor) {
     const p = panel(`<div class="kopf"><div><h2>Neue Anfrage</h2><small style="color:var(--muted)">Wer schreibt, was braucht er?</small></div><button class="zu" aria-label="Schließen">×</button></div>
-      ${vForm({})}<button class="btn" id="vSpeichern" style="width:100%;margin-top:14px">Anlegen</button><div class="msg" id="vmsg"></div>`);
+      ${vForm(vor && vor.kunde_id ? vor : {})}<button class="btn" id="vSpeichern" style="width:100%;margin-top:14px">Anlegen</button><div class="msg" id="vmsg"></div>`);
     p.querySelector("#vSpeichern").onclick = async () => {
       try { const d = await api({ aktion: "neu", ...werte(p) }); await laden(); oeffneV(d.id); toast("Anfrage angelegt"); }
       catch (e) { p.querySelector("#vmsg").textContent = e.message; p.querySelector("#vmsg").className = "msg err"; }
@@ -543,10 +566,10 @@
     const mitAngebot = bs.filter((b) => ["angebot", "gewaehlt", "nicht_gewaehlt"].includes(b.status));
     const gew = bs.find((b) => b.status === "gewaehlt");
     const vbHtml = bs.map((b) => `<div class="vb" data-vb="${b.id}">
-        <div class="zeile"><b>${esc(b.firma)}${b.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}</b><span class="st b-${b.status}">${BS[b.status]}</span></div>
+        <div class="zeile"><b>${esc(b.firma)}${b.wa_ok_am ? '<span class="tag2 t-wa">WhatsApp ✓</span>' : ""}${(() => { const x = BES.find((y) => y.vb_id === b.id); return x ? `<span class="tag2 t-gold">${esc(BESL[x.status] || x.status)}</span>` : ""; })()}${v.art === "langzeit" && b.dauer_modell ? `<span class="tag2 t-lang">${b.dauer_modell === "monatlich" ? "8 % monatlich" : "1 Monatsumsatz"}</span>` : ""}</b><span class="st b-${b.status}">${BS[b.status]}</span></div>
         <small style="color:var(--muted)">${esc([b.ansprechpartner, b.telefon, b.k_ort].filter(Boolean).join(" · "))} · angefragt ${dt(b.angefragt_am)}${b.gemailt_am ? " · ✉ per Mail" : b.status === "angefragt" ? ' · <span style="color:#A3480A">✉ noch keine Mail</span>' : ""}${b.erinnert_am ? " · 🔔 erinnert " + dt(b.erinnert_am) : ""}${b.gesehen_am ? " · 👁 Link geöffnet" : ""}${b.preis_betrag ? " · Angebot selbst abgegeben" : ""}</small>
         <div class="reihe"><select data-g="status">${Object.entries(BS).filter(([k]) => k !== "gewaehlt" && k !== "nicht_gewaehlt").map(([k, t]) => `<option value="${k}" ${b.status === k ? "selected" : ""}>${t}</option>`).join("")}${["gewaehlt", "nicht_gewaehlt"].includes(b.status) ? `<option selected value="${b.status}">${BS[b.status]}</option>` : ""}</select>
-          <input data-g="preis" placeholder="Preis, z. B. 380 €" value="${esc(b.preis || "")}" style="flex:1;min-width:120px"></div>
+          <input data-g="preis" placeholder="Preis, z. B. 380 €" value="${esc(b.preis || "")}" style="flex:1;min-width:120px">${v.art === "langzeit" ? `<select data-g="dm" title="Gebühr bei Dauerauftrag"><option value="einmal" ${b.dauer_modell !== "monatlich" ? "selected" : ""}>1 Monatsumsatz</option><option value="monatlich" ${b.dauer_modell === "monatlich" ? "selected" : ""}>8 % monatlich</option></select>` : ""}</div>
         <textarea data-g="angebot" placeholder="Angebot: Termin, was drin ist" style="margin-top:6px;min-height:50px">${esc(b.angebot || "")}</textarea>
         <div class="knopfreihe"><button class="btn ghost klein" data-sp="${b.id}" type="button">Speichern</button>${b.token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(b.token))}">Angebots-Link kopieren</button>` : ""}${b.status === "angefragt" && !b.gemailt_am && b.email ? `<button class="btn klein" data-nachmail="${b.kontakt_id}" type="button">Per Mail schicken</button>` : ""}${b.telefon ? `<a class="btn ghost klein" href="tel:${esc(String(b.telefon).replace(/[^\d+]/g, ""))}">Anrufen</a>` : ""}${b.status === "angebot" ? `<button class="btn klein" data-wahl="${b.id}" type="button">Abgemacht</button>` : ""}</div>
         ${b.status === "angefragt" ? vorlageHtml("Text: Anfrage an diesen Betrieb", T.anfrage(v) + (b.token ? "\n\nAngebot direkt hier abgeben: " + LINK(b.token) : ""), b.telefon, b.wa_ok_am) + vorlageHtml("Text: Erinnerung", T.erinnerung(v), b.telefon, b.wa_ok_am) : ""}
@@ -565,7 +588,9 @@
       ${v.empfohlen_firma ? `<div class="vb" style="margin-top:10px;background:#F2FAF7"><b>Empfohlen von ${esc(v.empfohlen_firma)}</b><small style="color:var(--muted);display:block">Diesen Betrieb nicht anfragen. Wird die Freischaltgebühr bezahlt, bekommt er die Hälfte${v.gebuehr ? " (" + esc(eur(Math.round(v.gebuehr * 50) / 100)) + ")" : ""}. Auszahlen unter Abrechnung → Empfehlungen.</small></div>` : ""}
       ${v.status === "abgemacht" && !v.freigeschaltet_am ? `<div class="vb" style="border-color:#F2B33D;background:#FFF8E8;margin-top:10px"><b>Wartet auf Freischaltung</b><small style="color:var(--muted);display:block">Kunde hat ${v.angenommen_am ? "am " + dt(v.angenommen_am) : ""} angenommen. Der Betrieb hat den Freischalt-Link per Mail, die Kontaktdaten gehen raus, sobald er bezahlt.</small>
         <div class="knopfreihe"><button class="btn ghost klein" type="button" id="vFrei">Von Hand freischalten</button><button class="btn ghost klein" type="button" id="vReset">Zurücksetzen, Kunde wählt neu</button></div></div>` : ""}
-      ${["neu", "angefragt", "angebote"].includes(v.status) || (v.status === "abgemacht" && !v.freigeschaltet_am) ? `<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">Freischaltstufe: <select id="vStufe" style="width:auto;display:inline-block;padding:4px 8px;font-size:13.5px"><option value="">automatisch nach Budget</option><option value="1" ${v.freischalt_stufe == 1 ? "selected" : ""}>bis 500 € · 9 €</option><option value="2" ${v.freischalt_stufe == 2 ? "selected" : ""}>bis 2.000 € · 29 €</option><option value="3" ${v.freischalt_stufe == 3 ? "selected" : ""}>bis 10.000 € · 69 €</option><option value="4" ${v.freischalt_stufe == 4 ? "selected" : ""}>darüber · 129 €</option></select></div>` : ""}
+      ${["neu", "angefragt", "angebote"].includes(v.status) || (v.status === "abgemacht" && !v.bezahlt_am) ? `<div style="margin-top:8px;font-size:13.5px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap">Gebühr: <input id="vHand" value="${v.gebuehr_hand != null ? esc(String(v.gebuehr_hand).replace(".", ",")) : ""}" placeholder="automatisch ${v.art === "langzeit" ? "(Monatsumsatz oder 8 %)" : "(5 %)"}" style="width:220px;padding:6px 10px;font-size:13.5px"> € <button class="btn ghost klein" type="button" id="vHandSp">Festlegen</button></div>` : ""}
+      ${v.kunde_name ? `<div class="vb" style="margin-top:10px;background:#F2FAF7"><b>${esc(KARTL[v.kunde_art] || "Fester Partner")}: ${esc(v.kunde_name)}</b><small style="color:var(--muted);display:block">${v.objekt_name ? "Objekt: " + esc(v.objekt_name) + " · " : ""}Wählt Angebote und bestätigt Besichtigungen selbst im Portal.</small></div>` : ""}
+      ${besHtml(v)}
       ${v.fotos ? `<h3 class="ab">Fotos (${v.fotos})</h3><div class="fotos" id="vFotos"><small style="color:var(--muted)">Lädt …</small></div>` : ""}
       <h3 class="ab">Auftraggeber</h3><div class="vb"><small style="color:var(--muted)">${esc([v.auftraggeber, v.kontakt].filter(Boolean).join(" · "))}${v.kunde_mail_am ? " · ✉ Angebotsseite gemailt " + dt(v.kunde_mail_am) : ""}${v.angenommen_am ? " · selbst angenommen " + dt(v.angenommen_am) : ""}</small>
         <div class="knopfreihe">${v.kunde_token ? `<button class="btn ghost klein" type="button" data-kopie="${esc(LINK(v.kunde_token))}">Angebotsseite-Link kopieren</button><button class="btn ghost klein" type="button" id="kLink">Link per Mail an Kunden</button>` : ""}</div></div>
@@ -590,7 +615,7 @@
     });
     p.querySelectorAll("[data-wahl]").forEach((b) => b.onclick = async () => {
       const box = b.closest("[data-vb]"); const preis = box.querySelector('[data-g="preis"]').value;
-      try { await api({ aktion: "vb", vb: +b.dataset.wahl, status: "angebot", preis, angebot: box.querySelector('[data-g="angebot"]').value, kunde_mail: false }); const d = await api({ aktion: "waehlen", vb: +b.dataset.wahl, auftragswert: preis }); await laden(); oeffneV(id); toast("Abgemacht!" + (d.gebuehr ? " Gebühr nach Modell: " + d.gebuehr + " €" : "")); } catch (e) { toast(e.message); }
+      try { await api({ aktion: "vb", vb: +b.dataset.wahl, status: "angebot", preis, angebot: box.querySelector('[data-g="angebot"]').value, kunde_mail: false }); const dmS = box.querySelector('[data-g="dm"]'); const d = await api({ aktion: "waehlen", vb: +b.dataset.wahl, auftragswert: preis, dauer_modell: dmS ? dmS.value : undefined }); await laden(); oeffneV(id); toast("Abgemacht!" + (d.gebuehr ? " Gebühr nach Modell: " + String(d.gebuehr).replace(".", ",") + " €" : "")); } catch (e) { toast(e.message); }
     });
     const suchen = async () => {
       const q = p.querySelector("#kSuch").value.trim(), ort = p.querySelector("#kOrt").value.trim(), max = +p.querySelector("#kKm").value;
@@ -611,7 +636,8 @@
     };
     const vf = p.querySelector("#vFrei"); if (vf) vf.onclick = async (e) => { if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich ohne Zahlung freischalten?"; return; } try { await api({ aktion: "freigeben", id }); await laden(); oeffneV(id); toast("Freigeschaltet, Kontaktdaten sind raus"); } catch (er) { toast(er.message); } };
     const vr = p.querySelector("#vReset"); if (vr) vr.onclick = async (e) => { if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich zurücksetzen?"; return; } try { await api({ aktion: "zuruecksetzen", id }); await laden(); oeffneV(id); toast("Zurückgesetzt. Dem Kunden kurz Bescheid geben, dass er neu wählen kann."); } catch (er) { toast(er.message); } };
-    const vs = p.querySelector("#vStufe"); if (vs) vs.onchange = async () => { try { await api({ aktion: "stufe", id, stufe: vs.value }); toast("Freischaltstufe gespeichert"); } catch (er) { toast(er.message); } };
+    const vh = p.querySelector("#vHandSp"); if (vh) vh.onclick = async () => { const w = p.querySelector("#vHand").value; try { await api({ aktion: "gebuehr_hand", id, betrag: w }); await laden(); oeffneV(id); toast(w ? "Gebühr festgelegt" : "Gebühr wieder automatisch"); } catch (er) { toast(er.message); } };
+    besKnoepfe(p, v);
     if (v.fotos) api({ aktion: "fotos", id }).then((d) => { const el = p.querySelector("#vFotos"); if (el) el.innerHTML = d.fotos.map((f) => `<a href="${f.src}" target="_blank" rel="noopener" download="anfrage-${id}-foto-${f.nr}.jpg"><img src="${f.src}" alt="Foto ${f.nr}"></a>`).join(""); }).catch(() => {});
     p.querySelector("#kSuchen").onclick = suchen;
     if (["neu", "angefragt", "angebote"].includes(v.status)) suchen();
@@ -635,6 +661,72 @@
       if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich löschen?"; return; }
       await api({ aktion: "loeschen", id }); schliessen(); await laden(); toast("Anfrage gelöscht");
     };
+  }
+
+  /* ---------- Besichtigungen (Termin bestätigen, anderen vorschlagen, ablehnen) ---------- */
+  function besHtml(v) {
+    const l = BES.filter((b) => b.vermittlung_id === v.id); if (!l.length) return "";
+    const firma = (b) => (B.find((x) => x.id === b.vb_id) || {}).firma || "Betrieb";
+    return `<h3 class="ab">Besichtigungen (${l.length})</h3>` + (v.objekt_adresse ? "" : '<div class="vb" style="border-color:#F2B33D;background:#FFF8E8"><b>Adresse fehlt</b><small style="color:var(--muted);display:block">Bevor du einen Termin bestätigst, unter „Anfrage bearbeiten“ die Adresse des Objekts und den Ansprechpartner vor Ort eintragen.</small></div>') +
+      l.map((b) => `<div class="vb" data-bes="${b.id}"><div class="zeile"><b>${esc(firma(b))}</b><span class="tag2 t-gold">${esc(BESL[b.status] || b.status)}</span></div>
+        <small style="color:var(--muted);display:block">${b.status === "bestaetigt" || b.status === "vorschlag" ? "Termin: " + esc(terminText(b.termin)) + (b.bestaetigt_von ? " · " + esc(b.bestaetigt_von) : "") : "Wunschtermine: " + (b.wunsch || []).map((t) => esc(terminText(t))).join(", ")}${b.nachricht ? " · „" + esc(b.nachricht) + "“" : ""}</small>
+        ${["angefragt", "vorschlag"].includes(b.status) ? `<div class="knopfreihe">${(b.wunsch || []).map((t) => `<button class="btn klein" type="button" data-bok="${b.id}" data-t="${esc(t)}">${esc(terminText(t))} bestätigen</button>`).join("")}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><input type="datetime-local" data-bt="${b.id}" style="width:auto;padding:8px 10px;font-size:14px"><button class="btn ghost klein" type="button" data-bvor="${b.id}">Anderen Termin vorschlagen</button><button class="btn ghost klein" type="button" data-bab="${b.id}" style="color:#A12B36">Ablehnen</button></div>` : ""}</div>`).join("");
+  }
+  function besKnoepfe(p, v) {
+    const setzen = async (bid, status, termin) => { try { await api({ aktion: "besichtigung_setzen", bid, status, termin }); await laden(); oeffneV(v.id); toast(status === "bestaetigt" ? "Bestätigt. Der Betrieb hat Adresse und Ansprechpartner per Mail." : status === "vorschlag" ? "Vorschlag an den Betrieb geschickt" : "Abgelehnt, der Betrieb wurde informiert"); } catch (e) { toast(e.message); } };
+    p.querySelectorAll("[data-bok]").forEach((b) => b.onclick = () => setzen(+b.dataset.bok, "bestaetigt", b.dataset.t));
+    p.querySelectorAll("[data-bvor]").forEach((b) => b.onclick = () => { const t = p.querySelector(`[data-bt="${b.dataset.bvor}"]`).value; if (!t) return toast("Bitte erst Datum und Uhrzeit wählen."); setzen(+b.dataset.bvor, "vorschlag", t); });
+    p.querySelectorAll("[data-bab]").forEach((b) => b.onclick = (e) => { if (e.target.dataset.sicher !== "1") { e.target.dataset.sicher = "1"; e.target.textContent = "Wirklich ablehnen?"; return; } setzen(+b.dataset.bab, "abgelehnt", null); });
+  }
+
+  /* ---------- Feste Partner: Verwaltungen, Makler, Gewerbe ---------- */
+  function oeffneK(kid) {
+    const k = K.find((x) => x.id === kid) || { art: "verwaltung", zugaenge: [] };
+    const f = (n, l, ganz, typ = "text") => `<div class="${ganz ? "ganz" : ""}"><label for="k_${n}">${l}</label><input id="k_${n}" data-k2="${n}" type="${typ}" value="${esc(k[n] || "")}"></div>`;
+    const z = k.zugaenge || [];
+    const p = panel(`<div class="kopf"><div><h2>${kid ? esc(k.name) : "Neuer fester Partner"}</h2><small style="color:var(--muted)">${kid ? esc(KARTL[k.art] || "") + " · seit " + dt(k.created_at).slice(0, 6) : "Hausverwaltung, Makler oder Gewerbe"}</small></div><button class="zu" aria-label="Schließen">×</button></div>
+      <div class="unter"><div class="formgrid">${f("name", "Name *", true)}
+        <div><label for="k_art">Art</label><select id="k_art" data-k2="art">${Object.entries(KARTL).map(([a, t]) => `<option value="${a}" ${k.art === a ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+        ${f("ansprechpartner", "Ansprechpartner")}${f("telefon", "Telefon", false, "tel")}${f("email", "E-Mail", false, "email")}${f("adresse", "Anschrift", true)}
+        <div class="ganz"><label for="k_notizen">Notizen</label><textarea id="k_notizen" data-k2="notizen">${esc(k.notizen || "")}</textarea></div></div>
+        <label class="check"><input type="checkbox" id="kVer" ${k.vereinbarung_am ? "checked" : ""}> <span>Partnervereinbarung und Vereinbarung zur Auftragsverarbeitung abgeschlossen${k.vereinbarung_am ? " (" + dt(k.vereinbarung_am).slice(0, 6) + ")" : ""}</span></label>
+        <div class="knopfreihe"><button class="btn klein" type="button" id="kSp">${kid ? "Speichern" : "Anlegen"}</button>${kid ? '<button class="btn ghost klein" type="button" id="kAnf">+ Anfrage für diesen Partner</button>' : ""}</div><div class="msg" id="kmsg"></div></div>
+      ${kid ? `<h3 class="ab">Portal-Zugänge</h3>${z.map((x) => `<div class="vb"><div class="zeile"><b>${esc(x.name || x.email)}</b><span class="tag2 ${x.aktiv ? (x.eingerichtet ? "t-wa" : "t-proj") : "v-verloren"}">${!x.aktiv ? "gesperrt" : x.eingerichtet ? "aktiv" : x.einladung_offen ? "Einladung offen" : "Einladung abgelaufen"}</span></div>
+          <small style="color:var(--muted)">${esc(x.email)}${x.letzter_login ? " · zuletzt angemeldet " + dt(x.letzter_login) : ""}</small>
+          <div class="knopfreihe"><button class="btn ghost klein" type="button" data-zein="${x.id}" data-mail="1">${x.eingerichtet ? "Passwort-Link per Mail" : "Einladung per Mail"}</button><button class="btn ghost klein" type="button" data-zein="${x.id}" data-mail="0">Link erzeugen</button><button class="btn ghost klein" type="button" data-zakt="${x.id}" data-an="${x.aktiv ? 0 : 1}">${x.aktiv ? "Sperren" : "Entsperren"}</button></div></div>`).join("") || '<div class="leer" style="padding:12px">Noch kein Zugang.</div>'}
+        <div class="unter"><b style="display:block;margin-bottom:6px">Neuen Zugang einladen</b><div class="formgrid"><div><label for="zName">Name</label><input id="zName" placeholder="z. B. Frau Berger"></div><div><label for="zMail">E-Mail *</label><input id="zMail" type="email" value="${esc(z.length ? "" : k.email || "")}"></div></div>
+          <label class="check"><input type="checkbox" id="zMailen" checked> <span>Einladung sofort per Mail schicken (Link 7 Tage gültig)</span></label>
+          <div class="knopfreihe"><button class="btn klein" type="button" id="zNeu">Zugang anlegen</button></div><div id="zLink"></div></div>
+        <h3 class="ab">Objekte</h3><div id="kObj"><small style="color:var(--muted)">Lädt …</small></div>
+        <div class="unter"><b style="display:block;margin-bottom:6px">Objekt anlegen</b><div class="formgrid"><div><label for="oName">Name *</label><input id="oName" placeholder="z. B. Hirschstraße 12"></div><div><label for="oArt">Art</label><select id="oArt"><option value="wohnen">Wohnen</option><option value="gewerbe">Gewerbe</option><option value="gemischt">Gemischt</option></select></div><div class="ganz"><label for="oAdr">Adresse</label><input id="oAdr" placeholder="Straße Nr., PLZ Ort"></div><div><label for="oEinh">Einheiten</label><input id="oEinh" type="number" min="1"></div><div><label for="oVor">Ansprechpartner vor Ort</label><input id="oVor" placeholder="z. B. Hausmeister, Telefon"></div></div>
+          <div class="knopfreihe"><button class="btn klein" type="button" id="oNeu">Objekt anlegen</button></div></div>
+        <h3 class="ab">Letzte Meldungen</h3><div id="kMeld"><small style="color:var(--muted)">Lädt …</small></div>` : ""}`);
+    const wk = () => { const o = {}; p.querySelectorAll("[data-k2]").forEach((e) => o[e.dataset.k2] = e.value); return o; };
+    p.querySelector("#kSp").onclick = async () => {
+      try { const r = await api({ aktion: "kunde_speichern", kunde: kid || undefined, ...wk(), vereinbarung: p.querySelector("#kVer").checked }); await laden(); oeffneK(r.id); toast(kid ? "Gespeichert" : "Angelegt. Jetzt den Zugang einladen."); }
+      catch (e) { p.querySelector("#kmsg").textContent = e.message; p.querySelector("#kmsg").className = "msg err"; }
+    };
+    if (!kid) return;
+    p.querySelector("#kAnf").onclick = () => neueAnfrage({ kunde_id: kid, auftraggeber: k.name + (k.ansprechpartner ? " (" + k.ansprechpartner + ")" : ""), kontakt: [k.email, k.telefon].filter(Boolean).join(" · "), kanal: "whatsapp" });
+    const linkZeigen = (r) => { p.querySelector("#zLink").innerHTML = `<div class="vb"><small style="color:var(--muted);display:block">${r.gemailt ? "Mail ist raus. " : ""}Einladungslink (7 Tage gültig), z. B. für WhatsApp:</small><code style="word-break:break-all;font-size:13px">${esc(r.link)}</code><div class="knopfreihe"><button class="btn ghost klein" type="button" data-kopie="${esc(r.link)}">Link kopieren</button></div></div>`; };
+    p.querySelector("#zNeu").onclick = async () => {
+      try { const r = await api({ aktion: "zugang_neu", kunde: kid, name: p.querySelector("#zName").value, email: p.querySelector("#zMail").value, mail: p.querySelector("#zMailen").checked }); await laden(); oeffneK(kid); linkZeigen(r); toast(r.gemailt ? "Einladung gesendet" : "Zugang angelegt"); }
+      catch (e) { toast(e.message); }
+    };
+    p.querySelectorAll("[data-zein]").forEach((b) => b.onclick = async () => { try { const r = await api({ aktion: "zugang_einladen", zugang: +b.dataset.zein, mail: b.dataset.mail === "1" }); await laden(); oeffneK(kid); linkZeigen(r); toast(r.gemailt ? "Mail gesendet" : b.dataset.mail === "1" ? "Mail konnte nicht gesendet werden, Link unten kopieren" : "Neuer Link erzeugt"); } catch (e) { toast(e.message); } });
+    p.querySelectorAll("[data-zakt]").forEach((b) => b.onclick = async () => { try { await api({ aktion: "zugang_aktiv", zugang: +b.dataset.zakt, aktiv: b.dataset.an === "1" }); await laden(); oeffneK(kid); toast(b.dataset.an === "1" ? "Entsperrt" : "Gesperrt und abgemeldet"); } catch (e) { toast(e.message); } });
+    p.querySelector("#oNeu").onclick = async () => {
+      try { await api({ aktion: "objekt_speichern", kunde: kid, name: p.querySelector("#oName").value, art: p.querySelector("#oArt").value, adresse: p.querySelector("#oAdr").value, einheiten: p.querySelector("#oEinh").value, vor_ort: p.querySelector("#oVor").value }); await laden(); oeffneK(kid); toast("Objekt angelegt"); }
+      catch (e) { toast(e.message); }
+    };
+    api({ aktion: "kunde_details", kunde: kid }).then((d) => {
+      const MS = { neu: "neu", frei: "Angebote laufen", selbst: "selbst erledigt", kein: "kein Bedarf", erledigt: "erledigt" };
+      p.querySelector("#kObj").innerHTML = d.objekte.map((o) => `<div class="vb"><div class="zeile"><b>${esc(o.name)}</b>${o.aktiv ? "" : '<span class="tag2 v-verloren">inaktiv</span>'}</div><small style="color:var(--muted)">${esc([o.adresse, o.einheiten ? o.einheiten + " Einheiten" : "", o.vor_ort].filter(Boolean).join(" · "))}</small>
+        <div class="knopfreihe"><a class="btn ghost klein" href="/melden?o=${esc(o.qr_token)}" target="_blank" rel="noopener">Mieter-Seite</a><button class="btn ghost klein" type="button" data-kopie="${esc(location.origin + "/melden?o=" + o.qr_token)}">Link kopieren</button><a class="btn ghost klein" href="/aushang?o=${esc(o.qr_token)}" target="_blank" rel="noopener">QR-Aushang</a></div></div>`).join("") || '<div class="leer" style="padding:12px">Noch keine Objekte.</div>';
+      p.querySelector("#kMeld").innerHTML = d.meldungen.map((m) => `<div class="vb"${m.vermittlung_id ? ` data-vgo="${m.vermittlung_id}" style="cursor:pointer"` : ""}><div class="zeile"><b>${esc(m.titel || "Meldung")}</b><span class="tag2 ${m.status === "neu" ? "v-neu" : "t-p"}">${esc(MS[m.status] || m.status)}</span></div><small style="color:var(--muted)">${esc([m.objekt, m.quelle === "mieter" ? "von Mieter" : m.quelle, dt(m.created_at)].filter(Boolean).join(" · "))}${m.vermittlung_id ? " · Anfrage #" + m.vermittlung_id + " →" : ""}</small></div>`).join("") || '<div class="leer" style="padding:12px">Noch keine Meldungen.</div>';
+      p.querySelectorAll("[data-vgo]").forEach((x) => x.onclick = () => oeffneV(+x.dataset.vgo));
+    }).catch((e) => { p.querySelector("#kObj").textContent = e.message; });
   }
 
   function oeffneP(kid) {
@@ -700,7 +792,8 @@
     catch (err) { m.textContent = err.message; m.className = "msg err"; pw = null; }
   };
   $("raus").onclick = abmelden;
-  $("neuA").onclick = neueAnfrage;
+  $("neuA").onclick = () => neueAnfrage();
+  $("neuK").onclick = () => { setze("kunden"); oeffneK(0); };
   $("neuP").onclick = neuerPartner;
   document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => setze(b.dataset.v));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") schliessen(); });

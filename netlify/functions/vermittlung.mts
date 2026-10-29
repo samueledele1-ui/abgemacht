@@ -643,6 +643,18 @@ export default async (req: Request, _context: Context) => {
     ]);
     return Response.json({ ok: true, objekte, meldungen });
   }
+  // Objekt für einen festen Partner anlegen (z. B. beim Einrichten gemeinsam mit der Verwaltung)
+  if (aktion === "objekt_speichern") {
+    const kid = Number(body.kunde) || 0;
+    if (!(await sql`SELECT id FROM kunden WHERE id = ${kid}`).length) return fehler("Partner nicht gefunden.", 404);
+    const name = clip(body.name, 120);
+    if (!name) return fehler("Bitte einen Namen für das Objekt angeben, z. B. „Hirschstraße 12“.");
+    const art = ["wohnen", "gewerbe", "gemischt"].includes(String(body.art)) ? String(body.art) : "wohnen";
+    const e = Number(body.einheiten);
+    const einheiten = Number.isInteger(e) && e > 0 && e < 10000 ? e : null;
+    const r = await sql`INSERT INTO objekte (kunde_id, name, adresse, art, einheiten, vor_ort) VALUES (${kid}, ${name}, ${clip(body.adresse, 200)}, ${art}, ${einheiten}, ${clip(body.vor_ort, 200)}) RETURNING id`;
+    return Response.json({ ok: true, id: r[0].id });
+  }
   if (aktion === "zugang_neu" || aktion === "zugang_einladen") {
     let zid = Number(body.zugang) || 0;
     if (aktion === "zugang_neu") {

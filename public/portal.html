@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Portal – Abgemacht</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#138A6B">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/portal.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Abgemacht">
+<link rel="apple-touch-icon" href="/buero-180.png">
+<link rel="stylesheet" href="/portal.css">
+<style>
+/* Layout: weiße App. Oben grüne Begrüßung mit gelben Zahlen, darunter Meldungen als Pinnwand in drei Spalten, Details in der Seitenleiste. Häuser, Fristen und Konto als eigene Ansichten. */
+@media (max-width:720px){.unten{grid-template-columns:repeat(4,1fr)}}
+.wand .karte{cursor:pointer;font:inherit;color:inherit}
+.karte .ic svg{width:20px;height:20px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-haus" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-post" viewBox="0 0 24 24"><path d="M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/></symbol>
+  <symbol id="i-kal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-handy" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-tel" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-kamera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+</svg>
+
+<header class="kopf">
+  <div class="wrap">
+    <a class="logo" href="#meldungen"><i><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 12.5l4.2 4.2L18.5 7.8" fill="none" stroke="#F2B33D" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Abgemacht</a>
+    <nav class="tabs" aria-label="Ansichten" id="tabs" hidden>
+      <a href="#meldungen" data-tab="meldungen">Meldungen <span class="zahl" data-neu hidden>0</span></a>
+      <a href="#objekte" data-tab="objekte">Häuser</a>
+      <a href="#fristen" data-tab="fristen">Fristen <span class="zahl" data-fr hidden>0</span></a>
+      <a href="#konto" data-tab="konto">Konto</a>
+    </nav>
+  </div>
+</header>
+<nav class="unten" aria-label="Ansichten" id="unten" hidden>
+  <a href="#meldungen" data-tab="meldungen"><svg class="i"><use href="#i-post"/></svg>Meldungen<span class="zahl" data-neu hidden>0</span></a>
+  <a href="#objekte" data-tab="objekte"><svg class="i"><use href="#i-haus"/></svg>Häuser</a>
+  <a href="#fristen" data-tab="fristen"><svg class="i"><use href="#i-kal"/></svg>Fristen<span class="zahl" data-fr hidden>0</span></a>
+  <a href="#konto" data-tab="konto"><svg class="i"><use href="#i-person"/></svg>Konto</a>
+</nav>
+
+<main class="wrap">
+  <section class="ansicht" id="v-lade"><p class="leer">Wird geladen …</p></section>
+
+  <section class="ansicht" id="v-login">
+    <form class="anmelden" id="loginForm" novalidate>
+      <h1>Portal für Partner</h1>
+      <p>Für Hausverwaltungen, Makler und Unternehmen, die mit Abgemacht zusammenarbeiten.</p>
+      <label class="f" for="lMail">E-Mail</label><input class="feld" id="lMail" type="email" autocomplete="username" required>
+      <label class="f" for="lPw">Passwort</label><input class="feld" id="lPw" type="password" autocomplete="current-password" required>
+      <button class="btn p voll" style="margin-top:18px" id="lBtn">Anmelden</button>
+      <div class="meld" id="lMsg" role="status"></div>
+      <p class="kleiner" style="margin-top:16px">Passwort vergessen oder noch kein Zugang? Schreiben Sie kurz an <a href="mailto:hallo@ab-gemacht.info?subject=Zugang%20Portal">hallo@ab-gemacht.info</a> oder per <a href="https://wa.me/491772385499" target="_blank" rel="noopener">WhatsApp</a>, Sie bekommen einen neuen Link.</p>
+    </form>
+  </section>
+
+  <section class="ansicht" id="v-einladung">
+    <form class="anmelden" id="eForm" novalidate>
+      <h1>Willkommen!</h1>
+      <p id="eText">Legen Sie Ihr Passwort fest.</p>
+      <label class="f" for="eMail">E-Mail</label><input class="feld" id="eMail" type="email" autocomplete="username" readonly>
+      <label class="f" for="ePw">Neues Passwort</label><input class="feld" id="ePw" type="password" autocomplete="new-password" minlength="10">
+      <p class="kleiner" style="margin:6px 0 0">Mindestens 10 Zeichen, mit Buchstaben und mindestens einer Zahl.</p>
+      <label class="f" for="ePw2">Passwort wiederholen</label><input class="feld" id="ePw2" type="password" autocomplete="new-password">
+      <label class="haken2"><input type="checkbox" id="eOk"> <span>Ich habe die <a href="/bedingungen#portal" target="_blank">Nutzungsbedingungen</a> und die <a href="/datenschutz#portal" target="_blank">Datenschutzhinweise</a> gelesen. Die Nutzung ist für uns kostenlos.</span></label>
+      <button class="btn p voll" style="margin-top:18px" id="eBtn">Passwort speichern und starten</button>
+      <div class="meld" id="eMsg" role="status"></div>
+    </form>
+  </section>
+
+  <section class="ansicht" id="v-meldungen" aria-labelledby="h-meld">
+    <div class="buehne">
+      <div><h1 id="h-meld">Guten Tag</h1><p id="untertitel"></p></div>
+      <div class="kacheln" id="kacheln"></div>
+    </div>
+    <div class="zeile"><h2>Meldungen</h2><button class="btn p klein" type="button" id="neuMeld"><svg class="i"><use href="#i-plus"/></svg>Meldung erfassen</button></div>
+    <div class="wand" id="wand"></div>
+    <div class="erl-link" id="erlLink"></div>
+  </section>
+
+  <section class="ansicht" id="v-objekte" aria-labelledby="h-obj">
+    <div class="zeile"><div class="kopfz" style="margin:0"><h1 id="h-obj">Meine Häuser</h1><p>Für jedes Haus gibt es einen QR-Aushang. Mieter melden darüber Schäden direkt in dieses Portal.</p></div><button class="btn p klein" type="button" id="neuObj"><svg class="i"><use href="#i-plus"/></svg>Haus anlegen</button></div>
+    <div class="haeuser" id="haeuser" style="margin-top:16px"></div>
+  </section>
+
+  <section class="ansicht" id="v-fristen" aria-labelledby="h-fr">
+    <div class="zeile"><div class="kopfz" style="margin:0"><h1 id="h-fr">Fristen &amp; <em>Wartungen</em></h1><p>Tragen Sie Ihre Prüf- und Wartungsintervalle ein. Das Portal zeigt, was ansteht, und mit einem Klick holt Abgemacht Angebote.</p></div><button class="btn p klein" type="button" id="neuFrist"><svg class="i"><use href="#i-plus"/></svg>Frist eintragen</button></div>
+    <div class="fzahlen" id="fzahlen" style="margin-top:16px"></div>
+    <div class="fleiste"><label for="fSel">Haus</label><select id="fSel"><option value="">Alle Häuser</option></select></div>
+    <div id="fliste"></div>
+    <p class="fhinweis">Welche Prüfung wie oft nötig ist, hängt von Gebäude, Anlage und Vorschriften ab. Die Intervalle tragen Sie selbst ein. Das Portal erinnert nur und holt auf Wunsch Angebote.</p>
+  </section>
+
+  <section class="ansicht" id="v-konto" aria-labelledby="h-konto">
+    <div class="kopfz"><h1 id="h-konto">Konto</h1><p id="kontoText"></p></div>
+    <div class="box2"><h3>Passwort ändern</h3>
+      <div class="reihe2"><div><label class="f" for="pwAlt">Bisheriges Passwort</label><input class="feld" id="pwAlt" type="password" autocomplete="current-password"></div><div><label class="f" for="pwNeu">Neues Passwort</label><input class="feld" id="pwNeu" type="password" autocomplete="new-password"></div></div>
+      <button class="btn s klein" type="button" id="pwBtn" style="margin-top:14px">Passwort ändern</button><div class="meld" id="pwMsg" role="status"></div></div>
+    <div class="box2"><h3>Ihr Ansprechpartner</h3><p class="kleiner" style="margin:0 0 12px">Samuel Edele, Abgemacht. Für neue Zugänge für Kolleginnen und Kollegen, Fragen oder einen Auftrag, der nicht ins Portal passt.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn p klein" href="https://wa.me/491772385499" target="_blank" rel="noopener">WhatsApp</a><a class="btn s klein" href="tel:+491772385499">0177 2385499</a><a class="btn s klein" href="mailto:hallo@ab-gemacht.info">E-Mail</a></div></div>
+    <div class="box2"><h3>Abmelden</h3><p class="kleiner" style="margin:0 0 12px">Auf diesem Gerät bleiben Sie sonst 30 Tage angemeldet.</p><button class="btn s klein" type="button" id="raus">Abmelden</button></div>
+  </section>
+</main>
+
+<div class="schleier" id="schleier"></div>
+<aside class="leiste" id="leiste" aria-label="Details" aria-hidden="true"></aside>
+<div class="toast" id="toast" role="status"><span id="toastText"></span></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var euro = function (n) { return Number(n).toLocaleString('de-DE', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €'; };
+  var tag = function (d) { return d ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' }).format(new Date(d)) : ''; };
+  var zeit = function (d) { return d ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }).format(new Date(d)) : ''; };
+  var terminText = function (t) { var d = new Date(String(t) + ':00'); return isNaN(d) ? String(t || '') : new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d) + ' Uhr'; };
+  var D = null, zeigeErledigte = false, offenId = null;
+
+  function toast(t) { $('toastText').textContent = t; $('toast').classList.add('da'); clearTimeout(toast.t); toast.t = setTimeout(function () { $('toast').classList.remove('da'); }, 3600); }
+  async function api(daten) {
+    var r = await fetch('/api/portal', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-abgemacht': '1' }, body: JSON.stringify(daten) });
+    var d = await r.json().catch(function () { return { ok: false, error: 'Verbindung fehlgeschlagen. Bitte gleich noch einmal versuchen.' }; });
+    if (r.status === 401 && daten.aktion !== 'login' && daten.aktion !== 'passwort_aendern') { zeigeAnsicht('login'); throw new Error(d.error || 'Bitte melden Sie sich an.'); }
+    if (!d.ok) throw new Error(d.error || 'Fehler');
+    return d;
+  }
+
+  /* ---------- Ansichten ---------- */
+  var ANSICHTEN = ['meldungen', 'objekte', 'fristen', 'konto'];
+  function zeigeAnsicht(n) {
+    document.querySelectorAll('.ansicht').forEach(function (s) { s.classList.toggle('an', s.id === 'v-' + n); });
+    var app = ANSICHTEN.indexOf(n) >= 0;
+    $('tabs').hidden = $('unten').hidden = !app;
+    document.querySelectorAll('[data-tab]').forEach(function (a) { if (a.dataset.tab === n) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  }
+  function route() {
+    if (!D) return;
+    var n = location.hash.replace('#', '');
+    if (ANSICHTEN.indexOf(n) < 0) n = 'meldungen';
+    zeigeAnsicht(n); window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+
+  /* ---------- Laden ---------- */
+  async function laden() {
+    D = await api({ aktion: 'start' });
+    alles();
+    if (offenId) { var m = D.meldungen.find(function (x) { return x.id === offenId; }); if (m) zeigeMeldung(m); }
+  }
+  function alles() { kopf(); wand(); haeuser(); fristen(); konto(); }
+  function objektName(id) { var o = (D.objekte || []).find(function (x) { return x.id === id; }); return o ? o.name : ''; }
+
+  /* ---------- Begrüßung und Kacheln ---------- */
+  function spalteVon(m) {
+    if (m.status === 'neu') return 'neu';
+    if (m.status === 'frei') return ['abgemacht', 'erledigt'].indexOf(m.v_status) >= 0 ? 'lauf' : 'ang';
+    if (m.status === 'selbst') return 'lauf';
+    return 'zu';
+  }
+  function kopf() {
+    var h = new Date().getHours(), gruss = h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
+    $('h-meld').textContent = gruss + (D.ich.name ? ', ' + D.ich.name : '');
+    var einh = D.objekte.reduce(function (a, o) { return a + (o.aktiv && o.einheiten ? o.einheiten : 0); }, 0);
+    $('untertitel').textContent = D.ich.kunde + ' · ' + D.objekte.filter(function (o) { return o.aktiv; }).length + ' Häuser' + (einh ? ' · ' + einh + ' Einheiten' : '');
+    var neu = D.meldungen.filter(function (m) { return m.status === 'neu'; }).length;
+    var ang = D.meldungen.filter(function (m) { return spalteVon(m) === 'ang' && m.angebote > 0; }).length;
+    var bes = D.meldungen.filter(function (m) { return m.besichtigung_offen > 0; }).length;
+    var fr = fristListe().filter(function (f) { return f.tage != null && f.tage <= 60; }).length;
+    $('kacheln').innerHTML = [[neu, 'neue Meldungen', 'meldungen'], [ang, 'mit Angeboten', 'meldungen'], [bes, 'Besichtigungen bestätigen', 'meldungen'], [fr, 'Fristen in 60 Tagen', 'fristen']]
+      .map(function (k) { return '<a class="kz" href="#' + k[2] + '"><b>' + k[0] + '</b><span>' + k[1] + '</span></a>'; }).join('');
+    document.querySelectorAll('[data-neu]').forEach(function (x) { x.textContent = neu; x.hidden = !neu; });
+    document.querySelectorAll('[data-fr]').forEach(function (x) { x.textContent = fr; x.hidden = !fr; });
+  }
+
+  /* ---------- Pinnwand ---------- */
+  var SPALTEN = [
+    { id: 'neu', titel: 'Neu, bitte entscheiden', farbe: 'var(--rot)', leer: 'Keine neuen Meldungen. Mieter melden über den QR-Aushang, Sie können auch selbst eine erfassen.' },
+    { id: 'ang', titel: 'Angebote laufen', farbe: 'var(--sonne)', leer: 'Hier landen Meldungen, für die Abgemacht Angebote holt.' },
+    { id: 'lauf', titel: 'Beauftragt', farbe: 'var(--gruen)', leer: 'Abgemachte und selbst erledigte Aufträge.' },
+  ];
+  function standText(m) {
+    if (m.status === 'neu') return '<span class="tag dr">neu</span>';
+    if (m.status === 'frei') {
+      if (m.besichtigung_offen) return '<span class="tag y">Besichtigung bestätigen</span>';
+      if (['abgemacht', 'erledigt'].indexOf(m.v_status) >= 0) return '<span class="tag g">Abgemacht' + (m.gewaehlt_firma ? ' · ' + esc(m.gewaehlt_firma) : '') + '</span>';
+      if (m.angebote) return '<span class="tag g">' + m.angebote + ' Angebot' + (m.angebote > 1 ? 'e' : '') + '</span>';
+      return '<span class="tag b">' + (m.angefragt ? m.angefragt + ' Betriebe angefragt' : 'Abgemacht sucht Betriebe') + '</span>';
+    }
+    return '<span class="tag">' + ({ selbst: 'machen wir selbst', kein: 'kein Bedarf', erledigt: 'erledigt' }[m.status] || m.status) + '</span>';
+  }
+  function karte(m) {
+    return '<button type="button" class="karte' + (m.dringend ? ' dr' : '') + '" data-m="' + m.id + '"><div class="ko"><span class="ic' + (m.quelle === 'mieter' ? ' y' : '') + '"><svg class="i"><use href="#' + (m.quelle === 'mieter' ? 'i-handy' : m.quelle === 'telefon' ? 'i-tel' : 'i-post') + '"/></svg></span><div><b>' + esc(m.titel || 'Meldung') + '</b><small>' + esc([objektName(m.objekt_id), m.einheit].filter(Boolean).join(' · ') || 'ohne Objekt') + '</small></div></div>' +
+      (m.text ? '<p>' + esc(m.text) + '</p>' : '') + '<div class="fuss"><span>' + zeit(m.created_at) + (m.fotos ? ' · 📷 ' + m.fotos : '') + (m.dringend ? ' · <b style="color:var(--rot)">dringend</b>' : '') + '</span>' + standText(m) + '</div></button>';
+  }
+  function wand() {
+    $('wand').innerHTML = SPALTEN.map(function (s) {
+      var l = D.meldungen.filter(function (m) { return spalteVon(m) === s.id; });
+      return '<section class="spalte" aria-label="' + s.titel + '"><h3><span class="punkt" style="background:' + s.farbe + '"></span>' + s.titel + '<span class="n">' + l.length + '</span></h3><div class="karten">' + (l.length ? l.map(karte).join('') : '<div class="leer">' + s.leer + '</div>') + '</div></section>';
+    }).join('');
+    var zu = D.meldungen.filter(function (m) { return spalteVon(m) === 'zu'; });
+    $('erlLink').innerHTML = zu.length ? '<button class="linkbtn" type="button" id="erlBtn">' + (zeigeErledigte ? 'Erledigte ausblenden' : 'Erledigte anzeigen (' + zu.length + ')') + '</button>' + (zeigeErledigte ? '<div class="karten" style="display:grid;gap:10px;margin-top:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">' + zu.map(karte).join('') + '</div>' : '') : '';
+    if ($('erlBtn')) $('erlBtn').onclick = function () { zeigeErledigte = !zeigeErledigte; wand(); };
+    document.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { zeigeMeldung(D.meldungen.find(function (x) { return x.id === +b.dataset.m; })); }; });
+  }
+
+  /* ---------- Seitenleiste ---------- */
+  function oeffnen(titel, unter, inhalt) {
+    var l = $('leiste');
+    l.innerHTML = '<div class="lk"><div><h2>' + titel + '</h2>' + (unter ? '<small>' + unter + '</small>' : '') + '</div><button class="zu" type="button" aria-label="Schließen"><svg class="i"><use href="#i-x"/></svg></button></div><div class="li">' + inhalt + '</div>';
+    l.classList.add('an'); l.setAttribute('aria-hidden', 'false'); $('schleier').classList.add('an');
+    l.querySelector('.zu').onclick = schliessen;
+    return l;
+  }
+  function schliessen() { offenId = null; $('leiste').classList.remove('an'); $('leiste').setAttribute('aria-hidden', 'true'); $('schleier').classList.remove('an'); }
+  $('schleier').onclick = schliessen;
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') schliessen(); });
+
+  function weg(m) {
+    var s = spalteVon(m), stufe = m.status === 'neu' ? 0 : s === 'ang' ? (m.angebote ? 1 : 1) : s === 'lauf' ? 2 : 3;
+    if (m.status === 'erledigt') stufe = 3;
+    return '<div class="weg">' + ['Gemeldet', 'Angebote', 'Beauftragt', 'Erledigt'].map(function (t, i) { return '<span class="' + (i < stufe ? 'da' : i === stufe ? 'jetzt' : '') + '">' + t + '</span>'; }).join('') + '</div>';
+  }
+  function zeigeMeldung(m) {
+    if (!m) return; offenId = m.id;
+    var daten = [['Haus', objektName(m.objekt_id)], ['Wohnung', m.einheit], ['Gemeldet von', m.name], ['Kontakt', m.kontakt], ['Über', { mieter: 'QR-Code (Mieter)', portal: 'Portal', telefon: 'Telefon' }[m.quelle] || m.quelle], ['Am', zeit(m.created_at)]]
+      .filter(function (x) { return x[1]; }).map(function (x) { return '<span>' + x[0] + ': <b>' + esc(x[1]) + '</b></span>'; }).join('');
+    var l = oeffnen(esc(m.titel || 'Meldung'), m.dringend ? '<b style="color:var(--rot)">Dringend</b>' : '', weg(m) + (m.text ? '<div class="text">' + esc(m.text).replace(/\n/g, '<br>') + '</div>' : '') +
+      '<div class="daten">' + daten + '</div>' + (m.fotos ? '<div class="fotos" id="mFotos"><span class="ph">Lädt …</span></div>' : '') + '<div id="aktion"></div>' + (m.notiz ? '<p class="kleiner" style="margin-top:16px">Notiz: ' + esc(m.notiz) + '</p>' : ''));
+    if (m.fotos) api({ aktion: 'meldung_fotos', id: m.id }).then(function (d) { var f = l.querySelector('#mFotos'); if (f) f.innerHTML = d.fotos.map(function (x) { return '<a href="' + x.src + '" target="_blank" rel="noopener"><img src="' + x.src + '" alt="Foto ' + x.nr + '"></a>'; }).join(''); }).catch(function () {});
+    aktion(m, l.querySelector('#aktion'));
+  }
+  async function status(m, st, text) { try { await api({ aktion: 'meldung_status', id: m.id, status: st }); toast(text); await laden(); } catch (e) { toast(e.message); } }
+
+  function aktion(m, el) {
+    if (m.status === 'neu') {
+      el.innerHTML = '<div class="block"><div class="frage"><h3>Was soll passieren?</h3><p class="kleiner" style="margin:4px 0 12px">Mit „Angebote holen“ fragt Abgemacht passende, geprüfte Betriebe an. Für Sie kostenlos.</p>' +
+        '<button class="btn p voll" type="button" id="aHolen">Ja, Angebote holen</button><div class="neben"><button class="linkbtn" type="button" id="aSelbst">Machen wir selbst</button><button class="linkbtn" type="button" id="aKein">Kein Handlungsbedarf</button></div></div></div>';
+      el.querySelector('#aHolen').onclick = function () { holenForm(m, el); };
+      el.querySelector('#aSelbst').onclick = function () { status(m, 'selbst', 'Notiert: machen Sie selbst'); };
+      el.querySelector('#aKein').onclick = function () { status(m, 'kein', 'Notiert: kein Handlungsbedarf'); };
+      return;
+    }
+    if (m.status === 'frei') return angebote(m, el);
+    if (m.status === 'selbst') {
+      el.innerHTML = '<div class="block"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn p" type="button" id="aErl">Ist erledigt</button><button class="btn s" type="button" id="aDoch">Doch Angebote holen</button></div></div>';
+      el.querySelector('#aErl').onclick = function () { status(m, 'erledigt', 'Als erledigt markiert'); };
+      el.querySelector('#aDoch').onclick = async function () { try { await api({ aktion: 'meldung_status', id: m.id, status: 'neu' }); m.status = 'neu'; holenForm(m, el); } catch (e) { toast(e.message); } };
+      return;
+    }
+    el.innerHTML = m.vermittlung_id ? '' : '<div class="block"><button class="btn s" type="button" id="aAuf">Wieder öffnen</button></div>';
+    if (el.querySelector('#aAuf')) el.querySelector('#aAuf').onclick = function () { status(m, 'neu', 'Wieder geöffnet'); };
+    if (m.vermittlung_id) angebote(m, el);
+  }
+
+  function holenForm(m, el) {
+    var o = D.objekte.find(function (x) { return x.id === m.objekt_id; }) || {};
+    var vorOrt = o.vor_ort || (m.name && m.kontakt ? m.name + (m.einheit ? ' (' + m.einheit + ')' : '') + ', ' + m.kontakt : '');
+    el.innerHTML = '<div class="block"><h3>Angebote holen</h3><p>Die Betriebe sehen zuerst nur Leistung, Ort, Beschreibung und Fotos, ohne Ihren Namen. Adresse und Ansprechpartner vor Ort bekommt ein Betrieb erst, wenn Sie eine Besichtigung bestätigen oder sein Angebot annehmen.</p>' +
+      '<label class="f" for="hL">Was wird gebraucht?</label><input class="feld" id="hL" maxlength="200" value="' + esc(m.titel || '') + '">' +
+      '<label class="f">Art</label><div class="wahl3"><input type="radio" name="hA" id="hA1" value="einmalig" checked><label for="hA1">Einmalig</label><input type="radio" name="hA" id="hA2" value="projekt"><label for="hA2">Projekt</label><input type="radio" name="hA" id="hA3" value="langzeit"><label for="hA3">Regelmäßig</label></div>' +
+      '<div class="reihe2"><div><label class="f" for="hZ">Wann?</label><select class="feld" id="hZ"><option>' + (m.dringend ? 'dringend' : 'So schnell wie möglich') + '</option><option>Diese Woche</option><option>In den nächsten 2–4 Wochen</option><option>Flexibel</option></select></div><div><label class="f" for="hB">Budget <span class="kleiner">(optional)</span></label><input class="feld" id="hB" maxlength="60" placeholder="z. B. bis 500 €"></div></div>' +
+      '<label class="f" for="hV">Ansprechpartner vor Ort</label><input class="feld" id="hV" maxlength="200" value="' + esc(vorOrt) + '" placeholder="z. B. Hausmeister, Telefon">' +
+      '<label class="f" for="hH">Hinweis für die Betriebe <span class="kleiner">(optional)</span></label><textarea class="feld" id="hH" maxlength="1500" placeholder="z. B. Zugang über den Hof, Schlüssel beim Hausmeister"></textarea>' +
+      '<button class="btn p voll" type="button" id="hGo" style="margin-top:16px">Angebote holen</button><button class="linkbtn" type="button" id="hZur">Abbrechen</button><div class="meld" id="hMsg"></div></div>';
+    el.querySelector('#hZur').onclick = function () { zeigeMeldung(m); };
+    el.querySelector('#hGo').onclick = async function () {
+      this.disabled = true;
+      try {
+        await api({ aktion: 'angebote_holen', id: m.id, leistung: $('hL').value, art: el.querySelector('input[name=hA]:checked').value, zeitraum: $('hZ').value, budget: $('hB').value, vor_ort: $('hV').value, hinweis: $('hH').value });
+        toast('Abgemacht holt jetzt Angebote. Sie bekommen eine Mail, sobald sie da sind.'); await laden();
+      } catch (e) { $('hMsg').textContent = e.message; $('hMsg').className = 'meld err'; this.disabled = false; }
+    };
+  }
+
+  async function angebote(m, el) {
+    el.innerHTML = '<div class="block"><div class="lade"><i></i>Stand wird geladen …</div></div>';
+    var d;
+    try { d = await api({ aktion: 'angebote', id: m.id }); } catch (e) { el.innerHTML = '<p class="meld err">' + esc(e.message) + '</p>'; return; }
+    var h = '';
+    if (d.betrieb) {
+      var b = d.betrieb;
+      h += '<div class="block"><div class="ok"><svg class="i"><use href="#i-check"/></svg>Abgemacht mit ' + esc(b.firma) + '</div><div class="kontaktk"><b>Kontakt zum Betrieb</b><dl>' +
+        [['Ansprechpartner', b.ansprechpartner], ['Telefon', b.telefon ? '<a href="tel:' + esc(String(b.telefon).replace(/[^\d+]/g, '')) + '">' + esc(b.telefon) + '</a>' : null], ['E-Mail', b.email ? '<a href="mailto:' + esc(b.email) + '">' + esc(b.email) + '</a>' : null], ['Website', b.website ? esc(b.website) : null]]
+          .filter(function (x) { return x[1]; }).map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + (x[0] === 'Ansprechpartner' ? esc(x[1]) : x[1]) + '</dd>'; }).join('') + '</dl><p class="kleiner" style="margin:10px 0 0">Den Vertrag schließen Sie direkt mit dem Betrieb. Der Betrieb hat Ihre Kontaktdaten und meldet sich.</p></div>' +
+        (m.status !== 'erledigt' ? '<button class="btn s" type="button" id="aErl" style="margin-top:12px">Auftrag ist erledigt</button>' : '') + '</div>';
+    } else if (d.wartet) {
+      h += '<div class="block"><div class="lade"><i></i>Angenommen. Der Betrieb bestätigt gerade, danach bekommen Sie seine Kontaktdaten per Mail und hier.</div></div>';
+    }
+    var offeneBes = d.besichtigungen.filter(function (b) { return b.status === 'angefragt'; });
+    if (d.besichtigungen.length) {
+      h += '<div class="block"><h3>Besichtigungen</h3><p>Erst nach Ihrer Bestätigung bekommt der Betrieb die Adresse und den Ansprechpartner vor Ort.</p>' +
+        (offeneBes.length && !d.objekt_adresse ? '<label class="f" for="bAdr">Adresse des Objekts *</label><input class="feld" id="bAdr" placeholder="Straße Nr., PLZ Ort">' : '') +
+        (offeneBes.length && !d.vor_ort ? '<label class="f" for="bVor">Ansprechpartner vor Ort</label><input class="feld" id="bVor" placeholder="z. B. Hausmeister, Telefon">' : '') +
+        d.besichtigungen.map(function (b) {
+          var kopf = '<b>' + esc(b.label) + (b.kategorie ? ' · ' + esc(b.kategorie) : '') + (b.ort ? ' aus ' + esc(b.ort) : '') + '</b>';
+          if (b.status === 'bestaetigt') return '<div class="besi" style="background:var(--gruen-l);border-color:var(--gruen-m)">' + kopf + '<span class="kleiner">Bestätigt: ' + esc(b.termin_text || '') + '</span></div>';
+          if (b.status === 'vorschlag') return '<div class="besi">' + kopf + '<span class="kleiner">Ihr Vorschlag ' + esc(b.termin_text || '') + ' ist beim Betrieb.</span></div>';
+          if (b.status === 'abgelehnt') return '<div class="besi" style="background:var(--flaeche2);border-color:var(--line)">' + kopf + '<span class="kleiner">Abgelehnt</span></div>';
+          return '<div class="besi">' + kopf + (b.nachricht ? '<span class="kleiner">„' + esc(b.nachricht) + '“</span>' : '') + '<div class="knoepfe">' + b.wunsch.map(function (w) { return '<button class="btn p klein" type="button" data-bok="' + b.id + '" data-t="' + esc(w.wert) + '">' + esc(w.text) + '</button>'; }).join('') + '</div>' +
+            '<div class="knoepfe"><input class="feld" type="datetime-local" data-bt="' + b.id + '" style="width:auto;min-height:40px;padding:8px 10px"><button class="btn s klein" type="button" data-bvor="' + b.id + '">Anderen Termin vorschlagen</button><button class="linkbtn" type="button" data-bab="' + b.id + '">Ablehnen</button></div></div>';
+        }).join('') + '<div class="meld" id="bMsg"></div></div>';
+    }
+    if (d.angebote.length) {
+      var best = null; d.angebote.forEach(function (a) { var p = a.bis != null ? a.bis : a.betrag; if (a.status === 'angebot' && p != null && (best == null || p < best.p)) best = { id: a.id, p: p }; });
+      h += '<div class="block"><h3>Angebote (' + d.angebote.length + ')</h3><p>' + (d.offen ? 'Wählen Sie das passende Angebot. Danach bekommen Sie und der Betrieb gegenseitig die Kontaktdaten. Die anderen Betriebe bekommen eine kurze Absage.' : 'Für diese Anfrage ist entschieden.') + '</p><div class="angebote">' +
+        d.angebote.map(function (a) {
+          var preis = a.betrag != null ? (a.bis != null ? euro(a.betrag).replace(' €', '') + ' – ' + euro(a.bis) : euro(a.betrag)) : esc(a.preis || 'Preis auf Anfrage');
+          var marken = [a.geprueft ? '<span class="tag g">✓ Geprüfter Betrieb</span>' : '', a.gruender ? '<span class="tag y">★ Gründungspartner</span>' : '', a.besichtigung === 'bestaetigt' ? '<span class="tag b">nach Besichtigung</span>' : '', a.sterne ? '<span class="tag">★ ' + String(a.sterne).replace('.', ',') + ' (' + a.bewertungen + ')</span>' : ''].join(' ');
+          return '<div class="angebot' + (best && best.id === a.id ? ' best' : '') + '" style="flex-wrap:wrap' + (a.status === 'nicht_gewaehlt' ? ';opacity:.55' : '') + '"><div class="t"><b>' + preis + '</b>' + (best && best.id === a.id && d.offen ? ' <span class="tag y">Günstigstes</span>' : '') + (a.status === 'gewaehlt' ? ' <span class="tag g">✓ Gewählt</span>' : '') +
+            '<span class="wer">' + esc(a.firma || a.label) + '</span><small>' + esc([a.kategorie, a.ort].filter(Boolean).join(' · ') || 'Betrieb aus der Region') + ' · ' + tag(a.am) + '</small>' + (marken.trim() ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">' + marken + '</div>' : '') +
+            (a.nachricht ? '<small style="margin-top:6px;color:var(--ink);white-space:pre-line">' + esc(a.nachricht) + '</small>' : '') + '</div>' +
+            (d.offen && a.status === 'angebot' ? '<button class="btn g klein" type="button" data-an="' + a.id + '">Abgemacht</button>' : '') + '</div>';
+        }).join('') + '</div><div class="meld" id="anMsg"></div></div>';
+    } else if (d.offen) {
+      h += '<div class="block"><div class="lade"><i></i>' + (d.angefragt ? d.angefragt + ' Betrieb' + (d.angefragt > 1 ? 'e sind' : ' ist') + ' angefragt.' : 'Abgemacht sucht passende Betriebe.') + ' Sobald Angebote da sind, bekommen Sie eine Mail.</div></div>';
+    }
+    el.innerHTML = h;
+    var erl = el.querySelector('#aErl'); if (erl) erl.onclick = function () { status(m, 'erledigt', 'Als erledigt markiert'); };
+    var besSetzen = async function (bid, st, termin) {
+      var adr = $('bAdr') ? $('bAdr').value.trim() : '', vor = $('bVor') ? $('bVor').value.trim() : '';
+      if (st === 'bestaetigt' && $('bAdr') && !adr) { $('bMsg').textContent = 'Bitte die Adresse des Objekts eintragen, damit der Betrieb weiß, wohin.'; $('bMsg').className = 'meld err'; $('bAdr').focus(); return; }
+      try { await api({ aktion: 'besichtigung', id: m.id, bid: bid, status: st, termin: termin, objekt_adresse: adr, vor_ort: vor }); toast(st === 'bestaetigt' ? 'Bestätigt. Der Betrieb bekommt Adresse und Ansprechpartner per Mail.' : st === 'vorschlag' ? 'Ihr Vorschlag ist beim Betrieb.' : 'Abgelehnt.'); await laden(); }
+      catch (e) { $('bMsg').textContent = e.message; $('bMsg').className = 'meld err'; }
+    };
+    el.querySelectorAll('[data-bok]').forEach(function (b) { b.onclick = function () { besSetzen(+b.dataset.bok, 'bestaetigt', b.dataset.t); }; });
+    el.querySelectorAll('[data-bvor]').forEach(function (b) { b.onclick = function () { var t = el.querySelector('[data-bt="' + b.dataset.bvor + '"]').value; if (!t) { toast('Bitte zuerst Datum und Uhrzeit wählen.'); return; } besSetzen(+b.dataset.bvor, 'vorschlag', t); }; });
+    el.querySelectorAll('[data-bab]').forEach(function (b) { b.onclick = function () { if (b.dataset.sicher !== '1') { b.dataset.sicher = '1'; b.textContent = 'Wirklich ablehnen?'; return; } besSetzen(+b.dataset.bab, 'abgelehnt', null); }; });
+    el.querySelectorAll('[data-an]').forEach(function (b) {
+      b.onclick = async function () {
+        if (b.dataset.sicher !== '1') { b.dataset.sicher = '1'; b.textContent = 'Wirklich annehmen?'; return; }
+        b.disabled = true;
+        try { var r = await api({ aktion: 'annehmen', id: m.id, vb: +b.dataset.an }); toast(r.wartet ? 'Angenommen. Der Betrieb bestätigt gleich.' : 'Abgemacht! Die Kontaktdaten stehen jetzt in der Meldung.'); await laden(); }
+        catch (e) { $('anMsg').textContent = e.message; $('anMsg').className = 'meld err'; b.disabled = false; }
+      };
+    });
+  }
+
+  /* ---------- Meldung selbst erfassen ---------- */
+  var neueFotos = [];
+  $('neuMeld').onclick = function () {
+    neueFotos = [];
+    var l = oeffnen('Meldung erfassen', 'z. B. nach einem Anruf eines Mieters', '<label class="f" for="nO">Haus</label><select class="feld" id="nO"><option value="">– ohne Haus –</option>' + D.objekte.filter(function (o) { return o.aktiv; }).map(function (o) { return '<option value="' + o.id + '">' + esc(o.name) + '</option>'; }).join('') + '</select>' +
+      '<label class="f" for="nT">Was ist los? *</label><input class="feld" id="nT" maxlength="120" placeholder="z. B. Heizung im Bad kalt">' +
+      '<label class="f" for="nX">Beschreibung</label><textarea class="feld" id="nX" maxlength="3000"></textarea>' +
+      '<div class="reihe2"><div><label class="f" for="nE">Wohnung / Einheit</label><input class="feld" id="nE" maxlength="60"></div><div><label class="f" for="nN">Gemeldet von</label><input class="feld" id="nN" maxlength="120"></div></div>' +
+      '<label class="f" for="nK">Kontakt der meldenden Person</label><input class="feld" id="nK" maxlength="160" placeholder="Telefon oder E-Mail">' +
+      '<label class="f">Fotos <span class="kleiner">(optional, bis zu 3)</span></label><div class="mfotos" id="nF"><label class="fotoplus" for="nFoto"><svg class="i"><use href="#i-kamera"/></svg><span>Foto hinzufügen</span></label></div><input type="file" id="nFoto" accept="image/*" hidden>' +
+      '<label class="haken2"><input type="checkbox" id="nTel"> <span>Kam per Telefon</span></label><label class="haken2"><input type="checkbox" id="nD"> <span>Dringend</span></label>' +
+      '<button class="btn p voll" type="button" id="nGo" style="margin-top:16px">Meldung speichern</button><div class="meld" id="nMsg"></div>');
+    var zeigen = function () { var box = l.querySelector('#nF'); box.querySelectorAll('img').forEach(function (x) { x.remove(); }); neueFotos.forEach(function (s, i) { var im = document.createElement('img'); im.src = s; im.alt = 'Foto ' + (i + 1); im.onclick = function () { neueFotos.splice(i, 1); zeigen(); }; box.insertBefore(im, box.querySelector('.fotoplus')); }); box.classList.toggle('mit', neueFotos.length > 0); box.querySelector('.fotoplus').hidden = neueFotos.length >= 3; };
+    l.querySelector('#nFoto').onchange = function (e) { var f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; var u = URL.createObjectURL(f), im = new Image(); im.onload = function () { var g = Math.min(1, 1400 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * g); c.height = Math.round(im.height * g); var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); neueFotos.push(c.toDataURL('image/jpeg', 0.78)); zeigen(); }; im.src = u; };
+    l.querySelector('#nGo').onclick = async function () {
+      this.disabled = true;
+      try { var r = await api({ aktion: 'meldung_neu', objekt_id: $('nO').value || null, titel: $('nT').value, text: $('nX').value, einheit: $('nE').value, name: $('nN').value, kontakt: $('nK').value, quelle: $('nTel').checked ? 'telefon' : 'portal', dringend: $('nD').checked, fotos: neueFotos });
+        offenId = r.id; await laden(); toast('Meldung gespeichert'); }
+      catch (e) { $('nMsg').textContent = e.message; $('nMsg').className = 'meld err'; this.disabled = false; }
+    };
+  };
+
+  /* ---------- Häuser ---------- */
+  function haeuser() {
+    $('haeuser').innerHTML = D.objekte.length ? D.objekte.map(function (o) {
+      var offen = D.meldungen.filter(function (m) { return m.objekt_id === o.id && ['neu', 'frei'].indexOf(m.status) >= 0; }).length;
+      return '<div class="objkarte"' + (o.aktiv ? '' : ' style="opacity:.6"') + '><div class="t"><h3>' + esc(o.name) + (o.aktiv ? '' : ' <span class="tag">inaktiv</span>') + '</h3><small>' + esc([o.adresse, { wohnen: 'Wohnen', gewerbe: 'Gewerbe', gemischt: 'Gemischt' }[o.art], o.einheiten ? o.einheiten + ' Einheiten' : ''].filter(Boolean).join(' · ')) + '</small>' + (o.vor_ort ? '<small>Vor Ort: ' + esc(o.vor_ort) + '</small>' : '') + (offen ? '<small style="color:var(--rot);font-weight:700">' + offen + ' offene Meldung' + (offen > 1 ? 'en' : '') + '</small>' : '') + '</div>' +
+        '<div class="knoepfe"><a class="btn p klein" href="/aushang?o=' + esc(o.qr_token) + '" target="_blank" rel="noopener">QR-Aushang</a><a class="btn s klein" href="/melden?o=' + esc(o.qr_token) + '" target="_blank" rel="noopener">Mieter-Ansicht</a><button class="btn s klein" type="button" data-oe="' + o.id + '">Bearbeiten</button></div></div>';
+    }).join('') : '<div class="leer">Noch keine Häuser. Legen Sie das erste an, dann bekommen Sie den QR-Aushang dafür.</div>';
+    document.querySelectorAll('[data-oe]').forEach(function (b) { b.onclick = function () { objektForm(D.objekte.find(function (o) { return o.id === +b.dataset.oe; })); }; });
+    var sel = $('fSel'), alt = sel.value;
+    sel.innerHTML = '<option value="">Alle Häuser</option>' + D.objekte.map(function (o) { return '<option value="' + o.id + '">' + esc(o.name) + '</option>'; }).join('');
+    sel.value = alt;
+  }
+  $('neuObj').onclick = function () { objektForm(null); };
+  function objektForm(o) {
+    o = o || { art: 'wohnen', aktiv: true };
+    var l = oeffnen(o.id ? 'Haus bearbeiten' : 'Haus anlegen', '', '<label class="f" for="oN">Name *</label><input class="feld" id="oN" maxlength="120" value="' + esc(o.name || '') + '" placeholder="z. B. Hirschstraße 12">' +
+      '<label class="f" for="oA">Adresse</label><input class="feld" id="oA" maxlength="200" value="' + esc(o.adresse || '') + '" placeholder="Straße Nr., PLZ Ort">' +
+      '<div class="reihe2"><div><label class="f" for="oT">Art</label><select class="feld" id="oT"><option value="wohnen"' + (o.art === 'wohnen' ? ' selected' : '') + '>Wohnen</option><option value="gewerbe"' + (o.art === 'gewerbe' ? ' selected' : '') + '>Gewerbe</option><option value="gemischt"' + (o.art === 'gemischt' ? ' selected' : '') + '>Gemischt</option></select></div><div><label class="f" for="oE">Einheiten</label><input class="feld" id="oE" type="number" min="1" value="' + esc(o.einheiten || '') + '"></div></div>' +
+      '<label class="f" for="oV">Ansprechpartner vor Ort</label><input class="feld" id="oV" maxlength="200" value="' + esc(o.vor_ort || '') + '" placeholder="z. B. Hausmeister Herr Kaya, 0170 …">' +
+      '<label class="f" for="oX">Notizen</label><textarea class="feld" id="oX" maxlength="1000">' + esc(o.notizen || '') + '</textarea>' +
+      (o.id ? '<label class="haken2"><input type="checkbox" id="oAk"' + (o.aktiv ? ' checked' : '') + '> <span>Aktiv (QR-Code nimmt Meldungen an)</span></label>' : '') +
+      '<button class="btn p voll" type="button" id="oGo" style="margin-top:16px">Speichern</button><div class="meld" id="oMsg"></div>' +
+      (o.id ? '<div class="box2"><h3>QR-Code erneuern</h3><p class="kleiner" style="margin:0 0 10px">Nur nötig, wenn der alte Aushang missbraucht wird. Danach funktioniert der alte Code nicht mehr, Sie müssen neu aushängen.</p><button class="btn s klein" type="button" id="oQr">Neuen QR-Code erzeugen</button></div>' : ''));
+    l.querySelector('#oGo').onclick = async function () {
+      try { await api({ aktion: 'objekt_speichern', id: o.id || undefined, name: $('oN').value, adresse: $('oA').value, art: $('oT').value, einheiten: $('oE').value, vor_ort: $('oV').value, notizen: $('oX').value, aktiv: $('oAk') ? $('oAk').checked : true }); schliessen(); await laden(); toast('Gespeichert'); }
+      catch (e) { $('oMsg').textContent = e.message; $('oMsg').className = 'meld err'; }
+    };
+    var q = l.querySelector('#oQr'); if (q) q.onclick = async function () { if (q.dataset.sicher !== '1') { q.dataset.sicher = '1'; q.textContent = 'Wirklich? Der alte Aushang geht dann nicht mehr'; return; } try { await api({ aktion: 'qr_neu', id: o.id }); schliessen(); await laden(); toast('Neuer QR-Code erzeugt. Bitte den Aushang neu drucken.'); } catch (e) { toast(e.message); } };
+  }
+
+  /* ---------- Fristen ---------- */
+  function plusMonate(d, n) { var x = new Date(d + 'T12:00:00'); x.setMonth(x.getMonth() + n); return x; }
+  function fristListe() {
+    var heute = new Date(); heute.setHours(12, 0, 0, 0);
+    return (D.fristen || []).map(function (f) {
+      var faellig = f.letzter ? plusMonate(String(f.letzter).slice(0, 10), f.intervall_monate) : null;
+      return Object.assign({}, f, { faellig: faellig, tage: faellig ? Math.round((faellig - heute) / 86400000) : null });
+    }).sort(function (a, b) { return (a.tage == null ? -1e9 : a.tage) - (b.tage == null ? -1e9 : b.tage); });
+  }
+  function ivText(n) { return n % 12 === 0 ? (n === 12 ? 'jährlich' : 'alle ' + n / 12 + ' Jahre') : n === 1 ? 'monatlich' : 'alle ' + n + ' Monate'; }
+  function fristen() {
+    var alle = fristListe(), sel = $('fSel').value, l = alle.filter(function (f) { return !sel || String(f.objekt_id) === sel; });
+    var ueber = alle.filter(function (f) { return f.tage != null && f.tage < 0; }).length, bald = alle.filter(function (f) { return f.tage != null && f.tage >= 0 && f.tage <= 60; }).length, ohne = alle.filter(function (f) { return f.tage == null; }).length;
+    $('fzahlen').innerHTML = '<div class="fz rot"><b>' + ueber + '</b>überfällig</div><div class="fz gelb"><b>' + bald + '</b>in 60 Tagen</div><div class="fz gruen"><b>' + (alle.length - ueber - bald - ohne) + '</b>später</div>' + (ohne ? '<div class="fz"><b>' + ohne + '</b>ohne letzten Termin</div>' : '');
+    $('fliste').innerHTML = l.length ? '<div class="monat">' + l.map(function (f) {
+      var cls = f.tage == null ? '' : f.tage < 0 ? ' ueber' : f.tage <= 60 ? ' bald' : '';
+      var st = f.tage == null ? 'Letzten Termin eintragen' : f.tage < 0 ? 'seit ' + (-f.tage) + ' Tagen überfällig' : f.tage === 0 ? 'heute fällig' : 'fällig am ' + tag(f.faellig) + ' (in ' + f.tage + ' Tagen)';
+      return '<div class="frist' + cls + '"><span class="ic"><svg class="i"><use href="#i-kal"/></svg></span><div class="t"><b>' + esc(f.art) + '</b><small>' + esc([objektName(f.objekt_id) || 'alle Häuser', ivText(f.intervall_monate), f.letzter ? 'zuletzt ' + tag(f.letzter) : ''].filter(Boolean).join(' · ')) + '</small><small style="font-weight:700;color:' + (f.tage != null && f.tage < 0 ? 'var(--rot)' : 'var(--ink)') + '">' + st + '</small></div>' +
+        '<div class="rechts"><button class="btn p klein" type="button" data-fh="' + f.id + '">Angebote holen</button><button class="btn s klein" type="button" data-fe="' + f.id + '">Erledigt</button><button class="linkbtn" type="button" data-fb="' + f.id + '">Bearbeiten</button></div></div>';
+    }).join('') + '</div>' : '<div class="leer">Noch keine Fristen. Tragen Sie z. B. Rauchwarnmelder, Heizungswartung oder Trinkwasseruntersuchung ein.</div>';
+    document.querySelectorAll('[data-fe]').forEach(function (b) { b.onclick = async function () { try { await api({ aktion: 'frist_erledigt', id: +b.dataset.fe }); await laden(); toast('Als heute erledigt eingetragen'); } catch (e) { toast(e.message); } }; });
+    document.querySelectorAll('[data-fb]').forEach(function (b) { b.onclick = function () { fristForm((D.fristen || []).find(function (f) { return f.id === +b.dataset.fb; })); }; });
+    document.querySelectorAll('[data-fh]').forEach(function (b) { b.onclick = async function () {
+      var f = (D.fristen || []).find(function (x) { return x.id === +b.dataset.fh; });
+      try { var r = await api({ aktion: 'meldung_neu', objekt_id: f.objekt_id, titel: f.art, text: f.art + ' (' + ivText(f.intervall_monate) + ')' + (f.letzter ? ', zuletzt am ' + tag(f.letzter) : '') + (f.notiz ? '\n' + f.notiz : ''), quelle: 'portal' });
+        await laden(); location.hash = '#meldungen'; var m = D.meldungen.find(function (x) { return x.id === r.id; }); zeigeMeldung(m); holenForm(m, $('leiste').querySelector('#aktion')); }
+      catch (e) { toast(e.message); }
+    }; });
+  }
+  $('fSel').onchange = fristen;
+  $('neuFrist').onclick = function () { fristForm(null); };
+  function fristForm(f) {
+    f = f || {};
+    var l = oeffnen(f.id ? 'Frist bearbeiten' : 'Frist eintragen', '', '<label class="f" for="frA">Was wird geprüft oder gewartet? *</label><input class="feld" id="frA" list="frVor" maxlength="120" value="' + esc(f.art || '') + '" placeholder="z. B. Rauchwarnmelder prüfen">' +
+      '<datalist id="frVor"><option value="Rauchwarnmelder prüfen"><option value="Heizungswartung"><option value="Trinkwasser auf Legionellen untersuchen"><option value="Feuerlöscher prüfen"><option value="Spielplatz prüfen"><option value="Aufzug prüfen"><option value="Dachrinnen reinigen"><option value="Rückstauklappe warten"><option value="Elektroprüfung (E-Check)"><option value="Lüftungsanlage warten"></datalist>' +
+      '<div class="reihe2"><div><label class="f" for="frI">Intervall in Monaten *</label><input class="feld" id="frI" type="number" min="1" max="240" value="' + esc(f.intervall_monate || 12) + '"></div><div><label class="f" for="frL">Zuletzt erledigt am</label><input class="feld" id="frL" type="date" value="' + esc(f.letzter ? String(f.letzter).slice(0, 10) : '') + '"></div></div>' +
+      '<label class="f" for="frO">Haus</label><select class="feld" id="frO"><option value="">Alle Häuser</option>' + D.objekte.map(function (o) { return '<option value="' + o.id + '"' + (f.objekt_id === o.id ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('') + '</select>' +
+      '<label class="f" for="frN">Notiz</label><input class="feld" id="frN" maxlength="500" value="' + esc(f.notiz || '') + '">' +
+      '<button class="btn p voll" type="button" id="frGo" style="margin-top:16px">Speichern</button>' + (f.id ? '<button class="linkbtn" type="button" id="frDel">Frist löschen</button>' : '') + '<div class="meld" id="frMsg"></div>');
+    l.querySelector('#frGo').onclick = async function () {
+      try { await api({ aktion: 'frist_speichern', id: f.id || undefined, art: $('frA').value, intervall_monate: Number($('frI').value), letzter: $('frL').value, objekt_id: $('frO').value || null, notiz: $('frN').value }); schliessen(); await laden(); toast('Gespeichert'); }
+      catch (e) { $('frMsg').textContent = e.message; $('frMsg').className = 'meld err'; }
+    };
+    var del = l.querySelector('#frDel'); if (del) del.onclick = async function () { if (del.dataset.sicher !== '1') { del.dataset.sicher = '1'; del.textContent = 'Wirklich löschen?'; return; } try { await api({ aktion: 'frist_loeschen', id: f.id }); schliessen(); await laden(); toast('Gelöscht'); } catch (e) { toast(e.message); } };
+  }
+
+  /* ---------- Konto ---------- */
+  function konto() { $('kontoText').textContent = (D.ich.name ? D.ich.name + ' · ' : '') + D.ich.email + ' · ' + D.ich.kunde + (D.ich.art_name ? ' (' + D.ich.art_name + ')' : ''); }
+  $('pwBtn').onclick = async function () {
+    var msg = $('pwMsg');
+    try { await api({ aktion: 'passwort_aendern', alt: $('pwAlt').value, neu: $('pwNeu').value }); msg.textContent = 'Passwort geändert. Andere Geräte wurden abgemeldet.'; msg.className = 'meld ok'; $('pwAlt').value = $('pwNeu').value = ''; }
+    catch (e) { msg.textContent = e.message; msg.className = 'meld err'; }
+  };
+  $('raus').onclick = async function () { try { await api({ aktion: 'logout' }); } catch (e) {} D = null; schliessen(); location.hash = ''; zeigeAnsicht('login'); };
+
+  /* ---------- Anmelden und Einladung ---------- */
+  $('loginForm').onsubmit = async function (e) {
+    e.preventDefault(); var msg = $('lMsg'), b = $('lBtn'); msg.textContent = ''; b.disabled = true;
+    try { await api({ aktion: 'login', email: $('lMail').value, pw: $('lPw').value }); $('lPw').value = ''; await laden(); route(); }
+    catch (err) { msg.textContent = err.message; msg.className = 'meld err'; }
+    b.disabled = false;
+  };
+  var einl = new URLSearchParams(location.search).get('einladung');
+  $('eForm').onsubmit = async function (e) {
+    e.preventDefault(); var msg = $('eMsg');
+    if ($('ePw').value !== $('ePw2').value) { msg.textContent = 'Die beiden Passwörter stimmen nicht überein.'; msg.className = 'meld err'; return; }
+    if (!$('eOk').checked) { msg.textContent = 'Bitte bestätigen Sie die Nutzungsbedingungen.'; msg.className = 'meld err'; return; }
+    $('eBtn').disabled = true;
+    try { await api({ aktion: 'passwort_setzen', token: einl, pw: $('ePw').value, zustimmung: true }); history.replaceState(null, '', '/portal'); await laden(); route(); toast('Willkommen! Legen Sie als Erstes Ihre Häuser an.'); }
+    catch (err) { msg.textContent = err.message; msg.className = 'meld err'; $('eBtn').disabled = false; }
+  };
+
+  (async function startApp() {
+    zeigeAnsicht('lade');
+    if (einl) {
+      try { var d = await api({ aktion: 'einladung_pruefen', token: einl }); $('eMail').value = d.email; $('eText').textContent = 'Für ' + d.kunde + ' ist ein Zugang zum Abgemacht-Portal eingerichtet' + (d.name ? ', ' + d.name : '') + '. Legen Sie Ihr Passwort fest.'; zeigeAnsicht('einladung'); }
+      catch (err) { zeigeAnsicht('login'); $('lMsg').textContent = err.message; $('lMsg').className = 'meld err'; }
+      return;
+    }
+    try { await laden(); route(); } catch (e) { zeigeAnsicht('login'); }
+  })();
+})();
+</script>
+</body>
+</html>

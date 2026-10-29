@@ -1,0 +1,16 @@
+{
+  "name": "Abgemacht Portal",
+  "short_name": "Abgemacht",
+  "description": "Meldungen, Angebote, Besichtigungen und Fristen für Ihre Objekte",
+  "id": "/portal",
+  "start_url": "/portal",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#138A6B",
+  "lang": "de",
+  "icons": [
+    { "src": "/buero-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/buero-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
