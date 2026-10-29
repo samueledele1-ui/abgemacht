@@ -12,7 +12,7 @@
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{background:var(--weiss);color:var(--ink);font:17px/1.6 var(--f-text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{background:var(--weiss);color:var(--ink);font:17px/1.6 var(--f-text);-webkit-font-smoothing:antialiased;overflow-x:hidden;overflow-x:clip}
 h1,h2,h3{font-family:var(--f-disp);font-weight:800;letter-spacing:-.025em;line-height:1.02;margin:0;text-wrap:balance}
 p{margin:0}
 a{color:inherit}
@@ -92,7 +92,7 @@ nav.haupt .btn{padding:12px 18px;font-size:15px;white-space:nowrap}
 @keyframes laufen{to{transform:translateX(-50%)}}
 
 /* Abschnitte */
-section.ab{padding-block:110px}
+section.ab{padding-block:72px}
 .eyebrow{font:700 13px/1 var(--f-text);letter-spacing:.12em;text-transform:uppercase;color:var(--gruen);margin-bottom:16px}
 h2{font-size:clamp(36px,5vw,64px);color:var(--ink)}
 .unter{color:var(--muted);font-size:19px;max-width:36em;margin-top:16px}
@@ -291,7 +291,7 @@ button.branche::after{content:"Anfragen →";position:absolute;left:24px;bottom:
 button.branche:hover::after,button.branche:focus-visible::after{opacity:1;transform:none}
 button.branche:hover small,button.branche:focus-visible small{opacity:0}
 button.branche small{transition:opacity .3s}
-.tipp{color:var(--muted);font-size:15px;margin-top:10px}
+.wrap > .tipp{background:none;color:var(--muted);padding:0;border-radius:0;font-weight:500;font-size:15px;margin-top:10px}
 @media (max-width:900px){.formband,.partnerform{grid-template-columns:1fr;gap:28px}.formbox{padding:22px;border-radius:24px}}
 @media (max-width:560px){.formbox .row{grid-template-columns:1fr}.kacheln label{flex-direction:row!important;align-items:center}}
 
@@ -338,7 +338,7 @@ footer a:hover{color:var(--tanne)}
   .quer .fest{position:static;height:auto;overflow:visible}
   .spur2{transform:none!important;overflow-x:auto;scroll-snap-type:x mandatory;padding-right:20px;padding-bottom:10px}
   .branche{scroll-snap-align:start;width:240px;height:280px}
-  section.ab{padding-block:80px}
+  section.ab{padding-block:52px}
 }
 @media (max-width:560px){
   .ziel{grid-template-columns:1fr}
@@ -351,7 +351,7 @@ footer a:hover{color:var(--tanne)}
   html{scroll-behavior:auto}
 }
 
-html{overflow-x:hidden}
+html{overflow-x:hidden;overflow-x:clip}
 /* Neues Gebührenmodell (Vorschlag) */
 .vorschlagsband{display:inline-block;margin-top:36px;background:var(--sonne);color:#4A3300;font:700 13px/1 var(--f-text);padding:8px 12px;border-radius:999px}
 .vorschlagsband + .preise2{margin-top:14px}
